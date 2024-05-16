@@ -1,0 +1,8 @@
+# nextflow run stuff
+.nextflow/
+.nextflow*
+work/
+results/
+timeline*
+dag*
+report*
