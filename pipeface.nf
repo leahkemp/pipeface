@@ -207,7 +207,7 @@ process minimap2 {
     script:
     // conditionally define preset
     if( data_type == 'ont' ) {
-        preset = 'map-ont'
+        preset = 'lr:hq'
     }
     else if( data_type == 'pacbio' ) {
         preset = 'map-hifi'
@@ -215,10 +215,10 @@ process minimap2 {
         """
         # run minimap
         minimap2 \
-        -y \
         --secondary=no \
         --MD \
-        -ax $preset \
+        -a \
+        -x $preset \
         -t ${task.cpus} \
         $ref \
         $merged_fastq | samtools sort -@ ${task.cpus} - > minimap2.tmp.bam
