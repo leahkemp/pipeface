@@ -146,7 +146,7 @@ end
 - Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to pipeline dependencies:
     - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
-        - Nextflow 23.04.3
+        - Nextflow 24.04.1
         - Java version 17.0.2
 
 ## Run it!

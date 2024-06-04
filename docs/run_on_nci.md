@@ -210,7 +210,7 @@ Specify the directory in which to write the pipeline outputs. Eg:
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
 
 ```bash
-module load nextflow/23.04.3
+module load nextflow/24.04.1
 ```
 
 ## 7. Stub (dry) run
