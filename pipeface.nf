@@ -168,35 +168,10 @@ process merge_runs {
 
 }
 
-process bam_to_fastq {
-
-    input:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(merged)
-
-    output:
-        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('merged.fastq')
-
-    script:
-    if( extension == 'bam' )
-        """
-        samtools fastq ${merged} -T '*' -@ ${task.cpus} > merged.fastq
-        """
-    else if( extension == 'gz' | extension == 'fastq' )
-        """
-        ln -s ${merged} merged.fastq
-        """
-
-    stub:
-        """
-        touch merged.fastq
-        """
-
-}
-
 process minimap2 {
 
     input:
-        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path(merged_fastq)
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(merged)
         val ref
         val ref_index
 
@@ -212,6 +187,31 @@ process minimap2 {
     else if( data_type == 'pacbio' ) {
         preset = 'map-hifi'
     }
+    if( extension == 'bam' )
+        """
+        # run minimap
+        samtools view $merged | minimap2 \
+        -y \
+        --secondary=no \
+        --MD \
+        -a \
+        -x $preset \
+        -t ${task.cpus} \
+        $ref \
+        - | samtools sort -@ ${task.cpus} -o minimap2.tmp.bam -
+        # add sample id to bam header for downstream deepvariant
+        samtools addreplacerg \
+        -r ID:S1 \
+        -r SM:$sample_id \
+        -o minimap2.sorted.bam minimap2.tmp.bam
+        # index bam
+        samtools index \
+        -@ ${task.cpus} \
+        minimap2.sorted.bam
+        # grab version
+        minimap2 --version > minimap2.version.txt
+        """
+    else if( extension == 'gz' | extension == 'fastq' )
         """
         # run minimap
         minimap2 \
@@ -221,7 +221,7 @@ process minimap2 {
         -x $preset \
         -t ${task.cpus} \
         $ref \
-        $merged_fastq | samtools sort -@ ${task.cpus} - > minimap2.tmp.bam
+        $merged | samtools sort -@ ${task.cpus} -o minimap2.tmp.bam -
         # add sample id to bam header for downstream deepvariant
         samtools addreplacerg \
         -r ID:S1 \
@@ -734,8 +734,7 @@ workflow {
     bam_header = scrape_bam_header(in_data_list)
     publish_bam_header(bam_header, outdir, outdir2)
     merged = merge_runs(in_data_tuple)
-    merged_fastq = bam_to_fastq(merged)
-    (bam, minimap_to_publish) = minimap2(merged_fastq, ref, ref_index)
+    (bam, minimap_to_publish) = minimap2(merged, ref, ref_index)
     publish_minimap2(minimap_to_publish, outdir, outdir2, ref_name)
     if ( snp_indel_caller == 'clair3' ) {
         (snp_indel_vcf, clair3_to_publish) = clair3(bam, ref, ref_index)
