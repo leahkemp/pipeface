@@ -190,15 +190,17 @@ process minimap2 {
     if( extension == 'bam' )
         """
         # run minimap
-        samtools view $merged | minimap2 \
+        samtools fastq \
+        -@ ${task.cpus} \
+        -T '*' \
+        $merged | minimap2 \
         -y \
         --secondary=no \
         --MD \
         -a \
         -x $preset \
         -t ${task.cpus} \
-        $ref \
-        - | samtools sort -@ ${task.cpus} -o minimap2.tmp.bam -
+        $ref - | samtools sort -@ ${task.cpus} -o minimap2.tmp.bam -
         # add sample id to bam header for downstream deepvariant
         samtools addreplacerg \
         -r ID:S1 \
