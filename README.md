@@ -137,7 +137,7 @@ end
 
 - Aligned, sorted and haplotagged bam's
 - Clair3 *OR* deepvariant phased SNP/indel VCF file
-- Clair3 *OR* deepvariant phase SNP/indel gVCF file
+- Clair3 *OR* deepvariant phased SNP/indel gVCF file
 - Sniffles *OR* cuteSV phased SV VCF file
 
 ## Assumptions
