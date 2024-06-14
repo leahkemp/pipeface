@@ -310,7 +310,7 @@ process clair3 {
         ln -s merge_output.gvcf.gz clair3.snp_indel.phased.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi clair3.snp_indel.phased.g.vcf.gz.tbi
         # grab version
-        run_clair3.sh --version > version.txt
+        run_clair3.sh --version > clair3.version.txt
         """
 
     stub:
