@@ -537,8 +537,7 @@ process sniffles {
         --snf sniffles.sv.phased.snf \
         --output-rnames \
         --minsvlen 20 \
-        --phase \
-        $tandem_repeat_optional
+        --phase $tandem_repeat_optional
         # grab version
         sniffles --version > sniffles.version.txt
         """
