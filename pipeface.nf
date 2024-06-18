@@ -280,7 +280,7 @@ process clair3 {
 
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi'), path('clair3.snp_indel.phased.g.vcf.gz'), path('clair3.snp_indel.phased.g.vcf.gz.tbi'), path('clair3.version.txt')
+        tuple val(sample_id), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi'), path('clair3.snp_indel.g.vcf.gz'), path('clair3.snp_indel.g.vcf.gz.tbi'), path('clair3.version.txt')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -299,16 +299,17 @@ process clair3 {
         --ref_fn=$ref \
         --output=./ \
         --threads=${task.cpus} \
+        --use_whatshap_for_final_output_phasing \
         --platform=$platform \
         --model_path=$clair3_model \
         --sample_name=$sample_id \
         --gvcf \
         $regions_of_interest_optional
         # rename files
-        ln -s merge_output.vcf.gz clair3.snp_indel.phased.vcf.gz
-        ln -s merge_output.vcf.gz.tbi clair3.snp_indel.phased.vcf.gz.tbi
-        ln -s merge_output.gvcf.gz clair3.snp_indel.phased.g.vcf.gz
-        ln -s merge_output.gvcf.gz.tbi clair3.snp_indel.phased.g.vcf.gz.tbi
+        ln -s phased_merge_output.vcf.gz clair3.snp_indel.phased.vcf.gz
+        ln -s phased_merge_output.vcf.gz.tbi clair3.snp_indel.phased.vcf.gz.tbi
+        ln -s merge_output.gvcf.gz clair3.snp_indel.g.vcf.gz
+        ln -s merge_output.gvcf.gz.tbi clair3.snp_indel.g.vcf.gz.tbi
         # grab version
         run_clair3.sh --version > clair3.version.txt
         """
@@ -317,8 +318,8 @@ process clair3 {
         """
         touch clair3.snp_indel.phased.vcf.gz
         touch clair3.snp_indel.phased.vcf.gz.tbi
-        touch clair3.snp_indel.phased.g.vcf.gz
-        touch clair3.snp_indel.phased.g.vcf.gz.tbi
+        touch clair3.snp_indel.g.vcf.gz
+        touch clair3.snp_indel.g.vcf.gz.tbi
         touch clair3.version.txt
         """
 
@@ -338,8 +339,8 @@ process publish_clair3 {
         val sample_id
         path 'clair3.snp_indel.phased.vcf.gz'
         path 'clair3.snp_indel.phased.vcf.gz.tbi'
-        path 'clair3.snp_indel.phased.g.vcf.gz'
-        path 'clair3.snp_indel.phased.g.vcf.gz.tbi'
+        path 'clair3.snp_indel.g.vcf.gz'
+        path 'clair3.snp_indel.g.vcf.gz.tbi'
         path 'clair3.version.txt'
 
     script:
@@ -351,8 +352,8 @@ process publish_clair3 {
         """
         touch clair3.snp_indel.phased.vcf.gz
         touch clair3.snp_indel.phased.vcf.gz.tbi
-        touch clair3.snp_indel.phased.g.vcf.gz
-        touch clair3.snp_indel.phased.g.vcf.gz.tbi
+        touch clair3.snp_indel.g.vcf.gz
+        touch clair3.snp_indel.g.vcf.gz.tbi
         touch clair3.version.txt
         """
 
