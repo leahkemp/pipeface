@@ -727,6 +727,8 @@ process cutesv {
         ./ \
         --sample ${sample_id} \
         -t ${task.cpus} \
+        --genotype \
+        --report_readid \
         $settings
         # compress and index vcf
         bgzip \
