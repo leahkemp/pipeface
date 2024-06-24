@@ -709,7 +709,7 @@ process cutesv {
         val tandem_repeat
 
     output:
-        tuple val(sample_id), path('cutesv.sv.phased.vcf.gz'), path('cutesv.sv.phased.vcf.gz.tbi'), path('cutesv.version.txt')
+        tuple val(sample_id), path('cutesv.sv.vcf.gz'), path('cutesv.sv.vcf.gz.tbi'), path('cutesv.version.txt')
 
     script:
     if( data_type == 'ont' ) {
@@ -723,7 +723,7 @@ process cutesv {
         cuteSV \
         $haplotagged_bam \
         $ref \
-        cutesv.sv.phased.vcf \
+        cutesv.sv.vcf \
         ./ \
         --sample ${sample_id} \
         -t ${task.cpus} \
@@ -733,16 +733,16 @@ process cutesv {
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
-        cutesv.sv.phased.vcf
-        tabix cutesv.sv.phased.vcf.gz
+        cutesv.sv.vcf
+        tabix cutesv.sv.vcf.gz
         # grab version
         cuteSV --version > cutesv.version.txt
         """
 
     stub:
         """
-        touch cutesv.sv.phased.vcf.gz
-        touch cutesv.sv.phased.vcf.gz.tbi
+        touch cutesv.sv.vcf.gz
+        touch cutesv.sv.vcf.gz.tbi
         touch cutesv.version.txt
         """
 
@@ -759,8 +759,8 @@ process publish_cutesv {
         val ref_name
 
     output:
-        path 'cutesv.sv.phased.vcf.gz'
-        path 'cutesv.sv.phased.vcf.gz.tbi'
+        path 'cutesv.sv.vcf.gz'
+        path 'cutesv.sv.vcf.gz.tbi'
         path 'cutesv.version.txt'
 
     script:
@@ -770,8 +770,8 @@ process publish_cutesv {
 
     stub:
         """
-        touch cutesv.sv.phased.vcf.gz
-        touch cutesv.sv.phased.vcf.gz.tbi
+        touch cutesv.sv.vcf.gz
+        touch cutesv.sv.vcf.gz.tbi
         touch cutesv.version.txt
         """
 
