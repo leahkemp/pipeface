@@ -19,14 +19,15 @@ flowchart LR
 
 subgraph "Pipeface"
 
-input_data("ONT fastq.gz \n ONT fastq \n ONT uBAM \n pacbio HiFi fastq.gz \n pacbio HiFi fastq \n pacbio HiFi uBAM")
+input_data("ONT fastq.gz \n ONT fastq \n ONT uBAM \n pacbio HiFi uBAM")
 minimap2{{"minimap2"}}
 snp_indel_caller{{"clair3 OR deepvariant"}}
-whatshap{{"whatshap"}}
+whatshap_phase{{"whatshap phase"}}
+whatshap_haplotag{{"whatshap haplotag"}}
 sv_caller{{"sniffles OR cuteSV"}}
 
-input_data-.->minimap2-.->snp_indel_caller-.->whatshap-.->sv_caller
-minimap2-.->whatshap
+input_data-.->minimap2-.->snp_indel_caller-.->whatshap_phase-.->whatshap_haplotag-.->sv_caller
+minimap2-.->whatshap_haplotag
 
 end
 
@@ -44,64 +45,49 @@ ont_data_f2("ONT fastq.gz \n (sample 1)")
 ont_data_f3("ONT fastq \n (sample 2)")
 ont_data_f4("ONT uBAM \n (sample 3)")
 
-pacbio_data_f5("Pacbio HiFi fastq.gz \n (sample 4)")
-pacbio_data_f6("Pacbio HiFi fastq \n (sample 5)")
-pacbio_data_f7("Pacbio HiFi fastq \n (sample 5)")
-pacbio_data_f8("Pacbio HiFi uBAM \n (sample 6)")
-pacbio_data_f9("Pacbio HiFi uBAM \n (sample 6)")
+pacbio_data_f5("Pacbio HiFi uBAM \n (sample 4)")
+pacbio_data_f6("Pacbio HiFi uBAM \n (sample 4)")
 
 merge_m1{{"merge runs"}}
 merge_m2{{"merge runs"}}
-merge_m3{{"merge runs"}}
-
-bam_to_fastq_s3{{"bam to fastq"}}
-bam_to_fastq_s6{{"bam to fastq"}}
 
 minimap2_s1{{"minimap2"}}
 minimap2_s2{{"minimap2"}}
-minimap2_s3{{"minimap2"}}
-minimap2_s4{{"minimap2"}}
-minimap2_s5{{"minimap2"}}
-minimap2_s6{{"minimap2"}}
+minimap2_s3{{"minimap2 \n (bam to fastq on the fly)"}}
+minimap2_s4{{"minimap2 \n (bam to fastq on the fly)"}}
 
 snp_indel_caller_s1{{"clair3 OR deepvariant"}}
 snp_indel_caller_s2{{"clair3 OR deepvariant"}}
 snp_indel_caller_s3{{"clair3 OR deepvariant"}}
 snp_indel_caller_s4{{"clair3 OR deepvariant"}}
-snp_indel_caller_s5{{"clair3 OR deepvariant"}}
-snp_indel_caller_s6{{"clair3 OR deepvariant"}}
 
-whatshap_s1{{"whatshap"}}
-whatshap_s2{{"whatshap"}}
-whatshap_s3{{"whatshap"}}
-whatshap_s4{{"whatshap"}}
-whatshap_s5{{"whatshap"}}
-whatshap_s6{{"whatshap"}}
+whatshap_phase_s1{{"whatshap phase"}}
+whatshap_phase_s2{{"whatshap phase"}}
+whatshap_phase_s3{{"whatshap phase"}}
+whatshap_phase_s4{{"whatshap phase"}}
 
-sv_caller_s1{{""sniffles OR cuteSV""}}
-sv_caller_s2{{""sniffles OR cuteSV""}}
-sv_caller_s3{{""sniffles OR cuteSV""}}
-sv_caller_s4{{""sniffles OR cuteSV""}}
-sv_caller_s5{{""sniffles OR cuteSV""}}
-sv_caller_s6{{""sniffles OR cuteSV""}}
+whatshap_haplotag_s1{{"whatshap haplotag"}}
+whatshap_haplotag_s2{{"whatshap haplotag"}}
+whatshap_haplotag_s3{{"whatshap haplotag"}}
+whatshap_haplotag_s4{{"whatshap haplotag"}}
 
-ont_data_f1-.->merge_m1-.->minimap2_s1-.->snp_indel_caller_s1-.->whatshap_s1-.->sv_caller_s1
+sv_caller_s1{{"sniffles OR cuteSV"}}
+sv_caller_s2{{"sniffles OR cuteSV"}}
+sv_caller_s3{{"sniffles OR cuteSV"}}
+sv_caller_s4{{"sniffles OR cuteSV"}}
+
+ont_data_f1-.->merge_m1-.->minimap2_s1-.->snp_indel_caller_s1-.->whatshap_phase_s1-.->whatshap_haplotag_s1-.->sv_caller_s1
 ont_data_f2-.->merge_m1
-ont_data_f3-.->minimap2_s2-.->snp_indel_caller_s2-.->whatshap_s2-.->sv_caller_s2
-ont_data_f4-.->bam_to_fastq_s3-.->minimap2_s3-.->snp_indel_caller_s3-.->whatshap_s3-.->sv_caller_s3
+ont_data_f3-.->minimap2_s2-.->snp_indel_caller_s2-.->whatshap_phase_s2-.->whatshap_haplotag_s2-.->sv_caller_s2
+ont_data_f4-.->minimap2_s3-.->snp_indel_caller_s3-.->whatshap_phase_s3-.->whatshap_haplotag_s3-.->sv_caller_s3
 
-pacbio_data_f5-.->minimap2_s4-.->snp_indel_caller_s4-.->whatshap_s4-.->sv_caller_s4
-pacbio_data_f6-.->merge_m2-.->minimap2_s5-.->snp_indel_caller_s5-.->whatshap_s5-.->sv_caller_s5
-pacbio_data_f7-.->merge_m2
-pacbio_data_f8-.->merge_m3-.->bam_to_fastq_s6-.->minimap2_s6-.->snp_indel_caller_s6-.->whatshap_s6-.->sv_caller_s6
-pacbio_data_f9-.->merge_m3
+pacbio_data_f5-.->merge_m2-.->minimap2_s4-.->snp_indel_caller_s4-.->whatshap_phase_s4-.->whatshap_haplotag_s4-.->sv_caller_s4
+pacbio_data_f6-.->merge_m2
 
-minimap2_s1-.->whatshap_s1
-minimap2_s2-.->whatshap_s2
-minimap2_s3-.->whatshap_s3
-minimap2_s4-.->whatshap_s4
-minimap2_s5-.->whatshap_s5
-minimap2_s6-.->whatshap_s6
+minimap2_s1-.->whatshap_haplotag_s1
+minimap2_s2-.->whatshap_haplotag_s2
+minimap2_s3-.->whatshap_haplotag_s3
+minimap2_s4-.->whatshap_haplotag_s4
 
 end
 
@@ -152,4 +138,5 @@ end
 ## Run it!
 
 See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
+
 

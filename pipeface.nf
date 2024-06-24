@@ -71,10 +71,10 @@ process publish_settings {
 process scrape_bam_header {
 
     input:
-    tuple val(sample_id), val(extension), val(file)
+        tuple val(sample_id), val(extension), val(file)
 
     output:
-    tuple val(sample_id), val(file), path('header')
+        tuple val(sample_id), val(file), path('header')
 
     script:
     if( extension == 'gz' )
@@ -279,8 +279,8 @@ process clair3 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi'), path('clair3.snp_indel.g.vcf.gz'), path('clair3.snp_indel.g.vcf.gz.tbi'), path('clair3.version.txt')
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.vcf.gz'), path('clair3.snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), path('clair3.snp_indel.g.vcf.gz'), path('clair3.snp_indel.g.vcf.gz.tbi'), path('clair3.version.txt')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -299,15 +299,14 @@ process clair3 {
         --ref_fn=$ref \
         --output=./ \
         --threads=${task.cpus} \
-        --use_whatshap_for_final_output_phasing \
         --platform=$platform \
         --model_path=$clair3_model \
         --sample_name=$sample_id \
         --gvcf \
         $regions_of_interest_optional
         # rename files
-        ln -s phased_merge_output.vcf.gz clair3.snp_indel.phased.vcf.gz
-        ln -s phased_merge_output.vcf.gz.tbi clair3.snp_indel.phased.vcf.gz.tbi
+        ln -s merge_output.vcf.gz clair3.snp_indel.vcf.gz
+        ln -s merge_output.vcf.gz.tbi clair3.snp_indel.vcf.gz.tbi
         ln -s merge_output.gvcf.gz clair3.snp_indel.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi clair3.snp_indel.g.vcf.gz.tbi
         # grab version
@@ -316,8 +315,8 @@ process clair3 {
 
     stub:
         """
-        touch clair3.snp_indel.phased.vcf.gz
-        touch clair3.snp_indel.phased.vcf.gz.tbi
+        touch clair3.snp_indel.vcf.gz
+        touch clair3.snp_indel.vcf.gz.tbi
         touch clair3.snp_indel.g.vcf.gz
         touch clair3.snp_indel.g.vcf.gz.tbi
         touch clair3.version.txt
@@ -330,15 +329,13 @@ process publish_clair3 {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(version)
+        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(version)
         val outdir
         val outdir2
         val ref_name
 
     output:
         val sample_id
-        path 'clair3.snp_indel.phased.vcf.gz'
-        path 'clair3.snp_indel.phased.vcf.gz.tbi'
         path 'clair3.snp_indel.g.vcf.gz'
         path 'clair3.snp_indel.g.vcf.gz.tbi'
         path 'clair3.version.txt'
@@ -350,11 +347,72 @@ process publish_clair3 {
 
     stub:
         """
-        touch clair3.snp_indel.phased.vcf.gz
-        touch clair3.snp_indel.phased.vcf.gz.tbi
         touch clair3.snp_indel.g.vcf.gz
         touch clair3.snp_indel.g.vcf.gz.tbi
         touch clair3.version.txt
+        """
+
+}
+
+process whatshap_phase_clair3 {
+
+    input:
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi')
+        tuple val(sample_id), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi'), path('clair3.snp_indel.phased.read_list.txt')
+
+    script:
+        """
+        # run whatshap phase
+        whatshap phase \
+        --reference $ref \
+        --output clair3.snp_indel.phased.vcf.gz \
+        --output-read-list clair3.snp_indel.phased.read_list.txt \
+        --sample $sample_id \
+        --ignore-read-groups $snp_indel_vcf $bam
+        # index vcf
+        tabix clair3.snp_indel.phased.vcf.gz
+        """
+
+    stub:
+        """
+        touch clair3.snp_indel.phased.vcf.gz
+        touch clair3.snp_indel.phased.vcf.gz.tbi
+        touch clair3.snp_indel.phased.read_list.txt
+        """
+
+}
+
+process publish_whatshap_phase_clair3 {
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+
+    input:
+        tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index), path(snp_indel_phased_read_list)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        val sample_id
+        path 'clair3.snp_indel.phased.vcf.gz'
+        path 'clair3.snp_indel.phased.vcf.gz.tbi'
+        path 'clair3.snp_indel.phased.read_list.txt'
+
+    script:
+        """
+        echo "Publishing files"
+        """
+
+    stub:
+        """
+        touch clair3.snp_indel.phased.vcf.gz
+        touch clair3.snp_indel.phased.vcf.gz.tbi
+        touch clair3.snp_indel.phased.read_list.txt
         """
 
 }
@@ -367,8 +425,8 @@ process deepvariant {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('deepvariant.snp_indel.phased.vcf.gz'), path('deepvariant.snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), path('deepvariant.snp_indel.phased.vcf.gz'), path('deepvariant.snp_indel.phased.vcf.gz.tbi'), path('deepvariant.snp_indel.phased.g.vcf.gz'), path('deepvariant.snp_indel.phased.g.vcf.gz.tbi'), path('deepvariant.version.txt')
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('deepvariant.snp_indel.vcf.gz'), path('deepvariant.snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), path('deepvariant.snp_indel.g.vcf.gz'), path('deepvariant.snp_indel.g.vcf.gz.tbi'), path('deepvariant.version.txt')
 
     script:
     // define an optional string to pass regions of interest bed file
@@ -380,7 +438,7 @@ process deepvariant {
         --ref $ref \
         --in-bam $bam \
         --gvcf \
-        --out-variants deepvariant.snp_indel.phased.g.vcf.gz \
+        --out-variants deepvariant.snp_indel.g.vcf.gz \
         --phase-reads \
         --num-gpus ${task.gpus} \
         --num-cpu-threads-per-stream ${task.cpus} \
@@ -389,18 +447,18 @@ process deepvariant {
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
-        deepvariant.snp_indel.phased.vcf
-        tabix deepvariant.snp_indel.phased.vcf.gz
+        deepvariant.snp_indel.vcf
+        tabix deepvariant.snp_indel.vcf.gz
         # grab version
         pbrun deepvariant --version >> deepvariant.version.txt
         """
 
     stub:
         """
-        touch deepvariant.snp_indel.phased.vcf.gz
-        touch deepvariant.snp_indel.phased.vcf.gz.tbi
-        touch deepvariant.snp_indel.phased.g.vcf.gz
-        touch deepvariant.snp_indel.phased.g.vcf.gz.tbi
+        touch deepvariant.snp_indel.vcf.gz
+        touch deepvariant.snp_indel.vcf.gz.tbi
+        touch deepvariant.snp_indel.g.vcf.gz
+        touch deepvariant.snp_indel.g.vcf.gz.tbi
         touch deepvariant.version.txt
         """
 
@@ -411,7 +469,70 @@ process publish_deepvariant {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(deepvariant_version)
+        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(deepvariant_version)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        val sample_id
+        path 'deepvariant.snp_indel.g.vcf.gz'
+        path 'deepvariant.snp_indel.g.vcf.gz.tbi'
+        path 'deepvariant.version.txt'
+
+    script:
+        """
+        echo "Publishing files"
+        """
+
+    stub:
+        """
+        touch deepvariant.snp_indel.g.vcf.gz
+        touch deepvariant.snp_indel.g.vcf.gz.tbi
+        touch deepvariant.version.txt
+        """
+
+}
+
+process whatshap_phase_dv {
+
+    input:
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('deepvariant.snp_indel.phased.vcf.gz'), path('deepvariant.snp_indel.phased.vcf.gz.tbi')
+        tuple val(sample_id), path('deepvariant.snp_indel.phased.vcf.gz'), path('deepvariant.snp_indel.phased.vcf.gz.tbi'), path('deepvariant.snp_indel.phased.read_list.txt')
+
+    script:
+        """
+        # run whatshap phase
+        whatshap phase \
+        --reference $ref \
+        --output deepvariant.snp_indel.phased.vcf.gz \
+        --output-read-list deepvariant.snp_indel.phased.read_list.txt \
+        --sample $sample_id \
+        --ignore-read-groups $snp_indel_vcf $bam
+        # index vcf
+        tabix deepvariant.snp_indel.phased.vcf.gz
+        """
+
+    stub:
+        """
+        touch deepvariant.snp_indel.phased.vcf.gz
+        touch deepvariant.snp_indel.phased.vcf.gz.tbi
+        touch deepvariant.snp_indel.phased.read_list.txt
+        """
+
+}
+
+process publish_whatshap_phase_dv {
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+
+    input:
+        tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index), path(snp_indel_phased_read_list)
         val outdir
         val outdir2
         val ref_name
@@ -420,9 +541,7 @@ process publish_deepvariant {
         val sample_id
         path 'deepvariant.snp_indel.phased.vcf.gz'
         path 'deepvariant.snp_indel.phased.vcf.gz.tbi'
-        path 'deepvariant.snp_indel.phased.g.vcf.gz'
-        path 'deepvariant.snp_indel.phased.g.vcf.gz.tbi'
-        path 'deepvariant.version.txt'
+        path 'deepvariant.snp_indel.phased.read_list.txt'
 
     script:
         """
@@ -433,14 +552,12 @@ process publish_deepvariant {
         """
         touch deepvariant.snp_indel.phased.vcf.gz
         touch deepvariant.snp_indel.phased.vcf.gz.tbi
-        touch deepvariant.snp_indel.phased.g.vcf.gz
-        touch deepvariant.snp_indel.phased.g.vcf.gz.tbi
-        touch deepvariant.version.txt
+        touch deepvariant.snp_indel.phased.read_list.txt
         """
 
 }
 
-process whatshap {
+process whatshap_haplotag {
 
     input:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
@@ -453,7 +570,7 @@ process whatshap {
 
     script:
         """
-        # run whatshap
+        # run whatshap haplotag
         whatshap haplotag \
         --reference $ref \
         --output minimap2.whatshap.sorted.haplotagged.bam \
@@ -481,7 +598,7 @@ process whatshap {
 
 }
 
-process publish_whatshap {
+process publish_whatshap_haplotag {
 
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
@@ -741,13 +858,17 @@ workflow {
     if ( snp_indel_caller == 'clair3' ) {
         (snp_indel_vcf, clair3_to_publish) = clair3(bam, ref, ref_index)
         publish_clair3(clair3_to_publish, outdir, outdir2, ref_name)
+        (snp_indel_phased_vcf, whatshap_phase_to_publish) = whatshap_phase_clair3(snp_indel_vcf, ref, ref_index)
+        publish_whatshap_phase_clair3(whatshap_phase_to_publish, outdir, outdir2, ref_name)
     }
     else if ( snp_indel_caller == 'deepvariant' ) {
         (snp_indel_vcf, deepvariant_to_publish) = deepvariant(bam, ref, ref_index)
         publish_deepvariant(deepvariant_to_publish, outdir, outdir2, ref_name)
+        (snp_indel_phased_vcf, whatshap_phase_to_publish) = whatshap_phase_dv(snp_indel_vcf, ref, ref_index)
+        publish_whatshap_phase_dv(whatshap_phase_to_publish, outdir, outdir2, ref_name)
     }
-    (haplotagged_bam, whatshap_to_publish) = whatshap(snp_indel_vcf, ref, ref_index)
-    publish_whatshap(whatshap_to_publish, outdir, outdir2, ref_name)
+    (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf, ref, ref_index)
+    publish_whatshap_haplotag(whatshap_haplotag_to_publish, outdir, outdir2, ref_name)
     if ( sv_caller == 'sniffles' ) {
         sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
