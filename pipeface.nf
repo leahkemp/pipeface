@@ -210,6 +210,8 @@ process minimap2 {
         samtools index \
         -@ ${task.cpus} \
         minimap2.sorted.bam
+        # cleanup
+        rm minimap2.tmp.bam
         # grab version
         minimap2 --version > minimap2.version.txt
         """
@@ -233,6 +235,8 @@ process minimap2 {
         samtools index \
         -@ ${task.cpus} \
         minimap2.sorted.bam
+        # cleanup
+        rm minimap2.tmp.bam
         # grab version
         minimap2 --version > minimap2.version.txt
         """
