@@ -13,7 +13,6 @@
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
   - [7. Stub (dry) run](#7-stub-dry-run)
   - [8. Launch pipeline](#8-launch-pipeline)
-  - [9. Evaluate results](#9-evaluate-results)
   - [Advanced](#advanced)
 
 ## 1. Get pipeline
@@ -109,11 +108,8 @@ sample_01,/g/data/kr68/test_data/PGXXXX240090_minimal.fastq.gz,ont,/g/data/kr68/
 sample_01,/g/data/kr68/test_data/PGXXXX240091_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/
 sample_02,/g/data/kr68/test_data/PGXXXX240092_minimal.fastq,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/
 sample_03,/g/data/kr68/test_data/PGXXOX240065_minimal.bam,ont,NONE,/g/data/kr68/clair3_models/ont/
-sample_04,/g/data/kr68/test_data/m84088_240403_003920_s4.hifi_reads.bc2033_minimal.fastq.gz,pacbio,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/hifi_revio/
-sample_05,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
-sample_05,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
-sample_06,/g/data/kr68/test_data/m84088_240403_003920_s4.hifi_reads.bc2033_minimal.bam,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
-sample_06,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.bam,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
+sample_04,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
+sample_04,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
 ```
 
 Requirements:
@@ -127,7 +123,7 @@ Requirements:
 
 ## 4. Modify nextflow_pipeface.config
 
-Modify the NCI project on which to charge the analysis. Eg:
+Modify the NCI project to which to charge the analysis. Eg:
 
 ```txt
     project = 'kr68'
@@ -225,44 +221,6 @@ In the same directory, run the pipeline
 
 ```bash
 nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config -with-timeline -with-dag -with-report
-```
-
-## 9. Evaluate results
-
-For example, when the pipeline is configured to write outputs to the `results` directory
-
-```bash
-lk0657@gadi-login-07:pipeface-0.0.1:$ ls -lhv results/
-total 24K
-drwxr-sr-x 2 lk0657 kr68 4.0K May 16 09:06 sample_01
-drwxr-sr-x 2 lk0657 kr68 4.0K May 16 09:06 sample_02
-drwxr-sr-x 2 lk0657 kr68 4.0K May 16 09:06 sample_03
-drwxr-sr-x 2 lk0657 kr68 4.0K May 16 09:06 sample_04
-drwxr-sr-x 2 lk0657 kr68 4.0K May 16 09:06 sample_05
-drwxr-sr-x 2 lk0657 kr68 4.0K May 16 09:06 sample_06
-lk0657@gadi-login-07:pipeface-0.0.1:$ ls -lhv results/sample_06/
-total 195M
--rw-r--r-- 1 lk0657 kr68  547 May 16 09:04 sample_06.hg38.deepvariant.version.txt
--rw-r--r-- 1 lk0657 kr68   11 May 16 09:03 sample_06.hg38.minimap2.version.txt
--rw-r--r-- 1 lk0657 kr68 193M May 16 09:05 sample_06.hg38.minimap2.whatshap.sorted.haplotagged.bam
--rw-r--r-- 1 lk0657 kr68 1.5M May 16 09:05 sample_06.hg38.minimap2.whatshap.sorted.haplotagged.bam.bai
--rw-r--r-- 1 lk0657 kr68 208K May 16 09:05 sample_06.hg38.minimap2.whatshap.sorted.haplotagged.tsv
--rw-r--r-- 1 lk0657 kr68 450K May 16 09:06 sample_06.hg38.sniffles.sv.phased.snf
--rw-r--r-- 1 lk0657 kr68  25K May 16 09:06 sample_06.hg38.sniffles.sv.phased.vcf.gz
--rw-r--r-- 1 lk0657 kr68 5.7K May 16 09:06 sample_06.hg38.sniffles.sv.phased.vcf.gz.tbi
--rw-r--r-- 1 lk0657 kr68   25 May 16 09:06 sample_06.hg38.sniffles.version.txt
--rw-r--r-- 1 lk0657 kr68    4 May 16 09:05 sample_06.hg38.whatshap.version.txt
--rw-r--r-- 1 lk0657 kr68  76K May 16 09:04 sample_06.hg38.deepvariant.snp_indel.phased.g.vcf.gz
--rw-r--r-- 1 lk0657 kr68  13K May 16 09:04 sample_06.hg38.deepvariant.snp_indel.phased.g.vcf.gz.tbi
--rw-r--r-- 1 lk0657 kr68 6.8K May 16 09:04 sample_06.hg38.deepvariant.snp_indel.phased.vcf.gz
--rw-r--r-- 1 lk0657 kr68 1.3K May 16 09:04 sample_06.hg38.deepvariant.snp_indel.phased.vcf.gz.tbi
--rw-r--r-- 1 lk0657 kr68  618 May 16 09:00 sample_06.hg38.pipeface_settings.txt
--rw-r--r-- 1 lk0657 kr68 2.7K May 16 09:00 sample_06.m84088_240403_003920_s4.hifi_reads.bc2033_minimal.bam.header
--rw-r--r-- 1 lk0657 kr68 2.7K May 16 09:00 sample_06.m84088_240403_023825_s1.hifi_reads.bc2034_minimal.bam.header
-lk0657@gadi-login-07:pipeface-0.0.1:$ ls -lhv * | grep -E "timeline|dag|report"
--rw-r--r--  1 lk0657 kr68 6.8K May 16 09:06 dag-20240516-32375825.dot
--rw-r--r--  1 lk0657 kr68 3.0M May 16 09:06 report-20240516-32375825.html
--rw-r--r--  1 lk0657 kr68 269K May 16 09:06 timeline-20240516-32375825.html
 ```
 
 ## Advanced
