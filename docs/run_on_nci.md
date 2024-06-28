@@ -7,6 +7,8 @@
       - [hg38](#hg38)
       - [hs1](#hs1)
     - [Clair3 models](#clair3-models)
+      - [ONT](#ont)
+      - [Pacbio HiFi revio](#pacbio-hifi-revio)
   - [3. Modify input.csv](#3-modify-inputcsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
@@ -86,16 +88,32 @@ samtools faidx hs1.fa
 
 ### Clair3 models
 
+#### ONT
+
+Clone the Rerio github repository
+
+```bash
+git clone https://github.com/nanoporetech/rerio
+```
+
 Get a copy of the clair3 models
 
 ```bash
-wget http://www.bio8.cs.hku.hk/clair3/clair3_models/clair3_models.tar.gz
+python3 rerio/download_model.py --clair3
+```
+
+#### Pacbio HiFi revio
+
+Get a copy of the clair3 models
+
+```bash
+wget http://www.bio8.cs.hku.hk/clair3/clair3_models/hifi_revio.tar.gz
 ```
 
 Untar
 
 ```bash
-tar -xvf clair3_models.tar.gz
+tar -xvf hifi_revio.tar.gz
 ```
 
 ## 3. Modify input.csv
