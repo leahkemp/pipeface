@@ -45,7 +45,7 @@ process scrape_settings {
 
 process publish_settings {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$filename" }
 
     input:
         tuple val(sample_id), path(pipeface_settings)
@@ -58,6 +58,20 @@ process publish_settings {
 
     script:
         """
+        OUT_PATH="$outdir/$sample_id/$outdir2"
+        # if a pipeface_settings.txt file exists ...
+        if [ -f \${OUT_PATH}/pipeface_settings.txt ]; then
+            # ... add +1 to the suffix of each file that has a suffix
+            for FILE in `ls -1vr \${OUT_PATH}/pipeface_settings.*.txt`; do
+                # find the current suffix number by stripping the filepath and returning the only the number
+                SUFFIX=\$(echo \${FILE} | sed 's/.*pipeface_settings//g' | tr -cd '[:digit:]')
+                NEW_SUFFIX=\$((\${SUFFIX} + 1 ))
+                # update suffix
+                mv \${FILE} \${OUT_PATH}/pipeface_settings.\${NEW_SUFFIX}.txt
+            done
+            # ... and start suffix for pipeface_settings.txt
+            mv \${OUT_PATH}/pipeface_settings.txt \${OUT_PATH}/pipeface_settings.1.txt
+        fi
         echo "Publishing files"
         """
 

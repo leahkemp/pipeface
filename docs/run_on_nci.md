@@ -213,10 +213,10 @@ Specify the SV caller to use (either 'sniffles' or 'cutesv'). Eg:
     "sv_caller": "cutesv",
 ```
 
-Specify the directory in which to write the pipeline outputs. Eg:
+Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
-    "outdir": "./results"
+    "outdir": "/g/data/ox63/results"
 ```
 
 ## 6. Get pipeline dependencies
