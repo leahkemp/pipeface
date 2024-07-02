@@ -808,31 +808,31 @@ workflow {
     outdir2 = "$params.outdir2"
 
     // check user provided inputs
-    if( !in_data ) {
+    if ( !in_data ) {
         exit 1, "Error: No in data csv file specified. Either include in parameter file or pass to --in_data on the command line."
     }
-    if( !ref ) {
+    if ( !ref ) {
         exit 1, "Error: No reference genome provided. Either include in parameter file or pass to --ref on the command line."
     }
-    if( !ref_index ) {
+    if ( !ref_index ) {
         exit 1, "Error: No reference genome index provided. Either include in parameter file or pass to --ref_index on the command line."
     }
-    if( !tandem_repeat ) {
+    if ( !tandem_repeat ) {
         exit 1, "Error: No tandem repeat bed file provided. Either include in parameter file or pass to --tandem_repeat on the command line. Set to 'NONE' if you do not wish to use a tandem repeat bed file."
     }
-    if( !snp_indel_caller ) {
+    if ( !snp_indel_caller ) {
         exit 1, "Error: No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
     }
-    if( snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
+    if ( snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
-    if( !sv_caller ) {
+    if ( !sv_caller ) {
         exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be either 'sniffles' or 'cutesv'."
     }
-    if( sv_caller != 'sniffles' && sv_caller != 'cutesv' ) {
+    if ( sv_caller != 'sniffles' && sv_caller != 'cutesv' ) {
         exit 1, "Error: SV calling software should be either 'sniffles' or 'cutesv', '${sv_caller}' selected."
     }
-    if( !outdir ) {
+    if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
     if ( !file(in_data).exists() ) {
