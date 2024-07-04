@@ -104,7 +104,7 @@ end
 - [minimap2](https://github.com/lh3/minimap2)
 - [Clair3](https://github.com/HKU-BAL/Clair3) OR [deepvariant](https://github.com/google/deepvariant)
 - [whatshap](https://github.com/whatshap/whatshap)
-- [sniffles](https://github.com/fritzsedlazeck/Sniffles) OR [cuteSV](https://github.com/tjiangHIT/cuteSV)
+- [sniffles](https://github.com/fritzsedlazeck/Sniffles) AND/OR [cuteSV](https://github.com/tjiangHIT/cuteSV)
 
 ## Main input files
 
