@@ -24,7 +24,7 @@ minimap2{{"minimap2"}}
 snp_indel_caller{{"clair3 OR deepvariant"}}
 whatshap_phase{{"whatshap phase"}}
 whatshap_haplotag{{"whatshap haplotag"}}
-sv_caller{{"sniffles OR cuteSV"}}
+sv_caller{{"sniffles AND/OR cuteSV"}}
 
 input_data-.->minimap2-.->snp_indel_caller-.->whatshap_phase-.->whatshap_haplotag-.->sv_caller
 minimap2-.->whatshap_haplotag
@@ -71,10 +71,10 @@ whatshap_haplotag_s2{{"whatshap haplotag"}}
 whatshap_haplotag_s3{{"whatshap haplotag"}}
 whatshap_haplotag_s4{{"whatshap haplotag"}}
 
-sv_caller_s1{{"sniffles OR cuteSV"}}
-sv_caller_s2{{"sniffles OR cuteSV"}}
-sv_caller_s3{{"sniffles OR cuteSV"}}
-sv_caller_s4{{"sniffles OR cuteSV"}}
+sv_caller_s1{{"sniffles AND/OR cuteSV"}}
+sv_caller_s2{{"sniffles AND/OR cuteSV"}}
+sv_caller_s3{{"sniffles AND/OR cuteSV"}}
+sv_caller_s4{{"sniffles AND/OR cuteSV"}}
 
 ont_data_f1-.->merge_m1-.->minimap2_s1-.->snp_indel_caller_s1-.->whatshap_phase_s1-.->whatshap_haplotag_s1-.->sv_caller_s1
 ont_data_f2-.->merge_m1
@@ -124,7 +124,7 @@ end
 - Aligned, sorted and haplotagged bam's
 - Clair3 *OR* deepvariant phased SNP/indel VCF file
 - Clair3 *OR* deepvariant SNP/indel gVCF file
-- Phased Sniffles *OR* un-phased cuteSV SV VCF file
+- Phased Sniffles *AND/OR* un-phased cuteSV SV VCF file
 
 ## Assumptions
 

@@ -21,6 +21,10 @@ process scrape_settings {
         tuple val(sample_id), path('pipeface_settings.txt')
 
     script:
+        // conditionally define reported SV caller
+        if( sv_caller == 'both' ) {
+            reported_sv_caller = 'cutesv,sniffles'
+        }
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
@@ -32,7 +36,7 @@ process scrape_settings {
         echo "Reference genome index: $ref_index" >> pipeface_settings.txt
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
-        echo "SV caller: $sv_caller" >> pipeface_settings.txt
+        echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
 
@@ -827,10 +831,10 @@ workflow {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
     if ( !sv_caller ) {
-        exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be either 'sniffles' or 'cutesv'."
+        exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
-    if ( sv_caller != 'sniffles' && sv_caller != 'cutesv' ) {
-        exit 1, "Error: SV calling software should be either 'sniffles' or 'cutesv', '${sv_caller}' selected."
+    if ( sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
+        exit 1, "Error: SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
     }
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -894,6 +898,12 @@ workflow {
         publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
     }
     else if ( sv_caller == 'cutesv' ) {
+        cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
+        publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+    }
+    else if ( sv_caller == 'both' ) {
+        sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
+        publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
         cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
     }

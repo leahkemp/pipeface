@@ -201,7 +201,7 @@ Specify the SNP/indel caller to use (either 'clair3' or 'deepvariant'). Eg:
     "snp_indel_caller": "deepvariant",
 ```
 
-Specify the SV caller to use (either 'sniffles' or 'cutesv'). Eg:
+Specify the SV caller to use (either 'sniffles', 'cutesv' or 'both'). Eg:
 
 ```json
     "sv_caller": "sniffles",
