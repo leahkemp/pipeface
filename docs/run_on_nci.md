@@ -213,6 +213,12 @@ Specify the SV caller to use (either 'sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "cutesv",
 ```
 
+*OR*
+
+```json
+    "sv_caller": "both",
+```
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
