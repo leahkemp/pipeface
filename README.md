@@ -122,7 +122,7 @@ end
 
 ## Main output files
 
-- Aligned, sorted and haplotagged bam's
+- Aligned, sorted and haplotagged bam
 - Clair3 or DeepVariant phased SNP/indel VCF file
 - Clair3 or DeepVariant SNP/indel gVCF file
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
