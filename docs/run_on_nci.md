@@ -249,7 +249,7 @@ nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config 
 
 ## Advanced
 
-The resources requested and the queue job's are submitted to may be modified by modifying `./config/nextflow_pipeface.config`.
+The resources requested and the queue each process is submitted to may be modified by modifying `./config/nextflow_pipeface.config`.
 
 Similarly, with some coding skills, the environmental modules used by each process in the pipeline may be modified. This means you're able to substitute in different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
