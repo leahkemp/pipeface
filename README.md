@@ -18,12 +18,12 @@ Nextflow pipeline to align, variant call (SNP's, indels's, SV's) and phase long 
 flowchart LR
 
 input_data("Input data: \n\n - ONT fastq.gz \n - ONT fastq \n - ONT uBAM \n - pacbio HiFi uBAM")
-merging{{"Processes: merge_runs \n\n Description: Merge runs (if needed) \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge or cat"}}
-alignment{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq (if needed) minimap2 and samtools sort"}}
-snp_indel_calling{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
-snp_indel_phasing{{"Processes: whatshap_phase_clair3 or whatshap_phase_dv \n\n Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
-haplotagging{{"Processes: whatshap_haplotag \n\n Description: Haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
-sv_calling{{"Processes: sniffles or cutesv \n\n Description: Structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+merging{{"Merge runs (if needed)"}}
+alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
+snp_indel_calling{{"SNP/indel variant calling"}}
+snp_indel_phasing{{"SNP/indel phasing"}}
+haplotagging{{"Haplotagging bams"}}
+sv_calling{{"Structural variant calling"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->haplotagging
