@@ -38,11 +38,10 @@ flowchart LR
 
 ont_data_f1("Input data: \n\n ONT fastq.gz \n\n (sample 1)")
 ont_data_f2("Input data: \n\n ONT fastq.gz \n\n (sample 1)")
-ont_data_f3("Input data: \n\n ONT fastq \n\n (sample 2)")
-ont_data_f4("Input data: \n\n ONT uBAM \n\n (sample 3)")
-
-pacbio_data_f5("Pacbio HiFi uBAM \n (sample 4)")
-pacbio_data_f6("Pacbio HiFi uBAM \n (sample 4)")
+pacbio_data_f3("Pacbio HiFi uBAM \n (sample 2)")
+pacbio_data_f4("Pacbio HiFi uBAM \n (sample 2)")
+ont_data_f5("Input data: \n\n ONT fastq \n\n (sample 3)")
+ont_data_f6("Input data: \n\n ONT uBAM \n\n (sample 4)")
 
 merging_m1{{"Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: cat"}}
 merging_m2{{"Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge"}}
@@ -74,11 +73,11 @@ sv_calling_s4{{"Description: Structural variant calling \n\n Main tools: Sniffle
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
-ont_data_f3-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
-ont_data_f4-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
+ont_data_f5-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
+ont_data_f6-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
 
-pacbio_data_f5-.->merging_m2-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
-pacbio_data_f6-.->merging_m2
+pacbio_data_f3-.->merging_m2-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+pacbio_data_f4-.->merging_m2
 
 alignment_s1-.->haplotagging_s1
 alignment_s2-.->haplotagging_s2
