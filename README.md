@@ -17,17 +17,18 @@ Nextflow pipeline to align, variant call (SNP's, indels's, SV's) and phase long 
 %%{init: {'theme':'dark'}}%%
 flowchart LR
 
-subgraph "Pipeface"
+subgraph "Pipeface - overview"
 
-input_data("ONT fastq.gz \n ONT fastq \n ONT uBAM \n pacbio HiFi uBAM")
-minimap2{{"minimap2"}}
-snp_indel_caller{{"clair3 OR deepvariant"}}
-whatshap_phase{{"whatshap phase"}}
-whatshap_haplotag{{"whatshap haplotag"}}
-sv_caller{{"sniffles AND/OR cuteSV"}}
+input_data("Input data: \n\n - ONT fastq.gz \n - ONT fastq \n - ONT uBAM \n - pacbio HiFi uBAM")
+merging{{"Processes: merge_runs \n\n Description: Merge runs (if needed) \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge or cat"}}
+alignment{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq (if needed) minimap2 and samtools sort"}}
+snp_indel_calling{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_phasing{{"Processes: whatshap_phase_clair3 or whatshap_phase_dv \n\n Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+haplotagging{{"Processes: whatshap_haplotag \n\n Description: Haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+sv_calling{{"Processes: sniffles or cutesv \n\n Description: Structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
 
-input_data-.->minimap2-.->snp_indel_caller-.->whatshap_phase-.->whatshap_haplotag-.->sv_caller
-minimap2-.->whatshap_haplotag
+input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+alignment-.->haplotagging
 
 end
 
@@ -39,55 +40,56 @@ end
 %%{init: {'theme':'dark'}}%%
 flowchart LR
 
-subgraph "Pipeface"
-ont_data_f1("ONT fastq.gz \n (sample 1)")
-ont_data_f2("ONT fastq.gz \n (sample 1)")
-ont_data_f3("ONT fastq \n (sample 2)")
-ont_data_f4("ONT uBAM \n (sample 3)")
+subgraph "Pipeface - detailed"
+
+ont_data_f1("Input data: \n\n ONT fastq.gz \n\n (sample 1)")
+ont_data_f2("Input data: \n\n ONT fastq.gz \n\n (sample 1)")
+ont_data_f3("Input data: \n\n ONT fastq \n\n (sample 2)")
+ont_data_f4("Input data: \n\n ONT uBAM \n\n (sample 3)")
 
 pacbio_data_f5("Pacbio HiFi uBAM \n (sample 4)")
 pacbio_data_f6("Pacbio HiFi uBAM \n (sample 4)")
 
-merge_m1{{"merge runs"}}
-merge_m2{{"merge runs"}}
+merging_m1{{"Processes: merge_runs \n\n Description: Merge runs (if needed) \n\n Main tools: Samtools or GNU coreutils \n\n Commands: cat"}}
+merging_m2{{"Processes: merge_runs \n\n Description: Merge runs (if needed) \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge"}}
 
-minimap2_s1{{"Minimap2"}}
-minimap2_s2{{"minimap2"}}
-minimap2_s3{{"minimap2 \n (bam to fastq on the fly)"}}
-minimap2_s4{{"minimap2 \n (bam to fastq on the fly)"}}
+alignment_s1{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
+alignment_s2{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
+alignment_s3{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s4{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 
-snp_indel_caller_s1{{"clair3 OR deepvariant"}}
-snp_indel_caller_s2{{"clair3 OR deepvariant"}}
-snp_indel_caller_s3{{"clair3 OR deepvariant"}}
-snp_indel_caller_s4{{"clair3 OR deepvariant"}}
+snp_indel_calling_s1{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s2{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s3{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s4{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
 
-whatshap_phase_s1{{"whatshap phase"}}
-whatshap_phase_s2{{"whatshap phase"}}
-whatshap_phase_s3{{"whatshap phase"}}
-whatshap_phase_s4{{"whatshap phase"}}
+snp_indel_phasing_s1{{"Processes: whatshap_phase_clair3 or whatshap_phase_dv \n\n Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s2{{"Processes: whatshap_phase_clair3 or whatshap_phase_dv \n\n Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s3{{"Processes: whatshap_phase_clair3 or whatshap_phase_dv \n\n Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s4{{"Processes: whatshap_phase_clair3 or whatshap_phase_dv \n\n Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
 
-whatshap_haplotag_s1{{"whatshap haplotag"}}
-whatshap_haplotag_s2{{"whatshap haplotag"}}
-whatshap_haplotag_s3{{"whatshap haplotag"}}
-whatshap_haplotag_s4{{"whatshap haplotag"}}
+haplotagging_s1{{"Processes: whatshap_haplotag \n\n Description: Haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s2{{"Processes: whatshap_haplotag \n\n Description: Haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s3{{"Processes: whatshap_haplotag \n\n Description: Haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s4{{"Processes: whatshap_haplotag \n\n Description: Haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
 
-sv_caller_s1{{"sniffles AND/OR cuteSV"}}
-sv_caller_s2{{"sniffles AND/OR cuteSV"}}
-sv_caller_s3{{"sniffles AND/OR cuteSV"}}
-sv_caller_s4{{"sniffles AND/OR cuteSV"}}
+sv_calling_s1{{"Processes: sniffles or cutesv \n\n Description: Structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s2{{"Processes: sniffles or cutesv \n\n Description: Structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s3{{"Processes: sniffles or cutesv \n\n Description: Structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s4{{"Processes: sniffles or cutesv \n\n Description: Structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
 
-ont_data_f1-.->merge_m1-.->minimap2_s1-.->snp_indel_caller_s1-.->whatshap_phase_s1-.->whatshap_haplotag_s1-.->sv_caller_s1
-ont_data_f2-.->merge_m1
-ont_data_f3-.->minimap2_s2-.->snp_indel_caller_s2-.->whatshap_phase_s2-.->whatshap_haplotag_s2-.->sv_caller_s2
-ont_data_f4-.->minimap2_s3-.->snp_indel_caller_s3-.->whatshap_phase_s3-.->whatshap_haplotag_s3-.->sv_caller_s3
+ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
+ont_data_f2-.->merging_m1
+ont_data_f3-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
+ont_data_f4-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
 
-pacbio_data_f5-.->merge_m2-.->minimap2_s4-.->snp_indel_caller_s4-.->whatshap_phase_s4-.->whatshap_haplotag_s4-.->sv_caller_s4
-pacbio_data_f6-.->merge_m2
+pacbio_data_f5-.->merging_m2-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+pacbio_data_f6-.->merging_m2
 
-minimap2_s1-.->whatshap_haplotag_s1
-minimap2_s2-.->whatshap_haplotag_s2
-minimap2_s3-.->whatshap_haplotag_s3
-minimap2_s4-.->whatshap_haplotag_s4
+alignment_s1-.->haplotagging_s1
+alignment_s2-.->haplotagging_s2
+alignment_s3-.->haplotagging_s3
+alignment_s4-.->haplotagging_s4
 
 end
 
