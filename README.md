@@ -44,13 +44,13 @@ ont_data_f4("Input data: \n\n ONT uBAM \n\n (sample 3)")
 pacbio_data_f5("Pacbio HiFi uBAM \n (sample 4)")
 pacbio_data_f6("Pacbio HiFi uBAM \n (sample 4)")
 
-merging_m1{{"Processes: merge_runs \n\n Description: Merge runs (if needed) \n\n Main tools: Samtools or GNU coreutils \n\n Commands: cat"}}
-merging_m2{{"Processes: merge_runs \n\n Description: Merge runs (if needed) \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge"}}
+merging_m1{{"Processes: merge_runs \n\n Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: cat"}}
+merging_m2{{"Processes: merge_runs \n\n Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge"}}
 
-alignment_s1{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
-alignment_s2{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
-alignment_s3{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
-alignment_s4{{"Processes: minimap2 \n\n Description: bam to fastq conversion (if needed), alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s1{{"Processes: minimap2 \n\n Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
+alignment_s2{{"Processes: minimap2 \n\n Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
+alignment_s3{{"Processes: minimap2 \n\n Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s4{{"Processes: minimap2 \n\n Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 
 snp_indel_calling_s1{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
 snp_indel_calling_s2{{"Processes: clair3 or deepvariant \n\n Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
