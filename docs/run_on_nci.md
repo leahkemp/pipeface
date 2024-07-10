@@ -26,7 +26,7 @@ cd pipeface
 
 ## 2. Get pipeline inputs
 
-*Please keep in mind that, while hs1 is new, smancy and exciting, hg38 is still the latest GRCh assembly and is better annotated by most projects*
+*Please keep in mind that, while hs1 is new, smancy and exciting, hg38 is still the latest GRCh assembly and is better annotated by most projects.*
 
 ### Reference genome
 
@@ -118,7 +118,7 @@ tar -xvf hifi_revio.tar.gz
 
 ## 3. Modify input.csv
 
-Specify the sample ID, data file path, data type, file path to regions of interest bed file (optional) and file path to clair3 model (optional) for each data to be analysed. Eg:
+Specify the sample ID, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (optional) for each data to be analysed. Eg:
 
 ```csv
 sample_id,file,data_type,regions_of_interest,clair3_model
@@ -251,7 +251,7 @@ nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config 
 
 The resources requested and the queue job's are submitted to may be modified by modifying `./config/nextflow_pipeface.config`.
 
-Similarly, with some coding skills, the environmental modules used by each job in the pipeline may be modified. This means you're able to sub in different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
+Similarly, with some coding skills, the environmental modules used by each process in the pipeline may be modified. This means you're able to substitute in different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
-This also means this pipeline is adaptable to other HPC's if appropriate environmental modules are included in `./config/nextflow_pipeface.config` (or if you get around to creating a nextflow configuration file pointing to containers for appropriate software before I do) and modify the SGE job scheduler specific configuration if needed.
+This also means this pipeline is adaptable to other HPC's if appropriate environmental modules are included in `./config/nextflow_pipeface.config` (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed.
 
