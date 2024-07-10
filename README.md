@@ -51,7 +51,7 @@ pacbio_data_f6("Pacbio HiFi uBAM \n (sample 4)")
 merge_m1{{"merge runs"}}
 merge_m2{{"merge runs"}}
 
-minimap2_s1{{"minimap2"}}
+minimap2_s1{{"Minimap2"}}
 minimap2_s2{{"minimap2"}}
 minimap2_s3{{"minimap2 \n (bam to fastq on the fly)"}}
 minimap2_s4{{"minimap2 \n (bam to fastq on the fly)"}}
@@ -101,10 +101,10 @@ end
 
 ## Main tools
 
-- [minimap2](https://github.com/lh3/minimap2)
-- [Clair3](https://github.com/HKU-BAL/Clair3) OR [deepvariant](https://github.com/google/deepvariant)
-- [whatshap](https://github.com/whatshap/whatshap)
-- [sniffles](https://github.com/fritzsedlazeck/Sniffles) AND/OR [cuteSV](https://github.com/tjiangHIT/cuteSV)
+- [Minimap2](https://github.com/lh3/minimap2)
+- [Clair3](https://github.com/HKU-BAL/Clair3) OR [DeepVariant](https://github.com/google/deepvariant) (wrapped in [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/))
+- [WhatsHap](https://github.com/whatshap/whatshap)
+- [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) AND/OR [cuteSV](https://github.com/tjiangHIT/cuteSV)
 
 ## Main input files
 
@@ -122,9 +122,9 @@ end
 ## Main output files
 
 - Aligned, sorted and haplotagged bam's
-- Clair3 *OR* deepvariant phased SNP/indel VCF file
-- Clair3 *OR* deepvariant SNP/indel gVCF file
-- Phased Sniffles *AND/OR* un-phased cuteSV SV VCF file
+- Clair3 *OR* DeepVariant phased SNP/indel VCF file
+- Clair3 *OR* DeepVariant SNP/indel gVCF file
+- Phased Sniffles2 *AND/OR* un-phased cuteSV SV VCF file
 
 ## Assumptions
 
