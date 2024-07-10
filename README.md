@@ -47,8 +47,8 @@ pacbio_data_f6("Pacbio HiFi uBAM \n (sample 4)")
 merging_m1{{"Processes: merge_runs \n\n Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: cat"}}
 merging_m2{{"Processes: merge_runs \n\n Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge"}}
 
-alignment_s1{{"Processes: minimap2 \n\n Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
-alignment_s2{{"Processes: minimap2 \n\n Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: samtools fastq, minimap2 and samtools sort"}}
+alignment_s1{{"Processes: minimap2 \n\n Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s2{{"Processes: minimap2 \n\n Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 alignment_s3{{"Processes: minimap2 \n\n Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 alignment_s4{{"Processes: minimap2 \n\n Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 
