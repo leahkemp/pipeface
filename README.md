@@ -40,8 +40,8 @@ flowchart LR
 
 ont_data_f1("Input data: ONT fastq.gz \n\n (sample 1)")
 ont_data_f2("Input data: ONT fastq.gz \n\n (sample 1)")
-pacbio_data_f3("Input data: Pacbio HiFi uBAM \n (sample 2)")
-pacbio_data_f4("Input data: Pacbio HiFi uBAM \n (sample 2)")
+pacbio_data_f3("Input data: Pacbio HiFi uBAM \n\n (sample 2)")
+pacbio_data_f4("Input data: Pacbio HiFi uBAM \n\n (sample 2)")
 ont_data_f5("Input data: ONT fastq \n\n (sample 3)")
 ont_data_f6("Input data: ONT uBAM \n\n (sample 4)")
 
