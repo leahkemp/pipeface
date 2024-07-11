@@ -118,7 +118,7 @@ tar -xvf hifi_revio.tar.gz
 
 ## 3. Modify input.csv
 
-Specify the sample ID, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (optional) for each data to be analysed. Eg:
+Specify the sample ID, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
 
 ```csv
 sample_id,file,data_type,regions_of_interest,clair3_model
