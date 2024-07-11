@@ -325,6 +325,7 @@ process clair3 {
         --model_path=$clair3_model \
         --sample_name=$sample_id \
         --gvcf \
+        --include_all_ctgs \
         $regions_of_interest_optional
         # rename files
         ln -s merge_output.vcf.gz clair3.snp_indel.vcf.gz
