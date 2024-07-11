@@ -17,7 +17,7 @@ Nextflow pipeline to align, variant call (SNP's, indels's, SV's) and phase long 
 %%{init: {'theme':'dark'}}%%
 flowchart LR
 
-input_data("Input data: ONT fastq.gz and/or ONT fastq and/or ONT uBAM and/or pacbio HiFi uBAM")
+input_data("Input data: \n\n ONT fastq.gz \n and/or \n ONT fastq \n and/or \n ONT uBAM \n and/or \n pacbio HiFi uBAM")
 merging{{"Merge runs (if needed)"}}
 alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
@@ -38,12 +38,12 @@ alignment-.->haplotagging
 %%{init: {'theme':'dark'}}%%
 flowchart LR
 
-ont_data_f1("Input data: ONT fastq.gz \n\n (sample 1)")
-ont_data_f2("Input data: ONT fastq.gz \n\n (sample 1)")
-pacbio_data_f3("Input data: Pacbio HiFi uBAM \n\n (sample 2)")
-pacbio_data_f4("Input data: Pacbio HiFi uBAM \n\n (sample 2)")
-ont_data_f5("Input data: ONT fastq \n\n (sample 3)")
-ont_data_f6("Input data: ONT uBAM \n\n (sample 4)")
+ont_data_f1("Sample 1 \n\n Input data: \n\n ONT fastq.gz")
+ont_data_f2("Sample 1 \n\n Input data: \n\n ONT fastq.gz")
+pacbio_data_f3("Sample 1 \n\n Input data: \n\n Pacbio HiFi uBAM")
+pacbio_data_f4("Sample 1 \n\n Input data: \n\n Pacbio HiFi uBAM")
+ont_data_f5("Sample 1 \n\n Input data: \n\n ONT fastq")
+ont_data_f6("Sample 1 \n\n Input data: \n\n ONT uBAM")
 
 merging_m1{{"Description: Merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat"}}
 merging_m2{{"Description: Merge runs \n\n Main tools: Samtools \n\n Commands: samtools merge"}}
