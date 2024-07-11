@@ -40,10 +40,10 @@ flowchart LR
 
 ont_data_f1("Sample 1 \n\n Input data: \n\n ONT fastq.gz")
 ont_data_f2("Sample 1 \n\n Input data: \n\n ONT fastq.gz")
-pacbio_data_f3("Sample 1 \n\n Input data: \n\n Pacbio HiFi uBAM")
-pacbio_data_f4("Sample 1 \n\n Input data: \n\n Pacbio HiFi uBAM")
-ont_data_f5("Sample 1 \n\n Input data: \n\n ONT fastq")
-ont_data_f6("Sample 1 \n\n Input data: \n\n ONT uBAM")
+pacbio_data_f3("Sample 2 \n\n Input data: \n\n Pacbio HiFi uBAM")
+pacbio_data_f4("Sample 2 \n\n Input data: \n\n Pacbio HiFi uBAM")
+ont_data_f5("Sample 3 \n\n Input data: \n\n ONT fastq")
+ont_data_f6("Sample 4 \n\n Input data: \n\n ONT uBAM")
 
 merging_m1{{"Description: merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat"}}
 merging_m2{{"Description: merge runs \n\n Main tools: Samtools \n\n Commands: samtools merge"}}
