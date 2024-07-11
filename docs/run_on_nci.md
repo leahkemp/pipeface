@@ -189,7 +189,7 @@ Optionally specify the path to the tandem repeat bed file. Eg:
     "tandem_repeat": "NONE"
 ```
 
-Specify the SNP/indel caller to use (either 'clair3' or 'deepvariant'). Eg:
+Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 
 ```json
     "snp_indel_caller": "clair3",
@@ -201,7 +201,7 @@ Specify the SNP/indel caller to use (either 'clair3' or 'deepvariant'). Eg:
     "snp_indel_caller": "deepvariant",
 ```
 
-Specify the SV caller to use (either 'sniffles', 'cutesv' or 'both'). Eg:
+Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
 ```json
     "sv_caller": "sniffles",
