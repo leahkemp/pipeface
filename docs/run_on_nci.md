@@ -14,7 +14,7 @@
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
   - [7. Stub (dry) run](#7-stub-dry-run)
-  - [8. Launch pipeline](#8-launch-pipeline)
+  - [8. Full run](#8-full-run)
   - [Advanced](#advanced)
 
 ## 1. Get pipeline
@@ -239,9 +239,7 @@ module load nextflow/24.04.1
 nextflow run pipeface.nf -stub -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
 ```
 
-## 8. Launch pipeline
-
-In the same directory, run the pipeline
+## 8. Full run
 
 ```bash
 nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config -with-timeline -with-dag -with-report
