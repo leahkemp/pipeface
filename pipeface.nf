@@ -462,7 +462,6 @@ process deepvariant {
         --in-bam $bam \
         --gvcf \
         --out-variants deepvariant.snp_indel.g.vcf.gz \
-        --phase-reads \
         --num-gpus ${task.gpus} \
         --num-cpu-threads-per-stream ${task.cpus} \
         --num-streams-per-gpu 1 \
