@@ -195,7 +195,7 @@ process minimap2 {
 
     output:
         tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('minimap2.sorted.bam'), path('minimap2.sorted.bam.bai')
-        tuple val(sample_id), path('minimap2.version.txt')
+        tuple val(sample_id), path('minimap2.sorted.bam'), path('minimap2.version.txt')
 
     script:
     // conditionally define preset
@@ -268,18 +268,49 @@ process minimap2 {
 
 }
 
+process depth {
+
+    input:
+        tuple val(sample_id), path(bam), path(minimap2_version)
+
+    output:
+        tuple val(sample_id), path('minimap2.version.txt'), path('depth.tsv')
+
+    script:
+        """
+        # calculate average depth per chromosome
+        samtools depth \
+        -@ ${task.cpus} \
+        -a \
+        $bam | awk '{cov[\$1]+=\$3; len[\$1]++} END {for (chr in cov) print chr, "	"cov[chr]/len[chr]}' >> tmp.tsv
+        # write tsv header
+        echo "chromosome\taverage_depth" > depth.tsv
+        # sort file
+        cat tmp.tsv | sort -V >> depth.tsv
+        # cleanup
+        rm tmp.tsv
+        """
+
+    stub:
+        """
+        touch depth.tsv
+        """
+
+}
+
 process publish_minimap2 {
 
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(minimap_version)
+        tuple val(sample_id), path(minimap_version), path(depth)
         val outdir
         val outdir2
         val ref_name
 
     output:
         path 'minimap2.version.txt'
+        path 'depth.tsv'
 
     script:
         """
@@ -289,6 +320,7 @@ process publish_minimap2 {
     stub:
         """
         touch minimap2.version.txt
+        touch depth.tsv
         """
 
 }
@@ -877,8 +909,9 @@ workflow {
     bam_header = scrape_bam_header(in_data_list)
     publish_bam_header(bam_header, outdir, outdir2)
     merged = merge_runs(in_data_tuple)
-    (bam, minimap_to_publish) = minimap2(merged, ref, ref_index)
-    publish_minimap2(minimap_to_publish, outdir, outdir2, ref_name)
+    (bam, minimap_to_publish1) = minimap2(merged, ref, ref_index)
+    minimap_to_publish2 = depth(minimap_to_publish1)
+    publish_minimap2(minimap_to_publish2, outdir, outdir2, ref_name)
     if ( snp_indel_caller == 'clair3' ) {
         (snp_indel_vcf, clair3_to_publish) = clair3(bam, ref, ref_index)
         publish_clair3(clair3_to_publish, outdir, outdir2, ref_name)

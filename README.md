@@ -20,12 +20,14 @@ flowchart LR
 input_data("Input data: \n\n - ONT fastq.gz \n - ONT fastq \n - ONT uBAM \n - pacbio HiFi uBAM")
 merging{{"Merge runs (if needed)"}}
 alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
+depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 haplotagging{{"Haplotagging bams"}}
 sv_calling{{"Structural variant calling"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+alignment-.->depth
 alignment-.->haplotagging
 
 ```
@@ -50,6 +52,11 @@ alignment_s1{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Sam
 alignment_s2{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 alignment_s3{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 alignment_s4{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+
+depth_s1{{"Description: Calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s2{{"Description: Calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s3{{"Description: Calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s4{{"Description: Calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
 
 snp_indel_calling_s1{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
 snp_indel_calling_s2{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
@@ -78,6 +85,11 @@ ont_data_f6-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->h
 
 pacbio_data_f3-.->merging_m2-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
 pacbio_data_f4-.->merging_m2
+
+alignment_s1-.->depth_s1
+alignment_s2-.->depth_s2
+alignment_s3-.->depth_s3
+alignment_s4-.->depth_s4
 
 alignment_s1-.->haplotagging_s1
 alignment_s2-.->haplotagging_s2
@@ -132,5 +144,3 @@ alignment_s4-.->haplotagging_s4
 ## Run it!
 
 See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
-
-
