@@ -45,8 +45,8 @@ pacbio_data_f4("Pacbio HiFi uBAM \n (sample 2)")
 ont_data_f5("Input data: \n\n ONT fastq \n\n (sample 3)")
 ont_data_f6("Input data: \n\n ONT uBAM \n\n (sample 4)")
 
-merging_m1{{"Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: cat"}}
-merging_m2{{"Description: Merge runs \n\n Main tools: Samtools or GNU coreutils \n\n Commands: samtools merge"}}
+merging_m1{{"Description: Merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat"}}
+merging_m2{{"Description: Merge runs \n\n Main tools: Samtools \n\n Commands: samtools merge"}}
 
 alignment_s1{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 alignment_s2{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
