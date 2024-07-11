@@ -17,7 +17,7 @@ Nextflow pipeline to align, variant call (SNP's, indels's, SV's) and phase long 
 %%{init: {'theme':'dark'}}%%
 flowchart LR
 
-input_data("Input data: \n\n - ONT fastq.gz \n - ONT fastq \n - ONT uBAM \n - pacbio HiFi uBAM")
+input_data("Input data: \n\n ONT fastq.gz \n ONT fastq \n ONT uBAM \n pacbio HiFi uBAM")
 merging{{"Merge runs (if needed)"}}
 alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
