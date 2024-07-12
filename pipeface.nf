@@ -162,7 +162,7 @@ process merge_runs {
         """
         ${
             if (files instanceof List && files.size() > 1) {
-                "cat ${files} | bgzip > merged"
+                "cat ${files} | bgzip -@ ${task.cpus} > merged"
             } else {
                 "ln -s ${files} merged"
             }
@@ -172,7 +172,7 @@ process merge_runs {
         """
         ${
             if (files instanceof List && files.size() > 1) { 
-                "samtools merge ${files} -o merged"
+                "samtools merge -@ ${task.cpus} ${files} -o merged"
             } else {
                 "ln -s ${files} merged"
             }
