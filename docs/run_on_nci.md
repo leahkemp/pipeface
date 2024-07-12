@@ -9,7 +9,7 @@
     - [Clair3 models](#clair3-models)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-  - [3. Modify input.csv](#3-modify-inputcsv)
+  - [3. Modify in_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
@@ -116,7 +116,7 @@ Untar
 tar -xvf hifi_revio.tar.gz
 ```
 
-## 3. Modify input.csv
+## 3. Modify in_data.csv
 
 Specify the sample ID, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
 
