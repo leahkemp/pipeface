@@ -25,6 +25,12 @@ process scrape_settings {
         if( sv_caller == 'both' ) {
             reported_sv_caller = 'cutesv,sniffles'
         }
+        else if ( sv_caller == 'sniffles' ) {
+            reported_sv_caller = 'sniffles'
+        }
+        else if ( sv_caller == 'cutesv' ) {
+            reported_sv_caller = 'cutesv'
+        }
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
