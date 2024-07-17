@@ -224,18 +224,12 @@ process minimap2 {
         -a \
         -x $preset \
         -t ${task.cpus} \
-        $ref - | samtools sort -@ ${task.cpus} -o minimap2.tmp.bam -
-        # add sample id to bam header for downstream deepvariant
-        samtools addreplacerg \
-        -r ID:S1 \
-        -r SM:$sample_id \
-        -o minimap2.sorted.bam minimap2.tmp.bam
+        -R '@RG\\t$sample_id:S1\\tSM:$sample_id' \
+        $ref - | samtools sort -@ ${task.cpus} -o minimap2.sorted.bam -
         # index bam
         samtools index \
         -@ ${task.cpus} \
         minimap2.sorted.bam
-        # cleanup
-        rm minimap2.tmp.bam
         # grab version
         minimap2 --version > minimap2.version.txt
         """
@@ -249,18 +243,12 @@ process minimap2 {
         -x $preset \
         -t ${task.cpus} \
         $ref \
-        $merged | samtools sort -@ ${task.cpus} -o minimap2.tmp.bam -
-        # add sample id to bam header for downstream deepvariant
-        samtools addreplacerg \
-        -r ID:S1 \
-        -r SM:$sample_id \
-        -o minimap2.sorted.bam minimap2.tmp.bam
+        -R '@RG\\tID:$sample_id\\tSM:$sample_id' \
+        $merged | samtools sort -@ ${task.cpus} -o minimap2.sorted.bam -
         # index bam
         samtools index \
         -@ ${task.cpus} \
         minimap2.sorted.bam
-        # cleanup
-        rm minimap2.tmp.bam
         # grab version
         minimap2 --version > minimap2.version.txt
         """
