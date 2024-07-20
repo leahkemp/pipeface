@@ -827,7 +827,7 @@ process publish_cutesv {
 
 workflow {
 
-    // grab metrics from parameter file
+    // grab parameters
     in_data = "$params.in_data"
     ref = "$params.ref"
     ref_index = "$params.ref_index"
@@ -837,7 +837,7 @@ workflow {
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
 
-    // check user provided inputs
+    // check user provided parameters
     if ( !in_data ) {
         exit 1, "Error: No in data csv file specified. Either include in parameter file or pass to --in_data on the command line."
     }
@@ -881,8 +881,15 @@ workflow {
     // build variable
     ref_name = file(ref).getSimpleName()
 
-    // build channel from input csv file
-    // groupTuple will collapse by sample_id (as defined by the input csv file), creating a list of files per sample_id
+    // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
+    Channel
+	.fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file ) }
+        .set { in_data_list }
+
+    // build channel from in_data.csv file for analysis
+    // groupTuple will collapse by sample_id (as defined in the in_data.csv file), creating a list of files per sample_id
     Channel
         .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
@@ -890,12 +897,55 @@ workflow {
         .groupTuple(by: [0,1,3,4,5] )
         .set { in_data_tuple }
 
-    // also build a list of files NOT collaped by sample_id (as defined by the input csv file)
+    // build channel from in_data.csv file for user input checks
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file ) }
-        .set { in_data_list }
+        .map { row ->
+            def sample_id = row.sample_id
+            def in_file = row.file
+            def data_type = row.data_type
+            def regions_of_interest = row.regions_of_interest
+            def clair3_model = row.clair3_model
+
+    // check user provided parameters in in_data.csv file
+    if ( sample_id.isEmpty() ) {
+       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'sample_id' column"
+    }
+    if ( in_file.isEmpty() ) {
+       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'file' column."
+    }
+    if ( data_type.isEmpty() ) {
+       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'data_type' column."
+    }
+    if ( regions_of_interest.isEmpty() ) {
+       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'regions_of_interest' column."
+    }
+    if ( clair3_model.isEmpty() ) {
+       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'clair3_model' column."
+    }
+    if ( data_type != 'ont' && data_type != 'pacbio' ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'data_type' column that is not 'ont' or 'pacbio', '$data_type' provided."
+    }
+    if ( !file(in_file).exists() ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't exist. Check file '$in_file'."
+    }
+    if ( !file(regions_of_interest).exists() ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'regions_of_interest' column which doesn't exist. Check file '$regions_of_interest'."
+    }
+    if ( !file(clair3_model).exists() ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'clair3_model' column which doesn't exist. Check path '$clair3_model'."
+    }
+    if ( file(in_file).getExtension() != "bam" && file(in_file).getExtension() != "gz" && file(in_file).getExtension() != "fastq" ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
+    }
+    if ( snp_indel_caller != "clair3" && clair3_model != "NONE" ) {
+       exit 1, "Error processing '$in_data' file. Pass 'NONE' in the 'clair3_model' column when clair3 is NOT selected as the SNP/indel calling software, '$clair3_model' provided'."
+    }
+    if ( snp_indel_caller == "clair3" && clair3_model == "NONE" ) {
+       exit 1, "Error processing '$in_data' file. When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column rather than setting it to 'NONE'."
+    }
+    }
 
     // workflow
     scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, outdir)
