@@ -139,7 +139,7 @@ alignment_s4-.->haplotagging_s4
 - Access to pipeline dependencies:
     - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
         - Nextflow 24.04.1
-        - Java version 17.0.2
+        - Java 17.0.2
 
 ## Run it!
 
