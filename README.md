@@ -156,6 +156,8 @@ alignment_s5-.->haplotagging_s5
         - Nextflow 24.04.1
         - Java version 17.0.2
 
+*[See the list of software versions used by this version of pipeface](./docs/main_software_versions.txt)*
+
 ## Run it!
 
 See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
