@@ -11,8 +11,6 @@ Nextflow pipeline to align, variant call (SNP's, indels's, SV's) and phase long 
 
 ## Workflow
 
-### Overview
-
 ```mermaid
 %%{init: {'theme':'dark'}}%%
 flowchart LR
@@ -44,55 +42,44 @@ pacbio_data_f3("Sample 2 \n\n Input data: \n\n Pacbio HiFi uBAM")
 pacbio_data_f4("Sample 2 \n\n Input data: \n\n Pacbio HiFi uBAM")
 ont_data_f5("Sample 3 \n\n Input data: \n\n ONT fastq")
 ont_data_f6("Sample 4 \n\n Input data: \n\n ONT uBAM")
-ont_data_f7("Sample 5 \n\n Input data: \n\n ONT fastq")
-ont_data_f8("Sample 5 \n\n Input data: \n\n ONT fastq")
 
-merging_m1{{"Description: merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat \n\n Software versions: GNU coreutils 8.30"}}
-merging_m2{{"Description: merge runs \n\n Main tools: Samtools \n\n Commands: samtools merge \n\n Software versions: Samtools 1.19"}}
-merging_m3{{"Description: merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat \n\n Software versions: GNU coreutils 8.30, HTSlib 1.16"}}
+merging_m1{{"Description: merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat"}}
+merging_m2{{"Description: merge runs \n\n Main tools: Samtools \n\n Commands: samtools merge"}}
 
-alignment_s1{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort \n\n Software verions: Samtools 1.19, Minimap2 2.28-r1209"}}
-alignment_s2{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort \n\n Software verions: Samtools 1.19, Minimap2 2.28-r1209"}}
-alignment_s3{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort \n\n Software verions: Samtools 1.19, Minimap2 2.28-r1209"}}
-alignment_s4{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort \n\n Software verions: Samtools 1.19, Minimap2 2.28-r1209"}}
-alignment_s5{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort \n\n Software verions: Samtools 1.19, Minimap2 2.28-r1209"}}
+alignment_s1{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s2{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s3{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s4{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 
-depth_s1{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth \n\n Software versions: Samtools 1.19, GNU Coreutils 8.30, GNU Awk 4.2.1"}}
-depth_s2{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth \n\n Software versions: Samtools 1.19, GNU Coreutils 8.30, GNU Awk 4.2.1"}}
-depth_s3{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth \n\n Software versions: Samtools 1.19, GNU Coreutils 8.30, GNU Awk 4.2.1"}}
-depth_s4{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth \n\n Software versions: Samtools 1.19, GNU Coreutils 8.30, GNU Awk 4.2.1"}}
-depth_s5{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth \n\n Software versions: Samtools 1.19, GNU Coreutils 8.30, GNU Awk 4.2.1"}}
+depth_s1{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s2{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s3{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s4{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
 
-snp_indel_calling_s1{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant \n\n Software versions: Clair3 v1.0.9, GNU Coreutils 8.30 or Clara Parabricks 4.2.1-1.beta4 (equivilant to deepvariant 1.5.0), HTSlib 1.16"}}
-snp_indel_calling_s2{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant \n\n Software versions: Clair3 v1.0.9, GNU Coreutils 8.30 or Clara Parabricks 4.2.1-1.beta4 (equivilant to deepvariant 1.5.0), HTSlib 1.16"}}
-snp_indel_calling_s3{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant \n\n Software versions: Clair3 v1.0.9, GNU Coreutils 8.30 or Clara Parabricks 4.2.1-1.beta4 (equivilant to deepvariant 1.5.0), HTSlib 1.16"}}
-snp_indel_calling_s4{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant \n\n Software versions: Clair3 v1.0.9, GNU Coreutils 8.30 or Clara Parabricks 4.2.1-1.beta4 (equivilant to deepvariant 1.5.0), HTSlib 1.16"}}
-snp_indel_calling_s5{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant \n\n Software versions: Clair3 v1.0.9, GNU Coreutils 8.30 or Clara Parabricks 4.2.1-1.beta4 (equivilant to deepvariant 1.5.0), HTSlib 1.16"}}
+snp_indel_calling_s1{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s2{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s3{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s4{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) \n\n Commands: run_clair3.sh or pbrun deepvariant"}}
 
-snp_indel_phasing_s1{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-snp_indel_phasing_s2{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-snp_indel_phasing_s3{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-snp_indel_phasing_s4{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-snp_indel_phasing_s5{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
+snp_indel_phasing_s1{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s2{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s3{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s4{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
 
-haplotagging_s1{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-haplotagging_s2{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-haplotagging_s3{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-haplotagging_s4{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
-haplotagging_s5{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag \n\n Software versions: WhatsHap 2.3, Samtools 1.19, HTSlib 1.16"}}
+haplotagging_s1{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s2{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s3{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s4{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
 
-sv_calling_s1{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV \n\n Software versions: Sniffles2 2.3.3 or cuteSV 1.0.13, HTSlib 1.16"}}
-sv_calling_s2{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV \n\n Software versions: Sniffles2 2.3.3 or cuteSV 1.0.13, HTSlib 1.16"}}
-sv_calling_s3{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV \n\n Software versions: Sniffles2 2.3.3 or cuteSV 1.0.13, HTSlib 1.16"}}
-sv_calling_s4{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV \n\n Software versions: Sniffles2 2.3.3 or cuteSV 1.0.13, HTSlib 1.16"}}
-sv_calling_s5{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV \n\n Software versions: Sniffles2 2.3.3 or cuteSV 1.0.13, HTSlib 1.16"}}
+sv_calling_s1{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s2{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s3{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s4{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
 ont_data_f5-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
 ont_data_f6-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
-ont_data_f7-.->merging_m3-.->alignment_s5-.->snp_indel_calling_s5-.->snp_indel_phasing_s5-.->haplotagging_s5-.->sv_calling_s5
-ont_data_f8-.->merging_m3
 
 pacbio_data_f3-.->merging_m2-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
 pacbio_data_f4-.->merging_m2
@@ -101,13 +88,11 @@ alignment_s1-.->depth_s1
 alignment_s2-.->depth_s2
 alignment_s3-.->depth_s3
 alignment_s4-.->depth_s4
-alignment_s5-.->depth_s5
 
 alignment_s1-.->haplotagging_s1
 alignment_s2-.->haplotagging_s2
 alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
-alignment_s5-.->haplotagging_s5
 
 ```
 
