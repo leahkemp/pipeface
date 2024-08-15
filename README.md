@@ -111,7 +111,7 @@ alignment_s5-.->haplotagging_s5
 
 ```
 
-*Note. software versions used assumes the default `config/nextflow_pipeface.config` file is used*
+*Note. software versions used assumes the default [config/nextflow_pipeface.config](config/nextflow_pipeface.config) file is used*
 
 ## Main analyses
 
