@@ -141,7 +141,7 @@ alignment_s4-.->haplotagging_s4
         - Nextflow 24.04.1
         - Java version 17.0.2
 
-*[See the list of software versions used by this version of pipeface](./docs/main_software_versions.txt)*
+*[See the list of software and their versions used by this version of pipeface](./docs/main_software_versions.txt)*
 
 ## Run it!
 
