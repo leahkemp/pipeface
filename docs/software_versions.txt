@@ -1,0 +1,14 @@
+Main tools
+Samtools: 1.19
+Minimap2: 2.28-r1209
+Clair3: 1.0.9
+Clara Parabricks: 4.2.1-1.beta4 (equivalent to DeepVariant 1.5.0)
+WhatsHap: 2.3
+Sniffles2: 2.3.3
+cuteSV: 1.0.13
+
+Other tools
+Samtools: 1.19
+GNU coreutils: 8.30
+HTSlib: 1.16
+GNU Awk: 4.2.1
