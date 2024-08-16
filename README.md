@@ -96,8 +96,6 @@ alignment_s4-.->haplotagging_s4
 
 ```
 
-*Note. software versions used assumes the default [config/nextflow_pipeface.config](config/nextflow_pipeface.config) file is used*
-
 ## Main analyses
 
 - ONT and pacbio HiFi data
