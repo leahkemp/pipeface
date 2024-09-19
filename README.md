@@ -146,3 +146,7 @@ alignment_s4-.->haplotagging_s4
 ## Run it!
 
 See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
+
+## Credit
+
+This is a highly collaborative project, with many contributions from the [genomic technologies lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline.
