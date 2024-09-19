@@ -149,4 +149,4 @@ See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
 
 ## Credit
 
-This is a highly collaborative project, with many contributions from the [genomic technologies lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline.
+This is a highly collaborative project, with many contributions from the [genomic technologies lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. The installation and hosting of software used in this pipeline has been supported by [project if89 on NCI](https://australianbiocommons.github.io/ables/if89/).
