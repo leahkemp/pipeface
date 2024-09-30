@@ -13,8 +13,6 @@ There currently exists tools and workflows which align, variant call and phase O
 
 ## Workflow
 
-### Overview
-
 ```mermaid
 %%{init: {'theme':'dark'}}%%
 flowchart LR
@@ -142,6 +140,8 @@ alignment_s4-.->haplotagging_s4
     - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
         - Nextflow 24.04.1
         - Java 17.0.2
+
+*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt)* (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).
 
 ## Run it!
 

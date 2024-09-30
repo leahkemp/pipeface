@@ -201,7 +201,7 @@ process minimap2 {
 
     output:
         tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('minimap2.sorted.bam'), path('minimap2.sorted.bam.bai')
-        tuple val(sample_id), path('minimap2.sorted.bam'), path('minimap2.version.txt')
+        tuple val(sample_id), path('minimap2.sorted.bam')
 
     script:
     // conditionally define preset
@@ -230,8 +230,6 @@ process minimap2 {
         samtools index \
         -@ ${task.cpus} \
         minimap2.sorted.bam
-        # grab version
-        minimap2 --version > minimap2.version.txt
         """
     else if( extension == 'gz' | extension == 'fastq' )
         """
@@ -249,15 +247,12 @@ process minimap2 {
         samtools index \
         -@ ${task.cpus} \
         minimap2.sorted.bam
-        # grab version
-        minimap2 --version > minimap2.version.txt
         """
 
     stub:
         """
         touch minimap2.sorted.bam
         touch minimap2.sorted.bam.bai
-        touch minimap2.version.txt
         """
 
 }
@@ -265,10 +260,10 @@ process minimap2 {
 process depth {
 
     input:
-        tuple val(sample_id), path(bam), path(minimap2_version)
+        tuple val(sample_id), path(bam)
 
     output:
-        tuple val(sample_id), path('minimap2.version.txt'), path('depth.tsv')
+        tuple val(sample_id), path('depth.tsv')
 
     script:
         """
@@ -297,13 +292,12 @@ process publish_minimap2 {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(minimap_version), path(depth)
+        tuple val(sample_id), path(depth)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        path 'minimap2.version.txt'
         path 'depth.tsv'
 
     script:
@@ -313,7 +307,6 @@ process publish_minimap2 {
 
     stub:
         """
-        touch minimap2.version.txt
         touch depth.tsv
         """
 
@@ -328,7 +321,7 @@ process clair3 {
 
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.vcf.gz'), path('clair3.snp_indel.vcf.gz.tbi')
-        tuple val(sample_id), path('clair3.snp_indel.g.vcf.gz'), path('clair3.snp_indel.g.vcf.gz.tbi'), path('clair3.version.txt')
+        tuple val(sample_id), path('clair3.snp_indel.g.vcf.gz'), path('clair3.snp_indel.g.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -358,8 +351,6 @@ process clair3 {
         ln -s merge_output.vcf.gz.tbi clair3.snp_indel.vcf.gz.tbi
         ln -s merge_output.gvcf.gz clair3.snp_indel.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi clair3.snp_indel.g.vcf.gz.tbi
-        # grab version
-        run_clair3.sh --version > clair3.version.txt
         """
 
     stub:
@@ -368,7 +359,6 @@ process clair3 {
         touch clair3.snp_indel.vcf.gz.tbi
         touch clair3.snp_indel.g.vcf.gz
         touch clair3.snp_indel.g.vcf.gz.tbi
-        touch clair3.version.txt
         """
 
 }
@@ -378,7 +368,7 @@ process publish_clair3 {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(version)
+        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index)
         val outdir
         val outdir2
         val ref_name
@@ -387,7 +377,6 @@ process publish_clair3 {
         val sample_id
         path 'clair3.snp_indel.g.vcf.gz'
         path 'clair3.snp_indel.g.vcf.gz.tbi'
-        path 'clair3.version.txt'
 
     script:
         """
@@ -398,7 +387,6 @@ process publish_clair3 {
         """
         touch clair3.snp_indel.g.vcf.gz
         touch clair3.snp_indel.g.vcf.gz.tbi
-        touch clair3.version.txt
         """
 
 }
@@ -475,7 +463,7 @@ process deepvariant {
 
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('deepvariant.snp_indel.vcf.gz'), path('deepvariant.snp_indel.vcf.gz.tbi')
-        tuple val(sample_id), path('deepvariant.snp_indel.g.vcf.gz'), path('deepvariant.snp_indel.g.vcf.gz.tbi'), path('deepvariant.version.txt')
+        tuple val(sample_id), path('deepvariant.snp_indel.g.vcf.gz'), path('deepvariant.snp_indel.g.vcf.gz.tbi')
 
     script:
     // define an optional string to pass regions of interest bed file
@@ -497,8 +485,6 @@ process deepvariant {
         -@ ${task.cpus} \
         deepvariant.snp_indel.vcf
         tabix deepvariant.snp_indel.vcf.gz
-        # grab version
-        pbrun deepvariant --version >> deepvariant.version.txt
         """
 
     stub:
@@ -507,7 +493,6 @@ process deepvariant {
         touch deepvariant.snp_indel.vcf.gz.tbi
         touch deepvariant.snp_indel.g.vcf.gz
         touch deepvariant.snp_indel.g.vcf.gz.tbi
-        touch deepvariant.version.txt
         """
 
 }
@@ -517,7 +502,7 @@ process publish_deepvariant {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(deepvariant_version)
+        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index)
         val outdir
         val outdir2
         val ref_name
@@ -526,7 +511,6 @@ process publish_deepvariant {
         val sample_id
         path 'deepvariant.snp_indel.g.vcf.gz'
         path 'deepvariant.snp_indel.g.vcf.gz.tbi'
-        path 'deepvariant.version.txt'
 
     script:
         """
@@ -537,7 +521,6 @@ process publish_deepvariant {
         """
         touch deepvariant.snp_indel.g.vcf.gz
         touch deepvariant.snp_indel.g.vcf.gz.tbi
-        touch deepvariant.version.txt
         """
 
 }
@@ -614,7 +597,7 @@ process whatshap_haplotag {
 
     output:
         tuple val(sample_id), val(data_type), path('minimap2.whatshap.sorted.haplotagged.bam'), path('minimap2.whatshap.sorted.haplotagged.bam.bai')
-        tuple val(sample_id), path('minimap2.whatshap.sorted.haplotagged.bam'), path('minimap2.whatshap.sorted.haplotagged.bam.bai'), path('minimap2.whatshap.sorted.haplotagged.tsv'), path('whatshap.version.txt')
+        tuple val(sample_id), path('minimap2.whatshap.sorted.haplotagged.bam'), path('minimap2.whatshap.sorted.haplotagged.bam.bai'), path('minimap2.whatshap.sorted.haplotagged.tsv')
 
     script:
         """
@@ -632,8 +615,6 @@ process whatshap_haplotag {
         samtools index \
         -@ ${task.cpus} \
         minimap2.whatshap.sorted.haplotagged.bam
-        # grab version
-        whatshap --version > whatshap.version.txt
         """
 
     stub:
@@ -641,7 +622,6 @@ process whatshap_haplotag {
         touch minimap2.whatshap.sorted.haplotagged.bam
         touch minimap2.whatshap.sorted.haplotagged.bam.bai
         touch minimap2.whatshap.sorted.haplotagged.tsv
-        touch whatshap.version.txt
         """
 
 }
@@ -651,7 +631,7 @@ process publish_whatshap_haplotag {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(haplotagged_bam_tsv), path(whatshap_version)
+        tuple val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(haplotagged_bam_tsv)
         val outdir
         val outdir2
         val ref_name
@@ -660,7 +640,6 @@ process publish_whatshap_haplotag {
         path 'minimap2.whatshap.sorted.haplotagged.bam'
         path 'minimap2.whatshap.sorted.haplotagged.bam.bai'
         path 'minimap2.whatshap.sorted.haplotagged.tsv'
-        path 'whatshap.version.txt'
 
     script:
         """
@@ -672,7 +651,6 @@ process publish_whatshap_haplotag {
         touch minimap2.whatshap.sorted.haplotagged.bam
         touch minimap2.whatshap.sorted.haplotagged.bam.bai
         touch minimap2.whatshap.sorted.haplotagged.tsv
-        touch whatshap.version.txt
         """
 
 }
@@ -686,7 +664,7 @@ process sniffles {
         val tandem_repeat
 
     output:
-        tuple val(sample_id), path('sniffles.sv.phased.vcf.gz'), path('sniffles.sv.phased.vcf.gz.tbi'), path('sniffles.sv.phased.snf'), path('sniffles.version.txt')
+        tuple val(sample_id), path('sniffles.sv.phased.vcf.gz'), path('sniffles.sv.phased.vcf.gz.tbi'), path('sniffles.sv.phased.snf')
 
     script:
     // define a string to optionally pass tandem repeat bed file
@@ -703,8 +681,6 @@ process sniffles {
         --output-rnames \
         --minsvlen 20 \
         --phase $tandem_repeat_optional
-        # grab version
-        sniffles --version > sniffles.version.txt
         """
 
     stub:
@@ -712,7 +688,6 @@ process sniffles {
         touch sniffles.sv.phased.vcf.gz
         touch sniffles.sv.phased.vcf.gz.tbi
         touch sniffles.sv.phased.snf
-        touch sniffles.version.txt
         """
 
 }
@@ -722,7 +697,7 @@ process publish_sniffles {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index), path(sv_snf), path(sniffles_version)
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index), path(sv_snf)
         val outdir
         val outdir2
         val ref_name
@@ -731,7 +706,6 @@ process publish_sniffles {
         path 'sniffles.sv.phased.vcf.gz'
         path 'sniffles.sv.phased.vcf.gz.tbi'
         path 'sniffles.sv.phased.snf'
-        path 'sniffles.version.txt'
 
     script:
         """
@@ -743,7 +717,6 @@ process publish_sniffles {
         touch sniffles.sv.phased.vcf.gz
         touch sniffles.sv.phased.vcf.gz.tbi
         touch sniffles.sv.phased.snf
-        touch sniffles.version.txt
         """
 
 }
@@ -757,7 +730,7 @@ process cutesv {
         val tandem_repeat
 
     output:
-        tuple val(sample_id), path('cutesv.sv.vcf.gz'), path('cutesv.sv.vcf.gz.tbi'), path('cutesv.version.txt')
+        tuple val(sample_id), path('cutesv.sv.vcf.gz'), path('cutesv.sv.vcf.gz.tbi')
 
     script:
     if( data_type == 'ont' ) {
@@ -783,15 +756,12 @@ process cutesv {
         -@ ${task.cpus} \
         cutesv.sv.vcf
         tabix cutesv.sv.vcf.gz
-        # grab version
-        cuteSV --version > cutesv.version.txt
         """
 
     stub:
         """
         touch cutesv.sv.vcf.gz
         touch cutesv.sv.vcf.gz.tbi
-        touch cutesv.version.txt
         """
 
 }
@@ -801,7 +771,7 @@ process publish_cutesv {
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index), path(cutesv_version)
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
         val outdir
         val outdir2
         val ref_name
@@ -809,7 +779,6 @@ process publish_cutesv {
     output:
         path 'cutesv.sv.vcf.gz'
         path 'cutesv.sv.vcf.gz.tbi'
-        path 'cutesv.version.txt'
 
     script:
         """
@@ -820,7 +789,6 @@ process publish_cutesv {
         """
         touch cutesv.sv.vcf.gz
         touch cutesv.sv.vcf.gz.tbi
-        touch cutesv.version.txt
         """
 
 }
