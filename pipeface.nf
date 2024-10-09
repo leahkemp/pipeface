@@ -1,9 +1,11 @@
+
 nextflow.enable.dsl=2
 
 // set defaults for optional params (set default optional input files to dummy NONE file)
 // secret sauce second outdir
 params.outdir2 = ""
 params.tandem_repeat = "NONE"
+params.annotate_override = ""
 
 process scrape_settings {
 
@@ -15,6 +17,7 @@ process scrape_settings {
         val tandem_repeat
         val snp_indel_caller
         val sv_caller
+        val annotate
         val outdir
 
     output:
@@ -43,6 +46,7 @@ process scrape_settings {
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
+        echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
 
@@ -177,7 +181,7 @@ process merge_runs {
     else if( extension == 'bam' )
         """
         ${
-            if (files instanceof List && files.size() > 1) { 
+            if (files instanceof List && files.size() > 1) {
                 "samtools merge -@ ${task.cpus} ${files} -o merged"
             } else {
                 "ln -s ${files} merged"
@@ -200,8 +204,8 @@ process minimap2 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('minimap2.sorted.bam'), path('minimap2.sorted.bam.bai')
-        tuple val(sample_id), path('minimap2.sorted.bam'), path('minimap2.version.txt')
+        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai')
+        tuple val(sample_id), path('sorted.bam')
 
     script:
     // conditionally define preset
@@ -224,13 +228,11 @@ process minimap2 {
         -a \
         -x $preset \
         -t ${task.cpus} \
-        $ref - | samtools sort -@ ${task.cpus} -o minimap2.sorted.bam -
+        $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index \
         -@ ${task.cpus} \
-        minimap2.sorted.bam
-        # grab version
-        minimap2 --version > minimap2.version.txt
+        sorted.bam
         """
     else if( extension == 'gz' | extension == 'fastq' )
         """
@@ -242,20 +244,17 @@ process minimap2 {
         -x $preset \
         -t ${task.cpus} \
         $ref \
-        $merged | samtools sort -@ ${task.cpus} -o minimap2.sorted.bam -
+        $merged | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index \
         -@ ${task.cpus} \
-        minimap2.sorted.bam
-        # grab version
-        minimap2 --version > minimap2.version.txt
+        sorted.bam
         """
 
     stub:
         """
-        touch minimap2.sorted.bam
-        touch minimap2.sorted.bam.bai
-        touch minimap2.version.txt
+        touch sorted.bam
+        touch sorted.bam.bai
         """
 
 }
@@ -263,10 +262,10 @@ process minimap2 {
 process depth {
 
     input:
-        tuple val(sample_id), path(bam), path(minimap2_version)
+        tuple val(sample_id), path(bam)
 
     output:
-        tuple val(sample_id), path('minimap2.version.txt'), path('depth.tsv')
+        tuple val(sample_id), path('depth.tsv')
 
     script:
         """
@@ -290,18 +289,17 @@ process depth {
 
 }
 
-process publish_minimap2 {
+process publish_depth {
 
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
     input:
-        tuple val(sample_id), path(minimap_version), path(depth)
+        tuple val(sample_id), path(depth)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        path 'minimap2.version.txt'
         path 'depth.tsv'
 
     script:
@@ -311,7 +309,6 @@ process publish_minimap2 {
 
     stub:
         """
-        touch minimap2.version.txt
         touch depth.tsv
         """
 
@@ -325,8 +322,7 @@ process clair3 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.vcf.gz'), path('clair3.snp_indel.vcf.gz.tbi')
-        tuple val(sample_id), path('clair3.snp_indel.g.vcf.gz'), path('clair3.snp_indel.g.vcf.gz.tbi'), path('clair3.version.txt')
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -352,114 +348,14 @@ process clair3 {
         --include_all_ctgs \
         $regions_of_interest_optional
         # rename files
-        ln -s merge_output.vcf.gz clair3.snp_indel.vcf.gz
-        ln -s merge_output.vcf.gz.tbi clair3.snp_indel.vcf.gz.tbi
-        ln -s merge_output.gvcf.gz clair3.snp_indel.g.vcf.gz
-        ln -s merge_output.gvcf.gz.tbi clair3.snp_indel.g.vcf.gz.tbi
-        # grab version
-        run_clair3.sh --version > clair3.version.txt
+        ln -s merge_output.vcf.gz snp_indel.vcf.gz
+        ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
         """
 
     stub:
         """
-        touch clair3.snp_indel.vcf.gz
-        touch clair3.snp_indel.vcf.gz.tbi
-        touch clair3.snp_indel.g.vcf.gz
-        touch clair3.snp_indel.g.vcf.gz.tbi
-        touch clair3.version.txt
-        """
-
-}
-
-process publish_clair3 {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
-
-    input:
-        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(version)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        val sample_id
-        path 'clair3.snp_indel.g.vcf.gz'
-        path 'clair3.snp_indel.g.vcf.gz.tbi'
-        path 'clair3.version.txt'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch clair3.snp_indel.g.vcf.gz
-        touch clair3.snp_indel.g.vcf.gz.tbi
-        touch clair3.version.txt
-        """
-
-}
-
-process whatshap_phase_clair3 {
-
-    input:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
-        val ref
-        val ref_index
-
-    output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), path('clair3.snp_indel.phased.vcf.gz'), path('clair3.snp_indel.phased.vcf.gz.tbi'), path('clair3.snp_indel.phased.read_list.txt')
-
-    script:
-        """
-        # run whatshap phase
-        whatshap phase \
-        --reference $ref \
-        --output clair3.snp_indel.phased.vcf.gz \
-        --output-read-list clair3.snp_indel.phased.read_list.txt \
-        --sample $sample_id \
-        --ignore-read-groups $snp_indel_vcf $bam
-        # index vcf
-        tabix clair3.snp_indel.phased.vcf.gz
-        """
-
-    stub:
-        """
-        touch clair3.snp_indel.phased.vcf.gz
-        touch clair3.snp_indel.phased.vcf.gz.tbi
-        touch clair3.snp_indel.phased.read_list.txt
-        """
-
-}
-
-process publish_whatshap_phase_clair3 {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
-
-    input:
-        tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index), path(snp_indel_phased_read_list)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        val sample_id
-        path 'clair3.snp_indel.phased.vcf.gz'
-        path 'clair3.snp_indel.phased.vcf.gz.tbi'
-        path 'clair3.snp_indel.phased.read_list.txt'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch clair3.snp_indel.phased.vcf.gz
-        touch clair3.snp_indel.phased.vcf.gz.tbi
-        touch clair3.snp_indel.phased.read_list.txt
+        touch snp_indel.vcf.gz
+        touch snp_indel.vcf.gz.tbi
         """
 
 }
@@ -472,8 +368,7 @@ process deepvariant {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('deepvariant.snp_indel.vcf.gz'), path('deepvariant.snp_indel.vcf.gz.tbi')
-        tuple val(sample_id), path('deepvariant.snp_indel.g.vcf.gz'), path('deepvariant.snp_indel.g.vcf.gz.tbi'), path('deepvariant.version.txt')
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // conditionally define model type
@@ -491,58 +386,22 @@ process deepvariant {
         --reads=$bam \
         --ref=$ref \
         --sample_name=$sample_id \
-        --output_vcf=deepvariant.snp_indel.vcf.gz \
-        --output_gvcf=deepvariant.snp_indel.g.vcf.gz \
+        --output_vcf=snp_indel.vcf.gz \
         --model_type=$model \
         $regions_of_interest_optional \
         --num_shards=${task.cpus} \
         --postprocess_cpus=${task.cpus}
-        # grab version
-        singularity run /g/data/ox63/install/deepvariant_1.6.1-gpu.sif run_deepvariant --version >> deepvariant.version.txt
         """
 
     stub:
         """
-        touch deepvariant.snp_indel.vcf.gz
-        touch deepvariant.snp_indel.vcf.gz.tbi
-        touch deepvariant.snp_indel.g.vcf.gz
-        touch deepvariant.snp_indel.g.vcf.gz.tbi
-        touch deepvariant.version.txt
+        touch snp_indel.vcf.gz
+        touch snp_indel.vcf.gz.tbi
         """
 
 }
 
-process publish_deepvariant {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
-
-    input:
-        tuple val(sample_id), path(snp_indel_gvcf), path(snp_indel_gvcf_index), path(deepvariant_version)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        val sample_id
-        path 'deepvariant.snp_indel.g.vcf.gz'
-        path 'deepvariant.snp_indel.g.vcf.gz.tbi'
-        path 'deepvariant.version.txt'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch deepvariant.snp_indel.g.vcf.gz
-        touch deepvariant.snp_indel.g.vcf.gz.tbi
-        touch deepvariant.version.txt
-        """
-
-}
-
-process whatshap_phase_dv {
+process whatshap_phase {
 
     input:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
@@ -550,46 +409,47 @@ process whatshap_phase_dv {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('deepvariant.snp_indel.phased.vcf.gz'), path('deepvariant.snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), path('deepvariant.snp_indel.phased.vcf.gz'), path('deepvariant.snp_indel.phased.vcf.gz.tbi'), path('deepvariant.snp_indel.phased.read_list.txt')
+        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
+        tuple val(sample_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt')
 
     script:
         """
         # run whatshap phase
         whatshap phase \
         --reference $ref \
-        --output deepvariant.snp_indel.phased.vcf.gz \
-        --output-read-list deepvariant.snp_indel.phased.read_list.txt \
+        --output snp_indel.phased.vcf.gz \
+        --output-read-list snp_indel.phased.read_list.txt \
         --sample $sample_id \
         --ignore-read-groups $snp_indel_vcf $bam
         # index vcf
-        tabix deepvariant.snp_indel.phased.vcf.gz
+        tabix snp_indel.phased.vcf.gz
         """
 
     stub:
         """
-        touch deepvariant.snp_indel.phased.vcf.gz
-        touch deepvariant.snp_indel.phased.vcf.gz.tbi
-        touch deepvariant.snp_indel.phased.read_list.txt
+        touch snp_indel.phased.vcf.gz
+        touch snp_indel.phased.vcf.gz.tbi
+        touch snp_indel.phased.read_list.txt
         """
 
 }
 
-process publish_whatshap_phase_dv {
+process publish_whatshap_phase {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }
 
     input:
         tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index), path(snp_indel_phased_read_list)
         val outdir
         val outdir2
         val ref_name
+        val snp_indel_caller
 
     output:
         val sample_id
-        path 'deepvariant.snp_indel.phased.vcf.gz'
-        path 'deepvariant.snp_indel.phased.vcf.gz.tbi'
-        path 'deepvariant.snp_indel.phased.read_list.txt'
+        path 'snp_indel.phased.vcf.gz'
+        path 'snp_indel.phased.vcf.gz.tbi'
+        path 'snp_indel.phased.read_list.txt'
 
     script:
         """
@@ -598,9 +458,102 @@ process publish_whatshap_phase_dv {
 
     stub:
         """
-        touch deepvariant.snp_indel.phased.vcf.gz
-        touch deepvariant.snp_indel.phased.vcf.gz.tbi
-        touch deepvariant.snp_indel.phased.read_list.txt
+        touch snp_indel.phased.vcf.gz
+        touch snp_indel.phased.vcf.gz.tbi
+        touch snp_indel.phased.read_list.txt
+        """
+
+}
+
+process vep_snv {
+
+    input:
+        tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index)
+        val ref
+        val ref_index
+        val vep_db
+        val revel_db
+        val gnomad_db
+        val clinvar_db
+        val cadd_snv_db
+        val cadd_indel_db
+        val cadd_sv_db
+        val spliceai_snv_db
+        val spliceai_indel_db
+        val alphamissense_db
+
+    output:
+        tuple val(sample_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $snp_indel_phased_vcf \
+        -o snp_indel.phased.annotated.vcf.gz \
+        --format vcf \
+        --vcf \
+        --fasta $ref \
+        --dir $vep_db \
+        --assembly GRCh38 \
+        --species homo_sapiens \
+        --cache \
+        --offline \
+        --merged \
+        --sift b \
+        --polyphen b \
+        --symbol \
+        --hgvs \
+        --hgvsg \
+        --plugin REVEL,file=$revel_db \
+        --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
+        --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
+        --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
+        --plugin AlphaMissense,file=$alphamissense_db \
+        --uploaded_allele \
+        --check_existing \
+        --filter_common \
+        --no_intergenic \
+        --pick \
+        --fork ${task.cpus} \
+        --no_stats \
+        --compress_output bgzip
+        # index vcf
+        tabix snp_indel.phased.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.annotated.vcf.gz
+        touch snp_indel.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process publish_vep_snv {
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }
+
+    input:
+        tuple val(sample_id), path(snp_indel_phased_annotated_vcf), path(snp_indel_phased_annotated_vcf_index)
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+
+    output:
+        path 'snp_indel.phased.annotated.vcf.gz'
+        path 'snp_indel.phased.annotated.vcf.gz.tbi'
+
+    script:
+        """
+        echo "Publishing files"
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.annotated.vcf.gz
+        touch snp_indel.phased.annotated.vcf.gz.tbi
         """
 
 }
@@ -613,54 +566,52 @@ process whatshap_haplotag {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path('minimap2.whatshap.sorted.haplotagged.bam'), path('minimap2.whatshap.sorted.haplotagged.bam.bai')
-        tuple val(sample_id), path('minimap2.whatshap.sorted.haplotagged.bam'), path('minimap2.whatshap.sorted.haplotagged.bam.bai'), path('minimap2.whatshap.sorted.haplotagged.tsv'), path('whatshap.version.txt')
+        tuple val(sample_id), val(data_type), path('sorted.haplotagged.bam'), path('sorted.haplotagged.bam.bai')
+        tuple val(sample_id), path('sorted.haplotagged.bam'), path('sorted.haplotagged.bam.bai'), path('sorted.haplotagged.tsv')
 
     script:
         """
         # run whatshap haplotag
         whatshap haplotag \
         --reference $ref \
-        --output minimap2.whatshap.sorted.haplotagged.bam \
+        --output sorted.haplotagged.bam \
         --sample $sample_id \
         --tag-supplementary \
         --ignore-read-groups \
         --output-threads ${task.cpus} \
-        --output-haplotag-list minimap2.whatshap.sorted.haplotagged.tsv \
+        --output-haplotag-list sorted.haplotagged.tsv \
         $snp_indel_vcf $bam
         # index bam
         samtools index \
         -@ ${task.cpus} \
-        minimap2.whatshap.sorted.haplotagged.bam
-        # grab version
-        whatshap --version > whatshap.version.txt
+        sorted.haplotagged.bam
         """
 
     stub:
         """
-        touch minimap2.whatshap.sorted.haplotagged.bam
-        touch minimap2.whatshap.sorted.haplotagged.bam.bai
-        touch minimap2.whatshap.sorted.haplotagged.tsv
-        touch whatshap.version.txt
+        touch sorted.haplotagged.bam
+        touch sorted.haplotagged.bam.bai
+        touch sorted.haplotagged.tsv
         """
 
 }
 
 process publish_whatshap_haplotag {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    def mapper_phaser = "minimap2.whatshap"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }
 
     input:
-        tuple val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(haplotagged_bam_tsv), path(whatshap_version)
+        tuple val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(haplotagged_bam_tsv)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        path 'minimap2.whatshap.sorted.haplotagged.bam'
-        path 'minimap2.whatshap.sorted.haplotagged.bam.bai'
-        path 'minimap2.whatshap.sorted.haplotagged.tsv'
-        path 'whatshap.version.txt'
+        path 'sorted.haplotagged.bam'
+        path 'sorted.haplotagged.bam.bai'
+        path 'sorted.haplotagged.tsv'
 
     script:
         """
@@ -669,10 +620,9 @@ process publish_whatshap_haplotag {
 
     stub:
         """
-        touch minimap2.whatshap.sorted.haplotagged.bam
-        touch minimap2.whatshap.sorted.haplotagged.bam.bai
-        touch minimap2.whatshap.sorted.haplotagged.tsv
-        touch whatshap.version.txt
+        touch sorted.haplotagged.bam
+        touch sorted.haplotagged.bam.bai
+        touch sorted.haplotagged.tsv
         """
 
 }
@@ -686,7 +636,7 @@ process sniffles {
         val tandem_repeat
 
     output:
-        tuple val(sample_id), path('sniffles.sv.phased.vcf.gz'), path('sniffles.sv.phased.vcf.gz.tbi'), path('sniffles.sv.phased.snf'), path('sniffles.version.txt')
+        tuple val(sample_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass tandem repeat bed file
@@ -698,40 +648,35 @@ process sniffles {
         --input $haplotagged_bam \
         --threads ${task.cpus} \
         --sample-id $sample_id \
-        --vcf sniffles.sv.phased.vcf.gz \
-        --snf sniffles.sv.phased.snf \
+        --vcf sv.phased.vcf.gz \
         --output-rnames \
         --minsvlen 20 \
         --phase $tandem_repeat_optional
-        # grab version
-        sniffles --version > sniffles.version.txt
         """
 
     stub:
         """
-        touch sniffles.sv.phased.vcf.gz
-        touch sniffles.sv.phased.vcf.gz.tbi
-        touch sniffles.sv.phased.snf
-        touch sniffles.version.txt
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
         """
 
 }
 
 process publish_sniffles {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    def sv_caller = "sniffles"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
 
     input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index), path(sv_snf), path(sniffles_version)
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        path 'sniffles.sv.phased.vcf.gz'
-        path 'sniffles.sv.phased.vcf.gz.tbi'
-        path 'sniffles.sv.phased.snf'
-        path 'sniffles.version.txt'
+        path 'sv.phased.vcf.gz'
+        path 'sv.phased.vcf.gz.tbi'
 
     script:
         """
@@ -740,10 +685,8 @@ process publish_sniffles {
 
     stub:
         """
-        touch sniffles.sv.phased.vcf.gz
-        touch sniffles.sv.phased.vcf.gz.tbi
-        touch sniffles.sv.phased.snf
-        touch sniffles.version.txt
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
         """
 
 }
@@ -757,7 +700,7 @@ process cutesv {
         val tandem_repeat
 
     output:
-        tuple val(sample_id), path('cutesv.sv.vcf.gz'), path('cutesv.sv.vcf.gz.tbi'), path('cutesv.version.txt')
+        tuple val(sample_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
     if( data_type == 'ont' ) {
@@ -771,7 +714,7 @@ process cutesv {
         cuteSV \
         $haplotagged_bam \
         $ref \
-        cutesv.sv.vcf \
+        sv.vcf \
         ./ \
         --sample ${sample_id} \
         -t ${task.cpus} \
@@ -781,35 +724,33 @@ process cutesv {
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
-        cutesv.sv.vcf
-        tabix cutesv.sv.vcf.gz
-        # grab version
-        cuteSV --version > cutesv.version.txt
+        sv.vcf
+        tabix sv.vcf.gz
         """
 
     stub:
         """
-        touch cutesv.sv.vcf.gz
-        touch cutesv.sv.vcf.gz.tbi
-        touch cutesv.version.txt
+        touch sv.vcf.gz
+        touch sv.vcf.gz.tbi
         """
 
 }
 
 process publish_cutesv {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    def sv_caller = "cutesv"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
 
     input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index), path(cutesv_version)
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        path 'cutesv.sv.vcf.gz'
-        path 'cutesv.sv.vcf.gz.tbi'
-        path 'cutesv.version.txt'
+        path 'sv.vcf.gz'
+        path 'sv.vcf.gz.tbi'
 
     script:
         """
@@ -818,9 +759,8 @@ process publish_cutesv {
 
     stub:
         """
-        touch cutesv.sv.vcf.gz
-        touch cutesv.sv.vcf.gz.tbi
-        touch cutesv.version.txt
+        touch sv.vcf.gz
+        touch sv.vcf.gz.tbi
         """
 
 }
@@ -834,8 +774,20 @@ workflow {
     tandem_repeat = "$params.tandem_repeat"
     snp_indel_caller = "$params.snp_indel_caller"
     sv_caller = "$params.sv_caller"
+    annotate = "$params.annotate"
+    annotate_override = "$params.annotate_override"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
+    vep_db = "$params.vep_db"
+    revel_db = "$params.revel_db"
+    gnomad_db = "$params.gnomad_db"
+    clinvar_db = "$params.clinvar_db"
+    cadd_snv_db = "$params.cadd_snv_db"
+    cadd_indel_db = "$params.cadd_indel_db"
+    cadd_sv_db = "$params.cadd_sv_db"
+    spliceai_snv_db = "$params.spliceai_snv_db"
+    spliceai_indel_db = "$params.spliceai_indel_db"
+    alphamissense_db = "$params.alphamissense_db"
 
     // check user provided parameters
     if ( !in_data ) {
@@ -861,6 +813,15 @@ workflow {
     }
     if ( sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
         exit 1, "Error: SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
+    }
+    if ( !annotate ) {
+        exit 1, "Error: Choice to annotate not made. Either include in parameter file or pass to --annotate on the command line. Should be either 'yes' or 'no'."
+    }
+    if ( annotate != 'yes' && annotate != 'no' ) {
+        exit 1, "Error: Choice to annotate should be either 'yes', or 'no', '${annotate}' selected."
+    }
+    if ( annotate == 'yes' && !ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes' ) {
+        exit 1, "Warning: Annotation of only hg38/GRCh38 is supported. You've chosen to annotate, but it looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. '${ref}' passed. Pass '--annotate_override yes' on the command line to override this error."
     }
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -948,27 +909,27 @@ workflow {
     }
 
     // workflow
-    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, outdir)
+    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, outdir)
     publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
     bam_header = scrape_bam_header(in_data_list)
     publish_bam_header(bam_header, outdir, outdir2)
     merged = merge_runs(in_data_tuple)
     (bam, minimap_to_publish1) = minimap2(merged, ref, ref_index)
     minimap_to_publish2 = depth(minimap_to_publish1)
-    publish_minimap2(minimap_to_publish2, outdir, outdir2, ref_name)
+    publish_depth(minimap_to_publish2, outdir, outdir2, ref_name)
     if ( snp_indel_caller == 'clair3' ) {
-        (snp_indel_vcf, clair3_to_publish) = clair3(bam, ref, ref_index)
-        publish_clair3(clair3_to_publish, outdir, outdir2, ref_name)
-        (snp_indel_phased_vcf, whatshap_phase_to_publish) = whatshap_phase_clair3(snp_indel_vcf, ref, ref_index)
-        publish_whatshap_phase_clair3(whatshap_phase_to_publish, outdir, outdir2, ref_name)
+        (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
     }
     else if ( snp_indel_caller == 'deepvariant' ) {
-        (snp_indel_vcf, deepvariant_to_publish) = deepvariant(bam, ref, ref_index)
-        publish_deepvariant(deepvariant_to_publish, outdir, outdir2, ref_name)
-        (snp_indel_phased_vcf, whatshap_phase_to_publish) = whatshap_phase_dv(snp_indel_vcf, ref, ref_index)
-        publish_whatshap_phase_dv(whatshap_phase_to_publish, outdir, outdir2, ref_name)
+        (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index)
     }
-    (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf, ref, ref_index)
+    (snp_indel_phased_vcf_bam, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
+    publish_whatshap_phase(snp_indel_phased_vcf, outdir, outdir2, ref_name, snp_indel_caller)
+    if ( annotate == 'yes' ) {
+        vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, cadd_sv_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
+        publish_vep_snv(vep_snv_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
+    }
+    (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index)
     publish_whatshap_haplotag(whatshap_haplotag_to_publish, outdir, outdir2, ref_name)
     if ( sv_caller == 'sniffles' ) {
         sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
