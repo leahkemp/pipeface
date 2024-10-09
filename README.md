@@ -23,7 +23,7 @@ alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
-snp_indel_annotation{{"SNP/indel annotation (optional)"}}
+snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 sv_calling{{"Structural variant calling"}}
 
@@ -69,6 +69,11 @@ snp_indel_phasing_s1{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap 
 snp_indel_phasing_s2{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
 snp_indel_phasing_s3{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
 snp_indel_phasing_s4{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+
+snp_indel_annotation_s1{{"SNP/indel annotation (optional - hg38 only)"}}
+snp_indel_annotation_s2{{"SNP/indel annotation (optional - hg38 only)"}}
+snp_indel_annotation_s3{{"SNP/indel annotation (optional - hg38 only)"}}
+snp_indel_annotation_s4{{"SNP/indel annotation (optional - hg38 only)"}}
 
 haplotagging_s1{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
 haplotagging_s2{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
@@ -137,7 +142,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 - Aligned, sorted and haplotagged bam
 - Clair3 or DeepVariant phased SNP/indel VCF file
-- Annotated Clair3 or DeepVariant phased SNP/indel VCF file (optional)
+- Annotated Clair3 or DeepVariant phased SNP/indel VCF file (optional - hg38 only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 
 ## Assumptions
