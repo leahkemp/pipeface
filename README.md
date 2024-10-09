@@ -4,9 +4,9 @@
 
 Pipefaceee.
 
-Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and annotate (optional - hg38 only) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
+Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and optionally annotate long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
-There currently exists tools and workflows which align, variant call, phase and annotate ONT/pacbio HiFi data, but pipeface serves as a central workflow to process long read data. Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
+There currently exists tools and workflows that undertake comparable analyses, but pipeface serves as a central workflow to process long read data (both ONT and pacbio HiFi data). Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
 
 <p align="center">
     <img src="./images/pipeface.png">
@@ -142,7 +142,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 - Aligned, sorted and haplotagged bam
 - Clair3 or DeepVariant phased SNP/indel VCF file
-- Annotated Clair3 or DeepVariant phased SNP/indel VCF file (optional - hg38 only)
+- Clair3 or DeepVariant phased and annotated SNP/indel VCF file (optional - hg38 only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 
 ## Assumptions
@@ -163,5 +163,5 @@ See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
 
 ## Credit
 
-This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. The installation and hosting of software used in this pipeline has been supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
+This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. The installation and hosting of software used in this pipeline has and continues to be supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
 
