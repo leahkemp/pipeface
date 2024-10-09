@@ -149,6 +149,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
+- Access to xy86 project on [National Computational Infrastructure (NCI)](https://nci.org.au/) (if running variant annotation)
 - Access to pipeline dependencies:
     - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
         - Nextflow 24.04.1
