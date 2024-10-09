@@ -847,6 +847,9 @@ workflow {
     if ( annotate == 'yes' && !file(spliceai_indel_db).exists() ) {
         exit 1, "Error SpliceAI indel database file path does not exist, '${spliceai_indel_db}' provided."
     }
+    if ( annotate == 'yes' && !file(alphamissense_db).exists() ) {
+        exit 1, "Error AlphaMissense database file path does not exist, '${alphamissense_db}' provided."
+    }
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
