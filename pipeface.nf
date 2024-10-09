@@ -228,7 +228,6 @@ process minimap2 {
         -a \
         -x $preset \
         -t ${task.cpus} \
-        -R '@RG\\t$sample_id:S1\\tSM:$sample_id' \
         $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index \
@@ -245,7 +244,6 @@ process minimap2 {
         -x $preset \
         -t ${task.cpus} \
         $ref \
-        -R '@RG\\tID:$sample_id\\tSM:$sample_id' \
         $merged | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index \
@@ -373,24 +371,26 @@ process deepvariant {
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
-    // define a string to optionally pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-L $regions_of_interest" : ''
+    // conditionally define model type
+    if( data_type == 'ont' ) {
+        model = 'ONT_R104'
+    }
+    else if ( data_type == 'pacbio' ) {
+        model = 'PACBIO'
+    }
+    // define an optional string to pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
         # run deepvariant
-        pbrun deepvariant \
-        --mode $data_type \
-        --ref $ref \
-        --in-bam $bam \
-        --out-variants snp_indel.vcf \
-        --num-gpus ${task.gpus} \
-        --num-cpu-threads-per-stream ${task.cpus} \
-        --num-streams-per-gpu 1 \
-        $regions_of_interest_optional
-        # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        snp_indel.vcf
-        tabix snp_indel.vcf.gz
+        singularity run /g/data/ox63/install/deepvariant_1.6.1-gpu.sif run_deepvariant \
+        --reads=$bam \
+        --ref=$ref \
+        --sample_name=$sample_id \
+        --output_vcf=snp_indel.vcf.gz \
+        --model_type=$model \
+        $regions_of_interest_optional \
+        --num_shards=${task.cpus} \
+        --postprocess_cpus=${task.cpus}
         """
 
     stub:

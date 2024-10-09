@@ -40,50 +40,45 @@ snp_indel_phasing-.->snp_indel_annotation
 %%{init: {'theme':'dark'}}%%
 flowchart LR
 
-ont_data_f1("Sample 1 <br><br> Input data: <br> ONT fastq.gz")
-ont_data_f2("Sample 1 <br><br> Input data: <br> ONT fastq.gz")
-pacbio_data_f3("Sample 2 <br><br> Input data: <br> Pacbio HiFi uBAM")
-pacbio_data_f4("Sample 2 <br><br> Input data: <br> Pacbio HiFi uBAM")
-ont_data_f5("Sample 3 <br><br> Input data: <br> ONT fastq")
-ont_data_f6("Sample 4 <br><br> Input data: <br> ONT uBAM")
+ont_data_f1("Sample 1 \n\n Input data: \n\n ONT fastq.gz")
+ont_data_f2("Sample 1 \n\n Input data: \n\n ONT fastq.gz")
+pacbio_data_f3("Sample 2 \n\n Input data: \n\n Pacbio HiFi uBAM")
+pacbio_data_f4("Sample 2 \n\n Input data: \n\n Pacbio HiFi uBAM")
+ont_data_f5("Sample 3 \n\n Input data: \n\n ONT fastq")
+ont_data_f6("Sample 4 \n\n Input data: \n\n ONT uBAM")
 
-merging_m1{{"Description: merge runs <br><br> Main tools: GNU coreutils <br><br> Commands: cat"}}
-merging_m2{{"Description: merge runs <br><br> Main tools: Samtools <br><br> Commands: samtools merge"}}
+merging_m1{{"Description: merge runs \n\n Main tools: GNU coreutils \n\n Commands: cat"}}
+merging_m2{{"Description: merge runs \n\n Main tools: Samtools \n\n Commands: samtools merge"}}
 
-alignment_s1{{"Description: alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
-alignment_s2{{"Description: alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
-alignment_s3{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
-alignment_s4{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s1{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s2{{"Description: alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s3{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
+alignment_s4{{"Description: bam to fastq conversion, alignment, sorting \n\n Main tools: Minimap2 and Samtools \n\n Commands: minimap2 and samtools sort"}}
 
-depth_s1{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s2{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s3{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s4{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
+depth_s1{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s2{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s3{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
+depth_s4{{"Description: calculate alignment depth \n\n Main tools: Samtools \n\n Commands: samtools depth"}}
 
-snp_indel_calling_s1{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) <br><br> Commands: run_clair3.sh or pbrun deepvariant"}}
-snp_indel_calling_s2{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) <br><br> Commands: run_clair3.sh or pbrun deepvariant"}}
-snp_indel_calling_s3{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) <br><br> Commands: run_clair3.sh or pbrun deepvariant"}}
-snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant (NVIDIA Parabricks) <br><br> Commands: run_clair3.sh or pbrun deepvariant"}}
+snp_indel_calling_s1{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant \n\n Commands: run_clair3.sh or run_deepvariant"}}
+snp_indel_calling_s2{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant \n\n Commands: run_clair3.sh or run_deepvariant"}}
+snp_indel_calling_s3{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant \n\n Commands: run_clair3.sh or run_deepvariant"}}
+snp_indel_calling_s4{{"Description: SNP/indel variant calling \n\n Main tools: Clair3 or DeepVariant \n\n Commands: run_clair3.sh or run_deepvariant"}}
 
-snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
-snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
-snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
-snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s1{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s2{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s3{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
+snp_indel_phasing_s4{{"Description: SNP/indel phasing \n\n Main tools: WhatsHap \n\n Commands: whatshap phase"}}
 
-snp_indel_annotation_s1{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
-snp_indel_annotation_s2{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
-snp_indel_annotation_s3{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
-snp_indel_annotation_s4{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
+haplotagging_s1{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s2{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s3{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
+haplotagging_s4{{"Description: haplotagging bams \n\n Main tools: WhatsHap \n\n Commands: whatshap haplotag"}}
 
-haplotagging_s1{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
-haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
-haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
-haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
-
-sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
-sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
-sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
-sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+sv_calling_s1{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s2{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s3{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
+sv_calling_s4{{"Description: structural variant calling \n\n Main tools: Sniffles2 and/or cuteSV \n\n Commands: sniffles and/or cuteSV"}}
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
@@ -119,7 +114,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 ## Main tools
 
 - [Minimap2](https://github.com/lh3/minimap2)
-- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant) (wrapped in [NVIDIA Parabricks](https://docs.nvidia.com/clara/parabricks/latest/))
+- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)

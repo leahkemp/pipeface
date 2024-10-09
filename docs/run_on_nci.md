@@ -9,7 +9,7 @@
     - [Clair3 models](#clair3-models)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-  - [3. Modify in_data.csv](#3-modify-in_datacsv)
+  - [3. Modify in\_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
