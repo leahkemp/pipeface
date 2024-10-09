@@ -479,7 +479,6 @@ process vep_snv {
         val clinvar_db
         val cadd_snv_db
         val cadd_indel_db
-        val cadd_sv_db
         val spliceai_snv_db
         val spliceai_indel_db
         val alphamissense_db
@@ -954,7 +953,7 @@ workflow {
     (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
     publish_whatshap_phase(whatshap_phase_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
     if ( annotate == 'yes' ) {
-        vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, cadd_sv_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
+        vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
         publish_vep_snv(vep_snv_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
     }
     (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index)
