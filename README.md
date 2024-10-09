@@ -4,7 +4,7 @@
 
 Pipefaceee.
 
-Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and annotate (optional) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
+Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and annotate (optional - hg38 only) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
 There currently exists tools and workflows which align, variant call, phase and annotate ONT/pacbio HiFi data, but pipeface serves as a central workflow to process long read data. Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
 
