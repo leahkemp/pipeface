@@ -154,7 +154,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
         - Nextflow 24.04.1
         - Java 17.0.2
 
-*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases](./docs/database_versions.txt) if variant annotation is carried out* (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).
+*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 
 ## Run it!
 
