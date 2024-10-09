@@ -411,6 +411,7 @@ process whatshap_phase {
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
         tuple val(sample_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt')
+        tuple val(sample_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
 
     script:
         """
@@ -784,7 +785,6 @@ workflow {
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
-    cadd_sv_db = "$params.cadd_sv_db"
     spliceai_snv_db = "$params.spliceai_snv_db"
     spliceai_indel_db = "$params.spliceai_indel_db"
     alphamissense_db = "$params.alphamissense_db"
@@ -822,6 +822,30 @@ workflow {
     }
     if ( annotate == 'yes' && !ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes' ) {
         exit 1, "Warning: Annotation of only hg38/GRCh38 is supported. You've chosen to annotate, but it looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. '${ref}' passed. Pass '--annotate_override yes' on the command line to override this error."
+    }
+    if ( annotate == 'yes' && !file(vep_db).exists() ) {
+        exit 1, "Error VEP cache directory does not exist, '${vep_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(revel_db).exists() ) {
+        exit 1, "Error REVEL database file path does not exist, '${revel_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
+        exit 1, "Error gnomAD database file path does not exist, '${gnomad_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
+        exit 1, "Error ClinVar database file path does not exist, '${clinvar_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(cadd_snv_db).exists() ) {
+        exit 1, "Error CADD SNV database file path does not exist, '${cadd_snv_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(cadd_indel_db).exists() ) {
+        exit 1, "Error CADD indel database file path does not exist, '${cadd_indel_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(spliceai_snv_db).exists() ) {
+        exit 1, "Error SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(spliceai_indel_db).exists() ) {
+        exit 1, "Error SpliceAI indel database file path does not exist, '${spliceai_indel_db}' provided."
     }
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -923,8 +947,8 @@ workflow {
     else if ( snp_indel_caller == 'deepvariant' ) {
         (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index)
     }
-    (snp_indel_phased_vcf_bam, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
-    publish_whatshap_phase(snp_indel_phased_vcf, outdir, outdir2, ref_name, snp_indel_caller)
+    (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
+    publish_whatshap_phase(whatshap_phase_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
     if ( annotate == 'yes' ) {
         vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, cadd_sv_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
         publish_vep_snv(vep_snv_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
