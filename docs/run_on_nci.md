@@ -150,10 +150,11 @@ Modify the NCI project to which to charge the analysis. Eg:
 Modify access to project specific directories. Eg:
 
 ```txt
-    storage = 'gdata/if89+scratch/kr68+gdata/kr68'
+    storage = 'gdata/if89+gdata/xy86+scratch/kr68+gdata/kr68'
 ```
 
 > **_Note:_** Don't remove access to if89 gdata (`gdata/if89`). This is required to access environmental modules used in the pipeline
+> **_Note:_** Similarly, don't remove access to xy86 gdata (`gdata/xy86`) if running variant annotation. This is required to access variant annotation databases used in the pipeline
 
 ## 5. Modify parameters_pipeface.json
 
@@ -219,6 +220,18 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "both",
 ```
 
+Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
+
+```json
+    "annotate": "no",
+```
+
+*OR*
+
+```json
+    "annotate": "yes",
+```
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
@@ -251,5 +264,5 @@ The resources requested and the queue each process is submitted to may be modifi
 
 Similarly, with some coding skills, the environmental modules used by each process in the pipeline may be modified. This means you're able to substitute in different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
-This also means this pipeline is adaptable to other HPC's if appropriate environmental modules are included in `./config/nextflow_pipeface.config` (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed.
+This also means this pipeline is adaptable to other HPC's if appropriate environmental modules are included in `./config/nextflow_pipeface.config` (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed. If you wish to use the variant annotation component of the pipeline, you'll additionally need to create local copies of the variant annotation databases used by the pipeline.
 

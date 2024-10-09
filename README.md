@@ -4,9 +4,9 @@
 
 Pipefaceee.
 
-Nextflow pipeline to align, variant call (SNP's, indels's, SV's) and phase long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
+Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and annotate (optional) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
-There currently exists tools and workflows which align, variant call and phase ONT/pacbio HiFi data, but pipeface serves as a central workflow to process long read data. Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
+There currently exists tools and workflows which align, variant call, phase and annotate ONT/pacbio HiFi data, but pipeface serves as a central workflow to process long read data. Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
 
 <p align="center">
     <img src="./images/pipeface.png">
@@ -23,12 +23,14 @@ alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
+snp_indel_annotation{{"SNP/indel annotation (optional)"}}
 haplotagging{{"Haplotagging bams"}}
 sv_calling{{"Structural variant calling"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
+snp_indel_phasing-.->snp_indel_annotation
 
 ```
 
@@ -68,6 +70,11 @@ snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: Whats
 snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
 snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
 
+snp_indel_annotation_s1{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
+snp_indel_annotation_s2{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
+snp_indel_annotation_s3{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
+snp_indel_annotation_s4{{"Description: SNP/indel annotation (optional) <br><br> Main tools: ensembl-vep <br><br> Commands: vep"}}
+
 haplotagging_s1{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
@@ -96,6 +103,11 @@ alignment_s2-.->haplotagging_s2
 alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
 
+snp_indel_phasing_s1-.->snp_indel_annotation_s1
+snp_indel_phasing_s2-.->snp_indel_annotation_s2
+snp_indel_phasing_s3-.->snp_indel_annotation_s3
+snp_indel_phasing_s4-.->snp_indel_annotation_s4
+
 ```
 
 ## Main analyses
@@ -111,6 +123,7 @@ alignment_s4-.->haplotagging_s4
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)
+- [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
 ## Main input files
 
@@ -129,19 +142,20 @@ alignment_s4-.->haplotagging_s4
 
 - Aligned, sorted and haplotagged bam
 - Clair3 or DeepVariant phased SNP/indel VCF file
-- Clair3 or DeepVariant SNP/indel gVCF file
+- Annotated Clair3 or DeepVariant phased SNP/indel VCF file (optional)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 
 ## Assumptions
 
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
+- Access to xy86 project on [National Computational Infrastructure (NCI)](https://nci.org.au/) (if running variant annotation)
 - Access to pipeline dependencies:
     - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
         - Nextflow 24.04.1
         - Java 17.0.2
 
-*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt)* (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).
+*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 
 ## Run it!
 
@@ -150,3 +164,4 @@ See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
 ## Credit
 
 This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. The installation and hosting of software used in this pipeline has been supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
+
