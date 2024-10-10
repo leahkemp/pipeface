@@ -18,6 +18,7 @@ process scrape_settings {
         val snp_indel_caller
         val sv_caller
         val annotate
+        val calculate_depth
         val outdir
 
     output:
@@ -47,6 +48,7 @@ process scrape_settings {
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
+        echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
 
@@ -941,7 +943,7 @@ workflow {
     }
 
     // workflow
-    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, outdir)
+    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
     publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
     bam_header = scrape_bam_header(in_data_list)
     publish_bam_header(bam_header, outdir, outdir2)
