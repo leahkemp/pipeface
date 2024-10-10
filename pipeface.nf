@@ -205,7 +205,7 @@ process minimap2 {
 
     output:
         tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai')
-        tuple val(sample_id), val(regions_of_interest), path('sorted.bam')
+        tuple val(sample_id), val(regions_of_interest), path('sorted.bam'), path('sorted.bam.bai')
 
     script:
     // conditionally define preset
@@ -262,7 +262,7 @@ process minimap2 {
 process depth {
 
     input:
-        tuple val(sample_id), val(regions_of_interest), path(bam)
+        tuple val(sample_id), val(regions_of_interest), path(bam), path(bam_index)
 
     output:
         tuple val(sample_id), path('depth.txt')
@@ -775,6 +775,7 @@ workflow {
     sv_caller = "$params.sv_caller"
     annotate = "$params.annotate"
     annotate_override = "$params.annotate_override"
+    calculate_depth = "$params.calculate_depth"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     vep_db = "$params.vep_db"
@@ -847,6 +848,12 @@ workflow {
     }
     if ( annotate == 'yes' && !file(alphamissense_db).exists() ) {
         exit 1, "Error AlphaMissense database file path does not exist, '${alphamissense_db}' provided."
+    }
+    if ( !calculate_depth ) {
+        exit 1, "Error: Choice to calculate depth not made. Either include in parameter file or pass to --calculate_depth on the command line. Should be either 'yes' or 'no'."
+    }
+    if ( calculate_depth != 'yes' && calculate_depth != 'no' ) {
+        exit 1, "Error: Choice to calculate depth should be either 'yes', or 'no', '${calculate_depth}' selected."
     }
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -940,8 +947,10 @@ workflow {
     publish_bam_header(bam_header, outdir, outdir2)
     merged = merge_runs(in_data_tuple)
     (bam, minimap_to_publish1) = minimap2(merged, ref, ref_index)
-    minimap_to_publish2 = depth(minimap_to_publish1)
-    publish_depth(minimap_to_publish2, outdir, outdir2, ref_name)
+    if ( calculate_depth == 'yes' ) {
+        minimap_to_publish2 = depth(minimap_to_publish1)
+        publish_depth(minimap_to_publish2, outdir, outdir2, ref_name)
+    }
     if ( snp_indel_caller == 'clair3' ) {
         (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
     }

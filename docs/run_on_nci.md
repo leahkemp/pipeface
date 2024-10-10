@@ -232,6 +232,18 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
+Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
+
+```json
+    "calculate_depth": "no",
+```
+
+*OR*
+
+```json
+    "calculate_depth": "yes",
+```
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
