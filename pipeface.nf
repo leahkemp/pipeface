@@ -205,7 +205,7 @@ process minimap2 {
 
     output:
         tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai')
-        tuple val(sample_id), path('sorted.bam')
+        tuple val(sample_id), val(regions_of_interest), path('sorted.bam')
 
     script:
     // conditionally define preset
@@ -262,29 +262,28 @@ process minimap2 {
 process depth {
 
     input:
-        tuple val(sample_id), path(bam)
+        tuple val(sample_id), val(regions_of_interest), path(bam)
 
     output:
-        tuple val(sample_id), path('depth.tsv')
+        tuple val(sample_id), path('depth.txt')
 
     script:
+    // define a string to optionally pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
-        # calculate average depth per chromosome
-        samtools depth \
-        -@ ${task.cpus} \
-        -a \
-        $bam | awk '{cov[\$1]+=\$3; len[\$1]++} END {for (chr in cov) print chr, "	"cov[chr]/len[chr]}' >> tmp.tsv
-        # write tsv header
-        echo "chromosome\taverage_depth" > depth.tsv
-        # sort file
-        cat tmp.tsv | sort -V >> depth.tsv
-        # cleanup
-        rm tmp.tsv
+        # run mosdepth
+        /g/data/ox63/install/mosdepth_v0.3.9 \
+        depth \
+        $bam \
+        $regions_of_interest_optional \
+        -t ${task.cpus}
+        # rename file
+        ln -s depth.mosdepth.summary.txt depth.txt
         """
 
     stub:
         """
-        touch depth.tsv
+        touch depth.txt
         """
 
 }
@@ -300,7 +299,7 @@ process publish_depth {
         val ref_name
 
     output:
-        path 'depth.tsv'
+        path 'depth.txt'
 
     script:
         """
@@ -309,7 +308,7 @@ process publish_depth {
 
     stub:
         """
-        touch depth.tsv
+        touch depth.txt
         """
 
 }
