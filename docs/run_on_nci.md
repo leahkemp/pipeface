@@ -136,8 +136,7 @@ Requirements:
 - similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
 - provide full file paths
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
-- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' or 'vcf.gz' (as appropriate)
-- if processing an aligned BAM or SNP/indel VCF file (ie. `in_data_format` is set to either 'aligned_bam' or 'snv_vcf'), there must be a unique `sample_id` per file/row (ie. merging of these file types aren't supported)
+- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' (as appropriate)
 - entries in the `data_type` column must be either 'ont', 'pacbio' or 'NONE' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
@@ -165,12 +164,6 @@ Specify the path to `in_data.csv`. Eg:
     "in_data": "./config/in_data.csv",
 ```
 
-Specify the format of the input data defined in the 'file' column of `in_data.csv`. This will determine the type of analysis to carry out. Options include unaligned BAM, FASTQ, unaligned BAM and FASTQ, aligned bam or SNP/indel VCF, ('ubam', 'fastq', 'ubam_and_fastq', 'aligned_bam' and 'snv_vcf' retrospectively). Eg:
-
-```json
-    "in_data_format": "fastq",
-```
-
 Specify the path to the reference genome and it's index. Eg:
 
 ```json
@@ -185,7 +178,7 @@ Specify the path to the reference genome and it's index. Eg:
     "ref_index": "./hs1.fa.fai",
 ```
 
-Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if 'in_data_format' is set to 'snv_vcf'. Eg:
+Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
 
 ```json
     "tandem_repeat": "./*.trf.bed",
@@ -197,7 +190,7 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if 'in_
     "tandem_repeat": "NONE"
 ```
 
-Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Set to 'NONE' if 'in_data_format' is set to 'snv_vcf'. Eg:
+Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 
 ```json
     "snp_indel_caller": "clair3",
@@ -209,13 +202,7 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Set to 'NONE' i
     "snp_indel_caller": "deepvariant",
 ```
 
-*OR*
-
-```json
-    "snp_indel_caller": "NONE",
-```
-
-Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Set to 'NONE' if 'in_data_format' is set to 'snv_vcf'. Eg:
+Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
 ```json
     "sv_caller": "sniffles",
@@ -233,13 +220,7 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Set to 'NONE' if 
     "sv_caller": "both",
 ```
 
-*OR*
-
-```json
-    "sv_caller": "NONE",
-```
-
-Specify whether variant annotation should be carried out ('yes' or 'no'). Set to 'yes' if 'in_data_format' is set to 'snv_vcf'. Eg:
+Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "no",
@@ -251,7 +232,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Set to
     "annotate": "yes",
 ```
 
-Specify whether alignment depth should be calculated  ('yes' or 'no'). Set to 'no' if 'in_data_format' is set to 'snv_vcf'. Eg:
+Specify whether alignment depth should be calculated  ('yes' or 'no'). Eg:
 
 ```json
     "calculate_depth": "no",
