@@ -138,7 +138,7 @@ Requirements:
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
 - for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' or 'vcf.gz' (as appropriate)
 - if processing an aligned BAM or SNP/indel VCF file (ie. `in_data_format` is set to either 'aligned_bam' or 'snv_vcf'), there must be a unique `sample_id` per file/row (ie. merging of these file types aren't supported)
-- entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
+- entries in the `data_type` column must be either 'ont', 'pacbio' or 'NONE' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
 
@@ -185,7 +185,7 @@ Specify the path to the reference genome and it's index. Eg:
     "ref_index": "./hs1.fa.fai",
 ```
 
-Optionally specify the path to the tandem repeat bed file. Eg:
+Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if 'in_data_format' is set to 'snv_vcf'. Eg:
 
 ```json
     "tandem_repeat": "./*.trf.bed",
@@ -197,7 +197,7 @@ Optionally specify the path to the tandem repeat bed file. Eg:
     "tandem_repeat": "NONE"
 ```
 
-Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
+Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Set to 'NONE' if 'in_data_format' is set to 'snv_vcf'. Eg:
 
 ```json
     "snp_indel_caller": "clair3",
@@ -209,7 +209,13 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
     "snp_indel_caller": "deepvariant",
 ```
 
-Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
+*OR*
+
+```json
+    "snp_indel_caller": "NONE",
+```
+
+Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Set to 'NONE' if 'in_data_format' is set to 'snv_vcf'. Eg:
 
 ```json
     "sv_caller": "sniffles",
@@ -227,7 +233,13 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "both",
 ```
 
-Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
+*OR*
+
+```json
+    "sv_caller": "NONE",
+```
+
+Specify whether variant annotation should be carried out ('yes' or 'no'). Set to 'yes' if 'in_data_format' is set to 'snv_vcf'. Eg:
 
 ```json
     "annotate": "no",
@@ -239,8 +251,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-Specify whether alignment depth should be calculated  ('yes' or 'no'). Eg:
-
+Specify whether alignment depth should be calculated  ('yes' or 'no'). Set to 'no' if 'in_data_format' is set to 'snv_vcf'. Eg:
 
 ```json
     "calculate_depth": "no",
