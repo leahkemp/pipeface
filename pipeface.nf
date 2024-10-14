@@ -6,6 +6,9 @@ nextflow.enable.dsl=2
 params.outdir2 = ""
 params.tandem_repeat = "NONE"
 params.annotate_override = ""
+// secret sauce option to pass pipeface an aligned bam or snp/indel VCF file
+// options include 'ubam_fastq', 'aligned_bam' or 'snv_vcf'
+params.in_data_format = "ubam_fastq"
 params.in_data_format_override = ""
 
 process scrape_settings {
@@ -34,6 +37,9 @@ process scrape_settings {
         }
         else if ( sv_caller == 'cutesv' ) {
             reported_sv_caller = 'cutesv'
+        }
+        else if ( sv_caller == 'NONE' ) {
+            reported_sv_caller = 'NONE'
         }
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
@@ -799,16 +805,25 @@ workflow {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
     }
     if ( !in_data_format ) {
-        exit 1, "Error: No in data format selected. Either include in parameter file or pass to --in_data_format on the command line. Should be 'ubam', 'fastq', 'ubam_and_fastq', 'aligned_bam' or 'snv_vcf'."
+        exit 1, "Error: No in data format selected. Either include in parameter file or pass to --in_data_format on the command line. Should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf'."
     }
-    if ( in_data_format != 'ubam' && in_data_format != 'fastq' && in_data_format != 'ubam_and_fastq' && in_data_format != 'aligned_bam' && in_data_format != 'snv_vcf' ) {
-        exit 1, "Error: In data format should be 'ubam', 'fastq', 'ubam_and_fastq', 'aligned_bam' or 'snv_vcf', '${in_data_format}' selected."
+    if ( in_data_format != 'ubam_fastq' && in_data_format != 'aligned_bam' && in_data_format != 'snv_vcf' ) {
+        exit 1, "Error: In data format should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf', '${in_data_format}' selected."
+    }
+    if ( in_data_format == 'snv_vcf' && tandem_repeat != 'NONE' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
+    }
+    if ( in_data_format == 'snv_vcf' && snp_indel_caller != 'NONE' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the SNP/indel calling software to 'NONE'. Either set snp_indel_caller to 'NONE' in parameter file or pass '--snp_indel_caller NONE' on the command line"
+    }
+    if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
     }
     if ( in_data_format == 'snv_vcf' && annotate == 'no' ) {
-        exit 1, "Error: In data format is SNV vcf, but you've chosen not to annotate. Nothing to do."
+        exit 1, "Error: In data format is SNP/indel vcf, but you've chosen not to annotate. Nothing for pipeface to do."
     }
     if ( in_data_format == 'snv_vcf' && calculate_depth == 'yes' ) {
-        exit 1, "Error: In data format is SNV vcf, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
+        exit 1, "Error: In data format is SNP/indel vcf, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
     }
     if ( !ref ) {
         exit 1, "Error: No reference genome provided. Either include in parameter file or pass to --ref on the command line."
@@ -831,13 +846,13 @@ workflow {
     if ( !snp_indel_caller ) {
         exit 1, "Error: No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
     }
-    if ( snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
+    if ( in_data_format != 'snv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
     if ( !sv_caller ) {
         exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
-    if ( sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
+    if ( in_data_format != 'snv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
         exit 1, "Error: SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
     }
     if ( !annotate ) {
@@ -929,15 +944,6 @@ workflow {
     if ( file(in_file).getExtension() != 'bam' && file(in_file).getExtension() != 'gz' && file(in_file).getExtension() != 'fastq' ) {
        exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
     }
-    if ( in_data_format == 'ubam' && !in_file.contains('bam') && in_data_format_override != 'yes' ) {
-       exit 1, "Error processing '$in_data' file. You've specified that the in data format is uBAM, but it looks like you may not be passing a BAM file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
-    }
-    if ( in_data_format == 'fastq' && !in_file.contains('fastq') && in_data_format_override != 'yes' ) {
-       exit 1, "Error processing '$in_data' file. You've specified that the in data format is FASTQ, but it looks like you may not be passing a FASTQ file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
-    }
-    if ( in_data_format == 'ubam_and_fastq' && !in_file.contains('bam') && !in_file.contains('fastq') && in_data_format_override != 'yes' ) {
-       exit 1, "Error processing '$in_data' file. You've specified that the in data format is uBAM or FASTQ, but it looks like you may not be passing a BAM or FASTQ file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
-    }
     if ( in_data_format == 'aligned_bam' && !in_file.contains('bam') && in_data_format_override != 'yes' ) {
        exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
     }
@@ -947,7 +953,7 @@ workflow {
     if ( data_type.isEmpty() ) {
        exit 1, "Error processing '$in_data' file. There is an empty entry in the 'data_type' column."
     }
-    if ( data_type != 'ont' && data_type != 'pacbio' ) {
+    if ( in_data_format != 'snv_vcf' && data_type != 'ont' && data_type != 'pacbio' ) {
        exit 1, "Error processing '$in_data' file. There is an entry in the 'data_type' column that is not 'ont' or 'pacbio', '$data_type' provided."
     }
     if ( regions_of_interest.isEmpty() ) {
@@ -971,21 +977,21 @@ workflow {
     }
 
     // workflow
-    if ( in_data_format == 'ubam' | in_data_format == 'fastq' | in_data_format == 'ubam_and_fastq' | in_data_format == 'aligned_bam' ) {
-        // pre-process, alignment and qc
-        scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, outdir)
-        publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
+    // pre-process, alignment and qc
+    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, outdir)
+    publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list)
         publish_bam_header(bam_header, outdir, outdir2)
     }
-    if ( in_data_format == 'ubam' | in_data_format == 'fastq' | in_data_format == 'ubam_and_fastq' ) {
+    if ( in_data_format == 'ubam_fastq' ) {
         merged = merge_runs(in_data_tuple)
         bam = minimap2(merged, ref, ref_index)
     }
     if ( in_data_format == 'aligned_bam' ) {
         bam = in_data_tuple
     }
-    if ( in_data_format == 'ubam' | in_data_format == 'fastq' | in_data_format == 'ubam_and_fastq' | in_data_format == 'aligned_bam' ) {
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
             depth_to_publish = depth(bam)
             publish_depth(depth_to_publish, outdir, outdir2, ref_name)
@@ -1022,7 +1028,7 @@ workflow {
     if ( in_data_format == 'snv_vcf' ) {
         snp_indel_phased_vcf = in_data_tuple
     }
-    if ( in_data_format == 'ubam' | in_data_format == 'fastq' | in_data_format == 'ubam_and_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
         // annotation
         if ( annotate == 'yes' ) {
             vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
@@ -1030,5 +1036,4 @@ workflow {
         }
     }
 }
-
 
