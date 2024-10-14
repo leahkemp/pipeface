@@ -136,7 +136,7 @@ Requirements:
 - similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
 - provide full file paths
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
-- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz' or '.fastq' (as appropriate)
+- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' or 'vcf.gz' (as appropriate)
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
@@ -161,7 +161,13 @@ Modify access to project specific directories. Eg:
 Specify the path to `in_data.csv`. Eg:
 
 ```json
-    "input": "./config/in_data.csv",
+    "in_data": "./config/in_data.csv",
+```
+
+Specify the format of the input data defined in the 'file' column of `in_data.csv`. This will determine the type of analysis to carry out. Options include unaligned BAM, FASTQ, unaligned BAM and FASTQ, aligned bam or SNP/indel VCF, (ubam, fastq, ubam_and_fastq, aligned_bam and snv_vcf retrospectively). Eg:
+
+```json
+    "in_data_format": "fastq",
 ```
 
 Specify the path to the reference genome and it's index. Eg:
@@ -230,6 +236,19 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",
+```
+
+Specify whether alignment depth should be calculated  ('yes' or 'no'). Eg:
+
+
+```json
+    "calculate_depth": "no",
+```
+
+*OR*
+
+```json
+    "calculate_depth": "yes",
 ```
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
