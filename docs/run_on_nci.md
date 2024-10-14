@@ -137,6 +137,7 @@ Requirements:
 - provide full file paths
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
 - for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' or 'vcf.gz' (as appropriate)
+- if processing an aligned BAM or SNP/indel VCF file (ie. `in_data_format` is set to either 'aligned_bam' or 'snv_vcf'), there must be a unique `sample_id` per file/row (ie. merging of these file types aren't supported)
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
@@ -164,7 +165,7 @@ Specify the path to `in_data.csv`. Eg:
     "in_data": "./config/in_data.csv",
 ```
 
-Specify the format of the input data defined in the 'file' column of `in_data.csv`. This will determine the type of analysis to carry out. Options include unaligned BAM, FASTQ, unaligned BAM and FASTQ, aligned bam or SNP/indel VCF, (ubam, fastq, ubam_and_fastq, aligned_bam and snv_vcf retrospectively). Eg:
+Specify the format of the input data defined in the 'file' column of `in_data.csv`. This will determine the type of analysis to carry out. Options include unaligned BAM, FASTQ, unaligned BAM and FASTQ, aligned bam or SNP/indel VCF, ('ubam', 'fastq', 'ubam_and_fastq', 'aligned_bam' and 'snv_vcf' retrospectively). Eg:
 
 ```json
     "in_data_format": "fastq",
