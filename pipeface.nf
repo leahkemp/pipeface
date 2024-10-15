@@ -341,6 +341,10 @@ process clair3 {
         platform = 'hifi'
     }
         """
+        # stage bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -s \${bam_loc}.bai .
         # run clair3
         run_clair3.sh \
         --bam_fn=$bam \
@@ -387,6 +391,10 @@ process deepvariant {
     // define an optional string to pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
+        # stage bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -s \${bam_loc}.bai .
         # run deepvariant
         singularity run /g/data/ox63/install/deepvariant_1.6.1-gpu.sif run_deepvariant \
         --reads=$bam \
@@ -943,6 +951,9 @@ workflow {
     }
     if ( file(in_file).getExtension() != 'bam' && file(in_file).getExtension() != 'gz' && file(in_file).getExtension() != 'fastq' ) {
        exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
+    }
+    if ( in_data_format == 'aligned_bam' && !file(in_file + '.bai').exists() ) {
+       exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks '${in_file}' isn't indexed (ie. '${in_file}.bai doesn't exist')."
     }
     if ( in_data_format == 'aligned_bam' && !in_file.contains('bam') && in_data_format_override != 'yes' ) {
        exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
