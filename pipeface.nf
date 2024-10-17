@@ -328,7 +328,7 @@ process clair3 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -378,7 +378,7 @@ process deepvariant {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // conditionally define model type
@@ -418,7 +418,7 @@ process deepvariant {
 process whatshap_phase {
 
     input:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(sample_id), val(extension), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
 
