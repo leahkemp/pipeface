@@ -765,6 +765,170 @@ process publish_cutesv {
 
 }
 
+process vep_sniffles_sv {
+
+    input:
+        tuple val(sample_id), path(sv_phased_vcf), path(sv_phased_vcf_index)
+        val ref
+        val ref_index
+        val sv_caller
+        val vep_db
+        val cadd_sv_db
+
+    output:
+        tuple val(sample_id), path('sv.phased.annotated.vcf.gz'), path('sv.phased.annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $sv_phased_vcf \
+        -o sv.phased.annotated.vcf.gz \
+        --format vcf \
+        --vcf \
+        --fasta $ref \
+        --dir $vep_db \
+        --assembly GRCh38 \
+        --species homo_sapiens \
+        --cache \
+        --offline \
+        --merged \
+        --sift b \
+        --polyphen b \
+        --symbol \
+        --hgvs \
+        --hgvsg \
+        --plugin CADD,sv=$cadd_sv_db \
+        --uploaded_allele \
+        --check_existing \
+        --filter_common \
+        --no_intergenic \
+        --pick \
+        --fork ${task.cpus} \
+        --no_stats \
+        --compress_output bgzip
+        # index vcf
+        tabix sv.phased.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.phased.annotated.vcf.gz
+        touch sv.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process vep_cutesv_sv {
+
+    input:
+        tuple val(sample_id), path(sv_phased_vcf), path(sv_phased_vcf_index)
+        val ref
+        val ref_index
+        val sv_caller
+        val vep_db
+        val cadd_sv_db
+
+    output:
+        tuple val(sample_id), path('sv.annotated.vcf.gz'), path('sv.annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $sv_phased_vcf \
+        -o sv.annotated.vcf.gz \
+        --format vcf \
+        --vcf \
+        --fasta $ref \
+        --dir $vep_db \
+        --assembly GRCh38 \
+        --species homo_sapiens \
+        --cache \
+        --offline \
+        --merged \
+        --sift b \
+        --polyphen b \
+        --symbol \
+        --hgvs \
+        --hgvsg \
+        --plugin CADD,sv=$cadd_sv_db \
+        --uploaded_allele \
+        --check_existing \
+        --filter_common \
+        --no_intergenic \
+        --pick \
+        --fork ${task.cpus} \
+        --no_stats \
+        --compress_output bgzip
+        # index vcf
+        tabix sv.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.annotated.vcf.gz
+        touch sv.annotated.vcf.gz.tbi
+        """
+
+}
+
+process publish_vep_cutesv_sv {
+
+    def sv_caller = "cutesv"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
+
+    input:
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        path 'sv.annotated.vcf.gz'
+        path 'sv.annotated.vcf.gz.tbi'
+
+    script:
+        """
+        echo "Publishing files"
+        """
+
+    stub:
+        """
+        touch sv.annotated.vcf.gz
+        touch sv.annotated.vcf.gz.tbi
+        """
+
+}
+
+process publish_vep_sniffles_sv {
+
+    def sv_caller = "sniffles"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
+
+    input:
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        path 'sv.phased.annotated.vcf.gz'
+        path 'sv.phased.annotated.vcf.gz.tbi'
+
+    script:
+        """
+        echo "Publishing files"
+        """
+
+    stub:
+        """
+        touch sv.phased.annotated.vcf.gz
+        touch sv.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
 workflow {
 
     // grab parameters
@@ -784,6 +948,7 @@ workflow {
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
+    cadd_sv_db = "$params.cadd_sv_db"
     spliceai_snv_db = "$params.spliceai_snv_db"
     spliceai_indel_db = "$params.spliceai_indel_db"
     alphamissense_db = "$params.alphamissense_db"
@@ -839,6 +1004,9 @@ workflow {
     }
     if ( annotate == 'yes' && !file(cadd_indel_db).exists() ) {
         exit 1, "Error CADD indel database file path does not exist, '${cadd_indel_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(cadd_sv_db).exists() ) {
+        exit 1, "Error CADD SV database file path does not exist, '${cadd_snv_db}' provided."
     }
     if ( annotate == 'yes' && !file(spliceai_snv_db).exists() ) {
         exit 1, "Error SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
@@ -958,19 +1126,32 @@ workflow {
     (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index)
     publish_whatshap_haplotag(whatshap_haplotag_to_publish, outdir, outdir2, ref_name)
     if ( sv_caller == 'sniffles' ) {
-        sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
+        sv_vcf = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
+        publish_sniffles(sv_vcf, outdir, outdir2, ref_name)
+        if ( annotate == 'yes' ) {
+            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            publish_vep_sniffles_sv(annotated_sv_vcf_sniffles, outdir, outdir2, ref_name)
+        }
     }
     else if ( sv_caller == 'cutesv' ) {
-        cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+        sv_vcf = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
+        publish_cutesv(sv_vcf, outdir, outdir2, ref_name)
+        if ( annotate == 'yes' ) {
+            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            publish_vep_cutesv_sv(annotated_sv_vcf_cutesv, outdir, outdir2, ref_name)
+        } 
     }
     else if ( sv_caller == 'both' ) {
-        sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
-        cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+        sv_vcf_sniffles = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
+        publish_sniffles(sv_vcf_sniffles, outdir, outdir2, ref_name)
+        sv_vcf_cutesv = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
+        publish_cutesv(sv_vcf_cutesv, outdir, outdir2, ref_name)
+        if ( annotate == 'yes' ) {
+            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            publish_vep_sniffles_sv(annotated_sv_vcf_sniffles, outdir, outdir2, ref_name)
+            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            publish_vep_cutesv_sv(annotated_sv_vcf_cutesv, outdir, outdir2, ref_name)
+        }
     }
-
 }
 

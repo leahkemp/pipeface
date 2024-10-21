@@ -26,11 +26,13 @@ snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 sv_calling{{"Structural variant calling"}}
+sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
 snp_indel_phasing-.->snp_indel_annotation
+sv_calling-.->sv_annotation
 
 ```
 
@@ -85,6 +87,11 @@ sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sni
 sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 
+sv_annotation_s1{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s2{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s3{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
 ont_data_f5-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
@@ -107,6 +114,11 @@ snp_indel_phasing_s1-.->snp_indel_annotation_s1
 snp_indel_phasing_s2-.->snp_indel_annotation_s2
 snp_indel_phasing_s3-.->snp_indel_annotation_s3
 snp_indel_phasing_s4-.->snp_indel_annotation_s4
+
+sv_calling_s1-.->sv_annotation_s1
+sv_calling_s2-.->sv_annotation_s2
+sv_calling_s3-.->sv_annotation_s3
+sv_calling_s4-.->sv_annotation_s4
 
 ```
 
