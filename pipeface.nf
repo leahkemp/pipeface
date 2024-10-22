@@ -341,10 +341,12 @@ process clair3 {
         platform = 'hifi'
     }
         """
-        # stage bam index
+        # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
         bam_loc=\$(realpath ${bam})
+        ln -s \${bam_loc} sorted.bam
         ln -s \${bam_loc}.bai .
+        ln -s \${bam_loc}.bai sorted.bam.bai
         # run clair3
         run_clair3.sh \
         --bam_fn=$bam \
@@ -378,7 +380,7 @@ process deepvariant {
         val ref_index
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // conditionally define model type
@@ -391,10 +393,12 @@ process deepvariant {
     // define an optional string to pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
-        # stage bam index
+        # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
         bam_loc=\$(realpath ${bam})
+        ln -s \${bam_loc} sorted.bam
         ln -s \${bam_loc}.bai .
+        ln -s \${bam_loc}.bai sorted.bam.bai
         # run deepvariant
         singularity run /g/data/ox63/install/deepvariant_1.6.1-gpu.sif run_deepvariant \
         --reads=$bam \
