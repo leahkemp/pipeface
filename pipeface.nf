@@ -871,35 +871,6 @@ process vep_cutesv_sv {
 
 }
 
-process publish_vep_cutesv_sv {
-
-    def sv_caller = "cutesv"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
-
-    input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        path 'sv.annotated.vcf.gz'
-        path 'sv.annotated.vcf.gz.tbi'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch sv.annotated.vcf.gz
-        touch sv.annotated.vcf.gz.tbi
-        """
-
-}
-
 process publish_vep_sniffles_sv {
 
     def sv_caller = "sniffles"
@@ -925,6 +896,35 @@ process publish_vep_sniffles_sv {
         """
         touch sv.phased.annotated.vcf.gz
         touch sv.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process publish_vep_cutesv_sv {
+
+    def sv_caller = "cutesv"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
+
+    input:
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        path 'sv.annotated.vcf.gz'
+        path 'sv.annotated.vcf.gz.tbi'
+
+    script:
+        """
+        echo "Publishing files"
+        """
+
+    stub:
+        """
+        touch sv.annotated.vcf.gz
+        touch sv.annotated.vcf.gz.tbi
         """
 
 }
