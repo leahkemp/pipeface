@@ -774,6 +774,8 @@ process vep_sniffles_sv {
         val ref_index
         val sv_caller
         val vep_db
+        val gnomad_db
+        val clinvar_db
         val cadd_sv_db
 
     output:
@@ -829,6 +831,8 @@ process vep_cutesv_sv {
         val ref_index
         val sv_caller
         val vep_db
+        val gnomad_db
+        val clinvar_db
         val cadd_sv_db
 
     output:
@@ -1134,7 +1138,7 @@ workflow {
         sv_vcf = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_sniffles(sv_vcf, outdir, outdir2, ref_name)
         if ( annotate == 'yes' ) {
-            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
             publish_vep_sniffles_sv(annotated_sv_vcf_sniffles, outdir, outdir2, ref_name)
         }
     }
@@ -1142,7 +1146,7 @@ workflow {
         sv_vcf = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_cutesv(sv_vcf, outdir, outdir2, ref_name)
         if ( annotate == 'yes' ) {
-            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
             publish_vep_cutesv_sv(annotated_sv_vcf_cutesv, outdir, outdir2, ref_name)
         } 
     }
@@ -1152,9 +1156,9 @@ workflow {
         sv_vcf_cutesv = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_cutesv(sv_vcf_cutesv, outdir, outdir2, ref_name)
         if ( annotate == 'yes' ) {
-            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
             publish_vep_sniffles_sv(annotated_sv_vcf_sniffles, outdir, outdir2, ref_name)
-            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, sv_caller, vep_db, cadd_sv_db)
+            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
             publish_vep_cutesv_sv(annotated_sv_vcf_cutesv, outdir, outdir2, ref_name)
         }
     }
