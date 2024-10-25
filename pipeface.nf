@@ -650,7 +650,7 @@ process sniffles {
         --sample-id $sample_id \
         --vcf sv.phased.vcf.gz \
         --output-rnames \
-        --minsvlen 20 \
+        --minsvlen 50 \
         --phase $tandem_repeat_optional
         """
 
@@ -720,6 +720,7 @@ process cutesv {
         -t ${task.cpus} \
         --genotype \
         --report_readid \
+        --min_size 50 \
         $settings
         # compress and index vcf
         bgzip \
@@ -797,6 +798,8 @@ process vep_sniffles_sv {
         --symbol \
         --hgvs \
         --hgvsg \
+        --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
         --check_existing \
@@ -850,6 +853,8 @@ process vep_cutesv_sv {
         --symbol \
         --hgvs \
         --hgvsg \
+        --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
         --check_existing \
