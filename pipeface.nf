@@ -775,6 +775,7 @@ process vep_sniffles_sv {
         val sv_caller
         val vep_db
         val gnomad_db
+        val gnomad_sv_db
         val clinvar_db
         val cadd_sv_db
 
@@ -800,7 +801,7 @@ process vep_sniffles_sv {
         --symbol \
         --hgvs \
         --hgvsg \
-        --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=exact,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
@@ -832,6 +833,7 @@ process vep_cutesv_sv {
         val sv_caller
         val vep_db
         val gnomad_db
+        val gnomad_sv_db
         val clinvar_db
         val cadd_sv_db
 
@@ -857,7 +859,7 @@ process vep_cutesv_sv {
         --symbol \
         --hgvs \
         --hgvsg \
-        --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=exact,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
@@ -954,6 +956,7 @@ workflow {
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
+    gnomad_sv_db = "$params.gnomad_sv_db"
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
@@ -1004,6 +1007,9 @@ workflow {
     }
     if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
         exit 1, "Error gnomAD database file path does not exist, '${gnomad_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(gnomad_sv_db).exists() ) {
+        exit 1, "Error gnomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
     }
     if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
         exit 1, "Error ClinVar database file path does not exist, '${clinvar_db}' provided."
@@ -1138,7 +1144,7 @@ workflow {
         sv_vcf = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_sniffles(sv_vcf, outdir, outdir2, ref_name)
         if ( annotate == 'yes' ) {
-            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
+            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db)
             publish_vep_sniffles_sv(annotated_sv_vcf_sniffles, outdir, outdir2, ref_name)
         }
     }
@@ -1146,7 +1152,7 @@ workflow {
         sv_vcf = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_cutesv(sv_vcf, outdir, outdir2, ref_name)
         if ( annotate == 'yes' ) {
-            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
+            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf, ref, ref_index, sv_caller, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db)
             publish_vep_cutesv_sv(annotated_sv_vcf_cutesv, outdir, outdir2, ref_name)
         } 
     }
@@ -1156,9 +1162,9 @@ workflow {
         sv_vcf_cutesv = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
         publish_cutesv(sv_vcf_cutesv, outdir, outdir2, ref_name)
         if ( annotate == 'yes' ) {
-            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
+            annotated_sv_vcf_sniffles = vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, sv_caller, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db)
             publish_vep_sniffles_sv(annotated_sv_vcf_sniffles, outdir, outdir2, ref_name)
-            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, sv_caller, vep_db, gnomad_db, clinvar_db, cadd_sv_db)
+            annotated_sv_vcf_cutesv = vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, sv_caller, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db)
             publish_vep_cutesv_sv(annotated_sv_vcf_cutesv, outdir, outdir2, ref_name)
         }
     }
