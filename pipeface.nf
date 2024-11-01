@@ -386,11 +386,15 @@ process deepvariant {
         --reads=$bam \
         --ref=$ref \
         --sample_name=$sample_id \
-        --output_vcf=snp_indel.vcf.gz \
+        --output_vcf=snp_indel.raw.vcf.gz \
         --model_type=$model \
         $regions_of_interest_optional \
         --num_shards=${task.cpus} \
         --postprocess_cpus=${task.cpus}
+        # filter out refcall variants
+        bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
+        # index vcf
+        tabix snp_indel.vcf.gz
         """
 
     stub:
