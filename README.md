@@ -154,6 +154,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
     - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
         - Nextflow 24.04.1
         - Java 17.0.2
+    - [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
 
 *[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 

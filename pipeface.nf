@@ -366,6 +366,7 @@ process deepvariant {
         tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index)
         val ref
         val ref_index
+        val deepvariant_container
 
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
@@ -382,7 +383,7 @@ process deepvariant {
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
         # run deepvariant
-        singularity run /g/data/ox63/install/deepvariant_1.6.1-gpu.sif run_deepvariant \
+        singularity run $deepvariant_container run_deepvariant \
         --reads=$bam \
         --ref=$ref \
         --sample_name=$sample_id \
@@ -778,6 +779,7 @@ workflow {
     annotate_override = "$params.annotate_override"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
+    deepvariant_container = "$params.deepvariant_container"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
@@ -806,6 +808,12 @@ workflow {
     }
     if ( snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
+    }
+    if ( snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
+        exit 1, "Error: When DeepVariant is selected as the SNP/indel calling software, provide a path to an appropriate DeepVariant container in the parameter file or pass to --deepvariant_container on the command line rather than setting it to 'NONE'."
+    }
+    if ( snp_indel_caller == 'clair3' && deepvariant_container != 'NONE' ) {
+        exit 1, "Error: When Clair3 is selected as the SNP/indel calling software, 'deepvariant_container' should be set to 'NONE', '${deepvariant_container}' provided."
     }
     if ( !sv_caller ) {
         exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
@@ -852,6 +860,9 @@ workflow {
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
+    if ( !deepvariant_container ) {
+        exit 1, "Error: No DeepVariant container provided. Either include in parameter file or pass to --deepvariant_container on the command line. Set to 'NONE' if not running DeepVariant."
+    }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
     }
@@ -863,6 +874,9 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+    }
+    if ( !file(deepvariant_container).exists() ) {
+        exit 1, "Error: In DeepVariant container file path does not exist, '${deepvariant_container}' provided."
     }
 
     // build variable
@@ -947,7 +961,7 @@ workflow {
         (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
     }
     else if ( snp_indel_caller == 'deepvariant' ) {
-        (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index)
+        (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index, deepvariant_container)
     }
     (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
     publish_whatshap_phase(whatshap_phase_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
