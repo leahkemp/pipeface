@@ -16,6 +16,7 @@ process scrape_settings {
     input:
         tuple val(sample_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
         val in_data
+        val in_data_format
         val ref
         val ref_index
         val tandem_repeat
@@ -42,8 +43,19 @@ process scrape_settings {
         else if ( sv_caller == 'NONE' ) {
             reported_sv_caller = 'NONE'
         }
+        // conditionally define reported in data format
+        if( in_data_format == 'ubam_fastq' ) {
+            reported_in_data_format = 'unaligned BAM and/or FASTQ'
+        }
+        else if ( in_data_format == 'aligned_bam' ) {
+            reported_in_data_format = 'aligned BAM'
+        }
+        else if ( in_data_format == 'snv_vcf' ) {
+            reported_in_data_format = 'SNP/indel vcf'
+        }
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
+        echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
         echo "Data type: $data_type" >> pipeface_settings.txt
         echo "Regions of interest file: $regions_of_interest" >> pipeface_settings.txt
@@ -214,7 +226,6 @@ process minimap2 {
 
     output:
         tuple val(sample_id), val(extension), path('sorted.bam'), val(data_type), val(regions_of_interest), val(clair3_model)
-        tuple val(sample_id), val(regions_of_interest), path('sorted.bam'), path('sorted.bam.bai')
 
     script:
     // conditionally define preset
@@ -1044,7 +1055,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
+    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
     publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list)
