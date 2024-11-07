@@ -55,10 +55,10 @@ alignment_s2{{"Description: alignment, sorting <br><br> Main tools: Minimap2 and
 alignment_s3{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
 alignment_s4{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
 
-depth_s1{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s2{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s3{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s4{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
+depth_s1{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s2{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s3{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s4{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
 
 snp_indel_calling_s1{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s2{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
@@ -123,6 +123,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)
+- [mosdepth](https://github.com/brentp/mosdepth)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
 ## Main input files
@@ -133,6 +134,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - Indexed reference genome
 - Clair3 models (if running Clair3)
 - [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
+- [mosdepth 0.3.9 binary](https://github.com/brentp/mosdepth/releases/tag/v0.3.9) (if running depth calculation)
 
 ### Optional
 

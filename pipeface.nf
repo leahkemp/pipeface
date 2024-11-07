@@ -22,6 +22,7 @@ process scrape_settings {
         val snp_indel_caller
         val sv_caller
         val annotate
+        val calculate_depth
         val outdir
 
     output:
@@ -54,6 +55,7 @@ process scrape_settings {
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
+        echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
 
@@ -212,6 +214,7 @@ process minimap2 {
 
     output:
         tuple val(sample_id), val(extension), path('sorted.bam'), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(regions_of_interest), path('sorted.bam'), path('sorted.bam.bai')
 
     script:
     // conditionally define preset
@@ -265,39 +268,41 @@ process minimap2 {
 
 }
 
-process depth {
+process mosdepth {
 
     input:
         tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
+        val mosdepth_binary
 
     output:
-        tuple val(sample_id), path('depth.tsv')
+        tuple val(sample_id), path('depth.txt')
 
     script:
+    // define a string to optionally pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
-        # calculate average depth per chromosome
-        samtools depth \
-        -@ ${task.cpus} \
-        -a \
-        $bam | awk '{cov[\$1]+=\$3; len[\$1]++} END {for (chr in cov) print chr, "	"cov[chr]/len[chr]}' >> tmp.tsv
-        # write tsv header
-        echo "chromosome\taverage_depth" > depth.tsv
-        # sort file
-        cat tmp.tsv | sort -V >> depth.tsv
-        # cleanup
-        rm tmp.tsv
+        # run mosdepth
+        $mosdepth_binary \
+        depth \
+        $bam \
+        $regions_of_interest_optional \
+        -t ${task.cpus}
+        # rename file
+        ln -s depth.mosdepth.summary.txt depth.txt
         """
 
     stub:
         """
-        touch depth.tsv
+        touch depth.txt
         """
 
 }
 
-process publish_depth {
+process publish_mosdepth {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    def depth_software = "mosdepth"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }
 
     input:
         tuple val(sample_id), path(depth)
@@ -306,7 +311,7 @@ process publish_depth {
         val ref_name
 
     output:
-        path 'depth.tsv'
+        path 'depth.txt'
 
     script:
         """
@@ -315,7 +320,7 @@ process publish_depth {
 
     stub:
         """
-        touch depth.tsv
+        touch depth.txt
         """
 
 }
@@ -405,11 +410,15 @@ process deepvariant {
         --reads=$bam \
         --ref=$ref \
         --sample_name=$sample_id \
-        --output_vcf=snp_indel.vcf.gz \
+        --output_vcf=snp_indel.raw.vcf.gz \
         --model_type=$model \
         $regions_of_interest_optional \
         --num_shards=${task.cpus} \
         --postprocess_cpus=${task.cpus}
+        # filter out refcall variants
+        bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
+        # index vcf
+        tabix snp_indel.vcf.gz
         """
 
     stub:
@@ -801,6 +810,7 @@ workflow {
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     deepvariant_container = "$params.deepvariant_container"
+    mosdepth_binary = "$params.mosdepth_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
@@ -920,8 +930,20 @@ workflow {
     if ( !deepvariant_container ) {
         exit 1, "Error: No DeepVariant container provided. Either include in parameter file or pass to --deepvariant_container on the command line. Set to 'NONE' if not running DeepVariant."
     }
-    if ( deepvariant_container != 'NONE' && snp_indel_caller == 'clair3') {
-        exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${snp_indel_caller}' and '${deepvariant_container}' provided'."
+    if ( deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant') {
+        exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
+    }
+    if ( deepvariant_container == 'NONE' && snp_indel_caller == 'deepvariant') {
+        exit 1, "Error: Pass an appropriate path to 'deepvariant_container' when DeepVariant is selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
+    }
+    if ( !mosdepth_binary ) {
+        exit 1, "Error: No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
+    }
+    if ( mosdepth_binary != 'NONE' && calculate_depth == 'no') {
+        exit 1, "Error: Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
+    }
+    if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
+        exit 1, "Error: Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
     }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
@@ -936,7 +958,10 @@ workflow {
         exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
     }
     if ( !file(deepvariant_container).exists() ) {
-        exit 1, "Error: In DeepVariant container file path does not exist, '${deepvariant_container}' provided."
+        exit 1, "Error: DeepVariant container file path does not exist, '${deepvariant_container}' provided."
+    }
+    if ( !file(mosdepth_binary).exists() ) {
+        exit 1, "Error: mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
     // build variable
@@ -1019,7 +1044,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, outdir)
+    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
     publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list)
@@ -1034,8 +1059,8 @@ workflow {
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
-            depth_to_publish = depth(bam)
-            publish_depth(depth_to_publish, outdir, outdir2, ref_name)
+            depth_to_publish = mosdepth(bam)
+            publish_mosdepth(depth_to_publish, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
