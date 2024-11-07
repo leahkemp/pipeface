@@ -812,9 +812,6 @@ workflow {
     if ( snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
         exit 1, "Error: When DeepVariant is selected as the SNP/indel calling software, provide a path to an appropriate DeepVariant container in the parameter file or pass to --deepvariant_container on the command line rather than setting it to 'NONE'."
     }
-    if ( snp_indel_caller == 'clair3' && deepvariant_container != 'NONE' ) {
-        exit 1, "Error: When Clair3 is selected as the SNP/indel calling software, 'deepvariant_container' should be set to 'NONE', '${deepvariant_container}' provided."
-    }
     if ( !sv_caller ) {
         exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
@@ -862,6 +859,9 @@ workflow {
     }
     if ( !deepvariant_container ) {
         exit 1, "Error: No DeepVariant container provided. Either include in parameter file or pass to --deepvariant_container on the command line. Set to 'NONE' if not running DeepVariant."
+    }
+    if ( deepvariant_container != 'NONE' && snp_indel_caller == 'clair3') {
+        exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${snp_indel_caller}' and '${deepvariant_container}' provided'."
     }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
