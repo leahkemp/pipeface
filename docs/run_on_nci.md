@@ -270,10 +270,28 @@ Specify the directory in which to write the pipeline outputs (please provide a f
     "outdir": "/g/data/ox63/results"
 ```
 
-Specify the path to DeepVariant GPU container v1.6.1 (singularity image file). Eg:
+Specify the path to the DeepVariant GPU container v1.6.1 (singularity image file) (if running DeepVariant). Eg:
 
 ```json
     "deepvariant_container": "./deepvariant_1.6.1-gpu.sif"
+```
+
+*OR*
+
+```json
+    "deepvariant_container": "NONE"
+```
+
+Specify the path to the mosdepth binary (if running depth calculation). Eg:
+
+```json
+    "mosdepth_binary": "./mosdepth_0.3.9"
+```
+
+*OR*
+
+```json
+    "mosdepth_binary": "NONE"
 ```
 
 ## 6. Get pipeline dependencies
