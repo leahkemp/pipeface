@@ -6,9 +6,10 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
-    - [Clair3 models](#clair3-models)
+    - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
+    - [DeepVariant container (if running DeepVariant)](#deepvariant-container-if-running-deepvariant)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
@@ -86,7 +87,7 @@ module load samtools/1.19
 samtools faidx hs1.fa
 ```
 
-### Clair3 models
+### Clair3 models (if running clair3)
 
 #### ONT
 
@@ -114,6 +115,15 @@ Untar
 
 ```bash
 tar -xvf hifi_revio.tar.gz
+```
+
+### DeepVariant container (if running DeepVariant)
+
+Get a local copy of the DeepVariant GPU container v1.6.1 (singularity image file)
+
+```bash
+module load singularity
+singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
 ```
 
 ## 3. Modify in_data.csv
@@ -236,6 +246,12 @@ Specify the directory in which to write the pipeline outputs (please provide a f
 
 ```json
     "outdir": "/g/data/ox63/results"
+```
+
+Specify the path to DeepVariant GPU container v1.6.1 (singularity image file). Eg:
+
+```json
+    "deepvariant_container": "./deepvariant_1.6.1-gpu.sif"
 ```
 
 ## 6. Get pipeline dependencies
