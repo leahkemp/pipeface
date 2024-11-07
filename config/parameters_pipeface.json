@@ -8,7 +8,9 @@
     "snp_indel_caller": "",
     "sv_caller": "",
     "annotate": "",
+    "calculate_depth": "",
     "outdir": "",
-    "deepvariant_container": ""
+    "deepvariant_container": "",
+    "mosdepth_binary": ""
 
 }
