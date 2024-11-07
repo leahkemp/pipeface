@@ -1026,7 +1026,7 @@ workflow {
         exit 1, "Error CADD indel database file path does not exist, '${cadd_indel_db}' provided."
     }
     if ( annotate == 'yes' && !file(cadd_sv_db).exists() ) {
-        exit 1, "Error CADD SV database file path does not exist, '${cadd_snv_db}' provided."
+        exit 1, "Error CADD SV database file path does not exist, '${cadd_sv_db}' provided."
     }
     if ( annotate == 'yes' && !file(spliceai_snv_db).exists() ) {
         exit 1, "Error SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
