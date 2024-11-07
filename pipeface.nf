@@ -872,8 +872,20 @@ workflow {
     if ( !deepvariant_container ) {
         exit 1, "Error: No DeepVariant container provided. Either include in parameter file or pass to --deepvariant_container on the command line. Set to 'NONE' if not running DeepVariant."
     }
-    if ( deepvariant_container != 'NONE' && snp_indel_caller == 'clair3') {
-        exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${snp_indel_caller}' and '${deepvariant_container}' provided'."
+    if ( deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant') {
+        exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
+    }
+    if ( deepvariant_container == 'NONE' && snp_indel_caller == 'deepvariant') {
+        exit 1, "Error: Pass an appropriate path to 'deepvariant_container' when DeepVariant is selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
+    }
+    if ( !mosdepth_binary ) {
+        exit 1, "Error: No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
+    }
+    if ( mosdepth_binary != 'NONE' && calculate_depth == 'no') {
+        exit 1, "Error: Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
+    }
+    if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
+        exit 1, "Error: Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
     }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
@@ -888,7 +900,10 @@ workflow {
         exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
     }
     if ( !file(deepvariant_container).exists() ) {
-        exit 1, "Error: In DeepVariant container file path does not exist, '${deepvariant_container}' provided."
+        exit 1, "Error: DeepVariant container file path does not exist, '${deepvariant_container}' provided."
+    }
+    if ( !file(mosdepth_binary).exists() ) {
+        exit 1, "Error: mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
     // build variable
