@@ -261,7 +261,7 @@ process minimap2 {
 
 }
 
-process depth {
+process mosdepth {
 
     input:
         tuple val(sample_id), val(regions_of_interest), path(bam), path(bam_index)
@@ -290,7 +290,7 @@ process depth {
 
 }
 
-process publish_depth {
+process publish_mosdepth {
 
     publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
 
@@ -964,8 +964,8 @@ workflow {
     merged = merge_runs(in_data_tuple)
     (bam, minimap_to_publish1) = minimap2(merged, ref, ref_index)
     if ( calculate_depth == 'yes' ) {
-        minimap_to_publish2 = depth(minimap_to_publish1)
-        publish_depth(minimap_to_publish2, outdir, outdir2, ref_name)
+        minimap_to_publish2 = mosdepth(minimap_to_publish1)
+        publish_mosdepth(minimap_to_publish2, outdir, outdir2, ref_name)
     }
     if ( snp_indel_caller == 'clair3' ) {
         (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
