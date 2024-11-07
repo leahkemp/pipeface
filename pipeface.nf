@@ -293,7 +293,9 @@ process mosdepth {
 
 process publish_mosdepth {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$filename" }
+    def depth_software = "mosdepth"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }
 
     input:
         tuple val(sample_id), path(depth)
