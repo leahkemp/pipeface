@@ -248,7 +248,7 @@ Specify the directory in which to write the pipeline outputs (please provide a f
     "outdir": "/g/data/ox63/results"
 ```
 
-Specify the path to DeepVariant GPU container (singularity image file). Eg:
+Specify the path to DeepVariant GPU container v1.6.1 (singularity image file). Eg:
 
 ```json
     "deepvariant_container": "./deepvariant_1.6.1-gpu.sif"
