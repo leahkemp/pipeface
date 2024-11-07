@@ -10,6 +10,7 @@
     "annotate": "",
     "calculate_depth": "",
     "outdir": "",
-    "deepvariant_container": ""
+    "deepvariant_container": "",
+    "mosdepth_binary": ""
 
 }

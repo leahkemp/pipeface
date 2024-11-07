@@ -10,6 +10,7 @@
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
     - [DeepVariant container (if running DeepVariant)](#deepvariant-container-if-running-deepvariant)
+    - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
@@ -124,6 +125,15 @@ Get a local copy of the DeepVariant GPU container v1.6.1 (singularity image file
 ```bash
 module load singularity
 singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
+```
+
+### mosdepth binary (if running depth calculation)
+
+Get a local copy of the mosdepth v0.3.9 binary
+
+```bash
+wget https://github.com/brentp/mosdepth/releases/download/v0.3.9/mosdepth -O mosdepth_0.3.9
+chmod +x mosdepth_0.3.9
 ```
 
 ## 3. Modify in_data.csv

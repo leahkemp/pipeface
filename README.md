@@ -134,6 +134,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - Indexed reference genome
 - Clair3 models (if running Clair3)
 - [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
+- [mosdepth 0.3.9 binary](https://github.com/brentp/mosdepth/releases/tag/v0.3.9) (if running depth calculation)
 
 ### Optional
 

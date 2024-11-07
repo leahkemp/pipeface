@@ -265,6 +265,7 @@ process mosdepth {
 
     input:
         tuple val(sample_id), val(regions_of_interest), path(bam), path(bam_index)
+        val mosdepth_binary
 
     output:
         tuple val(sample_id), path('depth.txt')
@@ -274,7 +275,7 @@ process mosdepth {
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
         # run mosdepth
-        /g/data/ox63/install/mosdepth_v0.3.9 \
+        $mosdepth_binary \
         depth \
         $bam \
         $regions_of_interest_optional \
@@ -782,6 +783,7 @@ workflow {
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     deepvariant_container = "$params.deepvariant_container"
+    mosdepth_binary = "$params.mosdepth_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
@@ -964,7 +966,7 @@ workflow {
     merged = merge_runs(in_data_tuple)
     (bam, minimap_to_publish1) = minimap2(merged, ref, ref_index)
     if ( calculate_depth == 'yes' ) {
-        minimap_to_publish2 = mosdepth(minimap_to_publish1)
+        minimap_to_publish2 = mosdepth(minimap_to_publish1, mosdepth_binary)
         publish_mosdepth(minimap_to_publish2, outdir, outdir2, ref_name)
     }
     if ( snp_indel_caller == 'clair3' ) {
