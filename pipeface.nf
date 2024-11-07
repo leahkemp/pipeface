@@ -1067,7 +1067,7 @@ workflow {
             (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
         }
         else if ( snp_indel_caller == 'deepvariant' ) {
-            (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index)
+            (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index, deepvariant_container)
         }
         // phasing
         (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
