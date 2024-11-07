@@ -6,10 +6,11 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
-    - [Clair3 models](#clair3-models)
+    - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-  - [3. Modify in_data.csv](#3-modify-in_datacsv)
+    - [DeepVariant container (if running DeepVariant)](#deepvariant-container-if-running-deepvariant)
+  - [3. Modify in\_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
@@ -86,7 +87,7 @@ module load samtools/1.19
 samtools faidx hs1.fa
 ```
 
-### Clair3 models
+### Clair3 models (if running clair3)
 
 #### ONT
 
@@ -114,6 +115,15 @@ Untar
 
 ```bash
 tar -xvf hifi_revio.tar.gz
+```
+
+### DeepVariant container (if running DeepVariant)
+
+Get a local copy of the DeepVariant GPU container v1.6.1 (singularity image file)
+
+```bash
+module load singularity
+singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
 ```
 
 ## 3. Modify in_data.csv
@@ -150,10 +160,11 @@ Modify the NCI project to which to charge the analysis. Eg:
 Modify access to project specific directories. Eg:
 
 ```txt
-    storage = 'gdata/if89+scratch/kr68+gdata/kr68'
+    storage = 'gdata/if89+gdata/xy86+scratch/kr68+gdata/kr68'
 ```
 
 > **_Note:_** Don't remove access to if89 gdata (`gdata/if89`). This is required to access environmental modules used in the pipeline
+> **_Note:_** Similarly, don't remove access to xy86 gdata (`gdata/xy86`) if running variant annotation. This is required to access variant annotation databases used in the pipeline
 
 ## 5. Modify parameters_pipeface.json
 
@@ -219,10 +230,28 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "both",
 ```
 
+Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
+
+```json
+    "annotate": "no",
+```
+
+*OR*
+
+```json
+    "annotate": "yes",
+```
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
     "outdir": "/g/data/ox63/results"
+```
+
+Specify the path to DeepVariant GPU container v1.6.1 (singularity image file). Eg:
+
+```json
+    "deepvariant_container": "./deepvariant_1.6.1-gpu.sif"
 ```
 
 ## 6. Get pipeline dependencies
@@ -251,5 +280,5 @@ The resources requested and the queue each process is submitted to may be modifi
 
 Similarly, with some coding skills, the environmental modules used by each process in the pipeline may be modified. This means you're able to substitute in different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
-This also means this pipeline is adaptable to other HPC's if appropriate environmental modules are included in `./config/nextflow_pipeface.config` (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed.
+This also means this pipeline is adaptable to other HPC's if appropriate environmental modules are included in `./config/nextflow_pipeface.config` (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed. If you wish to use the variant annotation component of the pipeline, you'll additionally need to create local copies of the variant annotation databases used by the pipeline.
 

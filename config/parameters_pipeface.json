@@ -7,7 +7,8 @@
     "tandem_repeat": "",
     "snp_indel_caller": "",
     "sv_caller": "",
-    "outdir": ""
+    "annotate": "",
+    "outdir": "",
+    "deepvariant_container": ""
 
 }
-
