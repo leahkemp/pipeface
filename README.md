@@ -4,7 +4,7 @@
 
 Pipefaceee.
 
-Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and optionally annotate long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
+Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and optionally annotate (SNP's, indels's) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
 There currently exists tools and workflows that undertake comparable analyses, but pipeface serves as a central workflow to process long read data (both ONT and pacbio HiFi data). Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
 
@@ -144,6 +144,7 @@ sv_calling_s4-.->sv_annotation_s4
 - ONT/pacbio HiFi FASTQ (gzipped or uncompressed) or unaligned BAM
 - Indexed reference genome
 - Clair3 models (if running Clair3)
+- [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
 
 ### Optional
 

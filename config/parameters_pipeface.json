@@ -8,7 +8,7 @@
     "snp_indel_caller": "",
     "sv_caller": "",
     "annotate": "",
-    "outdir": ""
+    "outdir": "",
+    "deepvariant_container": ""
 
 }
-
