@@ -13,7 +13,7 @@ params.in_data_format_override = ""
 
 process scrape_settings {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$filename" }
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$filename" }, pattern: 'pipeface_settings.txt'
 
     input:
         tuple val(sample_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
@@ -77,6 +77,39 @@ process scrape_settings {
     stub:
         """
         touch pipeface_settings.txt
+        """
+
+}
+
+process scrape_bam_header {
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$file_short.$filename" }
+
+    input:
+        tuple val(sample_id), val(extension), val(file), val(file_short)
+        val outdir
+        val outdir2
+
+    output:
+        tuple val(sample_id), val(file_short), path('header')
+
+    script:
+    if( extension == 'gz' )
+        """
+        echo "none" > header
+        """
+    else if ( extension == 'fastq' )
+        """
+        echo "none" > header
+        """
+    else if( extension == 'bam' )
+        """
+        samtools head $file > header
+        """
+
+    stub:
+        """
+        touch header
         """
 
 }
@@ -764,7 +797,7 @@ workflow {
     Channel
 	.fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file ) }
+        .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file,file(row.file).getName() ) }
         .set { in_data_list }
 
     // build channel from in_data.csv file for main workflow
@@ -838,6 +871,7 @@ workflow {
     // workflow
     // pre-process, alignment and qc
     scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir, outdir2)
+    bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     if ( in_data_format == 'ubam_fastq' ) {
         merged = merge_runs(in_data_tuple)
         bam = minimap2(merged, ref, ref_index)
