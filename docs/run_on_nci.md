@@ -157,7 +157,7 @@ Requirements:
 - provide full file paths
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
 - for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' (as appropriate)
-- entries in the `data_type` column must be either 'ont', 'pacbio' or 'NONE' (as appropriate)
+- entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
 
