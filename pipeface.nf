@@ -13,6 +13,8 @@ params.in_data_format_override = ""
 
 process scrape_settings {
 
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$filename" }
+
     input:
         tuple val(sample_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
         val in_data
@@ -25,6 +27,7 @@ process scrape_settings {
         val annotate
         val calculate_depth
         val outdir
+        val outdir2
 
     output:
         tuple val(sample_id), path('pipeface_settings.txt')
@@ -74,98 +77,6 @@ process scrape_settings {
     stub:
         """
         touch pipeface_settings.txt
-        """
-
-}
-
-process publish_settings {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$filename" }
-
-    input:
-        tuple val(sample_id), path(pipeface_settings)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        path 'pipeface_settings.txt'
-
-    script:
-        """
-        OUT_PATH="$outdir/$sample_id/$outdir2"
-        # if a pipeface_settings.txt file exists ...
-        if [ -f \${OUT_PATH}/pipeface_settings.txt ]; then
-            # ... add +1 to the suffix of each file that has a suffix
-            for FILE in `ls -1vr \${OUT_PATH}/pipeface_settings.*.txt`; do
-                # find the current suffix number by stripping the filepath and returning the only the number
-                SUFFIX=\$(echo \${FILE} | sed 's/.*pipeface_settings//g' | tr -cd '[:digit:]')
-                NEW_SUFFIX=\$((\${SUFFIX} + 1 ))
-                # update suffix
-                mv \${FILE} \${OUT_PATH}/pipeface_settings.\${NEW_SUFFIX}.txt
-            done
-            # ... and start suffix for pipeface_settings.txt
-            mv \${OUT_PATH}/pipeface_settings.txt \${OUT_PATH}/pipeface_settings.1.txt
-        fi
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch pipeface_settings.txt
-        """
-
-}
-
-process scrape_bam_header {
-
-    input:
-        tuple val(sample_id), val(extension), val(file)
-
-    output:
-        tuple val(sample_id), val(file), path('header')
-
-    script:
-    if( extension == 'gz' )
-        """
-        echo "none" > header
-        """
-    else if ( extension == 'fastq' )
-        """
-        echo "none" > header
-        """
-    else if( extension == 'bam' )
-        """
-        samtools head $file > header
-        """
-
-    stub:
-        """
-        touch header
-        """
-
-}
-
-process publish_bam_header {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$file.$filename" }
-
-    input:
-        tuple val(sample_id), path(file), path(header)
-        val outdir
-        val outdir2
-
-    output:
-        path 'header'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch header
         """
 
 }
@@ -281,9 +192,16 @@ process minimap2 {
 
 process mosdepth {
 
+    def depth_software = "mosdepth"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
+
     input:
         tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val mosdepth_binary
+        val outdir
+        val outdir2
+        val ref_name
 
     output:
         tuple val(sample_id), path('depth.txt')
@@ -292,6 +210,12 @@ process mosdepth {
     // define a string to optionally pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
+        # stage bam and bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run mosdepth
         $mosdepth_binary \
         depth \
@@ -309,33 +233,6 @@ process mosdepth {
 
 }
 
-process publish_mosdepth {
-
-    def depth_software = "mosdepth"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }
-
-    input:
-        tuple val(sample_id), path(depth)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        path 'depth.txt'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch depth.txt
-        """
-
-}
-
 process clair3 {
 
     input:
@@ -344,7 +241,7 @@ process clair3 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -442,15 +339,21 @@ process deepvariant {
 
 process whatshap_phase {
 
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+
     input:
         tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
 
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt')
         tuple val(sample_id), val(extension), path('snp_indel.phased.vcf.gz'), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), path('snp_indel.phased.read_list.txt')
 
     script:
         """
@@ -474,38 +377,9 @@ process whatshap_phase {
 
 }
 
-process publish_whatshap_phase {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }
-
-    input:
-        tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index), path(snp_indel_phased_read_list)
-        val outdir
-        val outdir2
-        val ref_name
-        val snp_indel_caller
-
-    output:
-        val sample_id
-        path 'snp_indel.phased.vcf.gz'
-        path 'snp_indel.phased.vcf.gz.tbi'
-        path 'snp_indel.phased.read_list.txt'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch snp_indel.phased.vcf.gz
-        touch snp_indel.phased.vcf.gz.tbi
-        touch snp_indel.phased.read_list.txt
-        """
-
-}
-
 process vep_snv {
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
         tuple val(sample_id), val(extension), path(snp_indel_phased_vcf), val(data_type), val(regions_of_interest), val(clair3_model)
@@ -520,6 +394,10 @@ process vep_snv {
         val spliceai_snv_db
         val spliceai_indel_db
         val alphamissense_db
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
 
     output:
         tuple val(sample_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
@@ -569,44 +447,23 @@ process vep_snv {
 
 }
 
-process publish_vep_snv {
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }
-
-    input:
-        tuple val(sample_id), path(snp_indel_phased_annotated_vcf), path(snp_indel_phased_annotated_vcf_index)
-        val outdir
-        val outdir2
-        val ref_name
-        val snp_indel_caller
-
-    output:
-        path 'snp_indel.phased.annotated.vcf.gz'
-        path 'snp_indel.phased.annotated.vcf.gz.tbi'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch snp_indel.phased.annotated.vcf.gz
-        touch snp_indel.phased.annotated.vcf.gz.tbi
-        """
-
-}
-
 process whatshap_haplotag {
+
+    def mapper_phaser = "minimap2.whatshap"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
 
     input:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
+        val outdir
+        val outdir2
+        val ref_name
 
     output:
         tuple val(sample_id), val(data_type), path('sorted.haplotagged.bam'), path('sorted.haplotagged.bam.bai')
-        tuple val(sample_id), path('sorted.haplotagged.bam'), path('sorted.haplotagged.bam.bai'), path('sorted.haplotagged.tsv')
+        tuple val(sample_id), path('sorted.haplotagged.tsv')
 
     script:
         """
@@ -635,44 +492,20 @@ process whatshap_haplotag {
 
 }
 
-process publish_whatshap_haplotag {
-
-    def mapper_phaser = "minimap2.whatshap"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }
-
-    input:
-        tuple val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(haplotagged_bam_tsv)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        path 'sorted.haplotagged.bam'
-        path 'sorted.haplotagged.bam.bai'
-        path 'sorted.haplotagged.tsv'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch sorted.haplotagged.bam
-        touch sorted.haplotagged.bam.bai
-        touch sorted.haplotagged.tsv
-        """
-
-}
-
 process sniffles {
+
+    def sv_caller = "sniffles"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
         tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
         val ref
         val ref_index
         val tandem_repeat
+        val outdir
+        val outdir2
+        val ref_name
 
     output:
         tuple val(sample_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
@@ -701,42 +534,20 @@ process sniffles {
 
 }
 
-process publish_sniffles {
-
-    def sv_caller = "sniffles"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
-
-    input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        path 'sv.phased.vcf.gz'
-        path 'sv.phased.vcf.gz.tbi'
-
-    script:
-        """
-        echo "Publishing files"
-        """
-
-    stub:
-        """
-        touch sv.phased.vcf.gz
-        touch sv.phased.vcf.gz.tbi
-        """
-
-}
-
 process cutesv {
+
+    def sv_caller = "cutesv"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
         tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
         val ref
         val ref_index
         val tandem_repeat
+        val outdir
+        val outdir2
+        val ref_name
 
     output:
         tuple val(sample_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
@@ -765,35 +576,6 @@ process cutesv {
         -@ ${task.cpus} \
         sv.vcf
         tabix sv.vcf.gz
-        """
-
-    stub:
-        """
-        touch sv.vcf.gz
-        touch sv.vcf.gz.tbi
-        """
-
-}
-
-process publish_cutesv {
-
-    def sv_caller = "cutesv"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }
-
-    input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        path 'sv.vcf.gz'
-        path 'sv.vcf.gz.tbi'
-
-    script:
-        """
-        echo "Publishing files"
         """
 
     stub:
@@ -1055,12 +837,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
-    publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
-    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
-        bam_header = scrape_bam_header(in_data_list)
-        publish_bam_header(bam_header, outdir, outdir2)
-    }
+    scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir, outdir2)
     if ( in_data_format == 'ubam_fastq' ) {
         merged = merge_runs(in_data_tuple)
         bam = minimap2(merged, ref, ref_index)
@@ -1070,36 +847,25 @@ workflow {
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
-            depth_to_publish = mosdepth(bam)
-            publish_mosdepth(depth_to_publish, outdir, outdir2, ref_name)
+            mosdepth(bam, mosdepth_binary, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
-            (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
+            snp_indel_vcf_bam = clair3(bam, ref, ref_index)
         }
         else if ( snp_indel_caller == 'deepvariant' ) {
-            (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index, deepvariant_container)
+            snp_indel_vcf_bam = deepvariant(bam, ref, ref_index, deepvariant_container)
         }
         // phasing
-        (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
-        publish_whatshap_phase(whatshap_phase_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
+        (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
-        (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index)
-        publish_whatshap_haplotag(whatshap_haplotag_to_publish, outdir, outdir2, ref_name)
+        (haplotagged_bam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
-        if ( sv_caller == 'sniffles' ) {
-            sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
-            publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
+        if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
+            sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
-        else if ( sv_caller == 'cutesv' ) {
-            cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
-            publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
-        }
-        else if ( sv_caller == 'both' ) {
-            sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
-            publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
-            cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
-            publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+        if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
+            cutesv(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
@@ -1108,8 +874,7 @@ workflow {
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
         // annotation
         if ( annotate == 'yes' ) {
-            vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
-            publish_vep_snv(vep_snv_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
+            vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
     }
 }
