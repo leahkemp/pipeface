@@ -360,9 +360,9 @@ process clair3 {
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
         bam_loc=\$(realpath ${bam})
-        ln -s \${bam_loc} sorted.bam
-        ln -s \${bam_loc}.bai .
-        ln -s \${bam_loc}.bai sorted.bam.bai
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
         run_clair3.sh \
         --bam_fn=$bam \
@@ -413,9 +413,9 @@ process deepvariant {
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
         bam_loc=\$(realpath ${bam})
-        ln -s \${bam_loc} sorted.bam
-        ln -s \${bam_loc}.bai .
-        ln -s \${bam_loc}.bai sorted.bam.bai
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run deepvariant
         singularity run $deepvariant_container run_deepvariant \
         --reads=$bam \
@@ -848,9 +848,6 @@ workflow {
     if ( in_data_format == 'snv_vcf' && tandem_repeat != 'NONE' ) {
         exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
     }
-    if ( in_data_format == 'snv_vcf' && snp_indel_caller != 'NONE' ) {
-        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the SNP/indel calling software to 'NONE'. Either set snp_indel_caller to 'NONE' in parameter file or pass '--snp_indel_caller NONE' on the command line"
-    }
     if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
         exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
     }
@@ -884,7 +881,7 @@ workflow {
     if ( in_data_format != 'snv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
-    if ( snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
+    if ( in_data_format != 'snv_vcf' && snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
         exit 1, "Error: When DeepVariant is selected as the SNP/indel calling software, provide a path to an appropriate DeepVariant container in the parameter file or pass to --deepvariant_container on the command line rather than setting it to 'NONE'."
     }
     if ( !sv_caller ) {
@@ -892,6 +889,12 @@ workflow {
     }
     if ( in_data_format != 'snv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
         exit 1, "Error: SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
+    }
+    if ( in_data_format == 'snv_vcf' && ref == 'NONE' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
+    }
+    if ( in_data_format == 'snv_vcf' && snp_indel_caller == 'NONE' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please pass the SNP/indel calling software used to generate the input data to 'snp_indel_caller' instead of setting it to 'NONE'."
     }
     if ( !annotate ) {
         exit 1, "Error: Choice to annotate not made. Either include in parameter file or pass to --annotate on the command line. Should be either 'yes' or 'no'."
@@ -943,9 +946,6 @@ workflow {
     }
     if ( deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant') {
         exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
-    }
-    if ( deepvariant_container == 'NONE' && snp_indel_caller == 'deepvariant') {
-        exit 1, "Error: Pass an appropriate path to 'deepvariant_container' when DeepVariant is selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
     }
     if ( !mosdepth_binary ) {
         exit 1, "Error: No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
