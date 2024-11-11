@@ -386,7 +386,7 @@ process whatshap_phase {
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
         tuple val(sample_id), val(extension), path('snp_indel.phased.vcf.gz'), val(data_type), val(regions_of_interest), val(clair3_model)
-        tuple val(sample_id), path('snp_indel.phased.read_list.txt')
+        tuple val(sample_id), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.tsv')
 
     script:
         """
@@ -399,6 +399,10 @@ process whatshap_phase {
         --ignore-read-groups $snp_indel_vcf $bam
         # index vcf
         tabix snp_indel.phased.vcf.gz
+        # run whatshap stats
+        whatshap stats \
+        --tsv snp_indel.phased.stats.tsv \
+        --sample $sample_id
         """
 
     stub:
@@ -406,6 +410,7 @@ process whatshap_phase {
         touch snp_indel.phased.vcf.gz
         touch snp_indel.phased.vcf.gz.tbi
         touch snp_indel.phased.read_list.txt
+        touch snp_indel.phased.stats.tsv
         """
 
 }
