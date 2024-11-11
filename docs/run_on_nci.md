@@ -181,7 +181,7 @@ Modify access to project specific directories. Eg:
 Specify the path to `in_data.csv`. Eg:
 
 ```json
-    "input": "./config/in_data.csv",
+    "in_data": "./config/in_data.csv",
 ```
 
 Specify the path to the reference genome and it's index. Eg:
@@ -198,7 +198,7 @@ Specify the path to the reference genome and it's index. Eg:
     "ref_index": "./hs1.fa.fai",
 ```
 
-Optionally specify the path to the tandem repeat bed file. Eg:
+Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
 
 ```json
     "tandem_repeat": "./*.trf.bed",

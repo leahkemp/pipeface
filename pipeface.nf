@@ -6,12 +6,17 @@ nextflow.enable.dsl=2
 params.outdir2 = ""
 params.tandem_repeat = "NONE"
 params.annotate_override = ""
+// secret sauce option to pass pipeface an aligned bam or snp/indel VCF file
+// options include 'ubam_fastq', 'aligned_bam' or 'snv_vcf'
+params.in_data_format = "ubam_fastq"
+params.in_data_format_override = ""
 
 process scrape_settings {
 
     input:
         tuple val(sample_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
         val in_data
+        val in_data_format
         val ref
         val ref_index
         val tandem_repeat
@@ -35,8 +40,22 @@ process scrape_settings {
         else if ( sv_caller == 'cutesv' ) {
             reported_sv_caller = 'cutesv'
         }
+        else if ( sv_caller == 'NONE' ) {
+            reported_sv_caller = 'NONE'
+        }
+        // conditionally define reported in data format
+        if( in_data_format == 'ubam_fastq' ) {
+            reported_in_data_format = 'unaligned BAM and/or FASTQ'
+        }
+        else if ( in_data_format == 'aligned_bam' ) {
+            reported_in_data_format = 'aligned BAM'
+        }
+        else if ( in_data_format == 'snv_vcf' ) {
+            reported_in_data_format = 'SNP/indel vcf'
+        }
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
+        echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
         echo "Data type: $data_type" >> pipeface_settings.txt
         echo "Regions of interest file: $regions_of_interest" >> pipeface_settings.txt
@@ -206,8 +225,7 @@ process minimap2 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai')
-        tuple val(sample_id), val(regions_of_interest), path('sorted.bam'), path('sorted.bam.bai')
+        tuple val(sample_id), val(extension), path('sorted.bam'), val(data_type), val(regions_of_interest), val(clair3_model)
 
     script:
     // conditionally define preset
@@ -264,7 +282,7 @@ process minimap2 {
 process mosdepth {
 
     input:
-        tuple val(sample_id), val(regions_of_interest), path(bam), path(bam_index)
+        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val mosdepth_binary
 
     output:
@@ -321,12 +339,12 @@ process publish_mosdepth {
 process clair3 {
 
     input:
-        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index)
+        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -339,6 +357,12 @@ process clair3 {
         platform = 'hifi'
     }
         """
+        # stage bam and bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
         run_clair3.sh \
         --bam_fn=$bam \
@@ -367,13 +391,13 @@ process clair3 {
 process deepvariant {
 
     input:
-        tuple val(sample_id), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index)
+        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
         val deepvariant_container
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // conditionally define model type
@@ -386,6 +410,12 @@ process deepvariant {
     // define an optional string to pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
+        # stage bam and bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run deepvariant
         singularity run $deepvariant_container run_deepvariant \
         --reads=$bam \
@@ -413,14 +443,14 @@ process deepvariant {
 process whatshap_phase {
 
     input:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
 
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
         tuple val(sample_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt')
-        tuple val(sample_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), path('snp_indel.phased.vcf.gz'), val(data_type), val(regions_of_interest), val(clair3_model)
 
     script:
         """
@@ -478,7 +508,7 @@ process publish_whatshap_phase {
 process vep_snv {
 
     input:
-        tuple val(sample_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index)
+        tuple val(sample_id), val(extension), path(snp_indel_phased_vcf), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
         val vep_db
@@ -778,6 +808,8 @@ workflow {
 
     // grab parameters
     in_data = "$params.in_data"
+    in_data_format = "$params.in_data_format"
+    in_data_format_override = "$params.in_data_format_override"
     ref = "$params.ref"
     ref_index = "$params.ref_index"
     tandem_repeat = "$params.tandem_repeat"
@@ -804,29 +836,65 @@ workflow {
     if ( !in_data ) {
         exit 1, "Error: No in data csv file specified. Either include in parameter file or pass to --in_data on the command line."
     }
+    if ( !file(in_data).exists() ) {
+        exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
+    }
+    if ( !in_data_format ) {
+        exit 1, "Error: No in data format selected. Either include in parameter file or pass to --in_data_format on the command line. Should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf'."
+    }
+    if ( in_data_format != 'ubam_fastq' && in_data_format != 'aligned_bam' && in_data_format != 'snv_vcf' ) {
+        exit 1, "Error: In data format should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf', '${in_data_format}' selected."
+    }
+    if ( in_data_format == 'snv_vcf' && tandem_repeat != 'NONE' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
+    }
+    if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
+    }
+    if ( in_data_format == 'snv_vcf' && annotate == 'no' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you've chosen not to annotate. Nothing for pipeface to do."
+    }
+    if ( in_data_format == 'snv_vcf' && calculate_depth == 'yes' ) {
+        exit 1, "Error: In data format is SNP/indel vcf, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
+    }
     if ( !ref ) {
         exit 1, "Error: No reference genome provided. Either include in parameter file or pass to --ref on the command line."
+    }
+    if ( !file(ref).exists() ) {
+        exit 1, "Error: Reference genome file path does not exist, '${ref}' provided."
     }
     if ( !ref_index ) {
         exit 1, "Error: No reference genome index provided. Either include in parameter file or pass to --ref_index on the command line."
     }
+    if ( !file(ref_index).exists() ) {
+        exit 1, "Error: Reference genome index file path does not exist, '${ref_index}' provided."
+    }
     if ( !tandem_repeat ) {
         exit 1, "Error: No tandem repeat bed file provided. Either include in parameter file or pass to --tandem_repeat on the command line. Set to 'NONE' if you do not wish to use a tandem repeat bed file."
+    }
+    if ( !file(tandem_repeat).exists() ) {
+        exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
     }
     if ( !snp_indel_caller ) {
         exit 1, "Error: No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
     }
-    if ( snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
+    if ( in_data_format != 'snv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
-    if ( snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
+    if ( in_data_format != 'snv_vcf' && snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
         exit 1, "Error: When DeepVariant is selected as the SNP/indel calling software, provide a path to an appropriate DeepVariant container in the parameter file or pass to --deepvariant_container on the command line rather than setting it to 'NONE'."
     }
     if ( !sv_caller ) {
         exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
-    if ( sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
+    if ( in_data_format != 'snv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
         exit 1, "Error: SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
+    }
+    if ( in_data_format == 'snv_vcf' && ref == 'NONE' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
+    }
+    if ( in_data_format == 'snv_vcf' && snp_indel_caller == 'NONE' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please pass the SNP/indel calling software used to generate the input data to 'snp_indel_caller' instead of setting it to 'NONE'."
     }
     if ( !annotate ) {
         exit 1, "Error: Choice to annotate not made. Either include in parameter file or pass to --annotate on the command line. Should be either 'yes' or 'no'."
@@ -879,9 +947,6 @@ workflow {
     if ( deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant') {
         exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
     }
-    if ( deepvariant_container == 'NONE' && snp_indel_caller == 'deepvariant') {
-        exit 1, "Error: Pass an appropriate path to 'deepvariant_container' when DeepVariant is selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
-    }
     if ( !mosdepth_binary ) {
         exit 1, "Error: No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
     }
@@ -920,7 +985,7 @@ workflow {
         .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file ) }
         .set { in_data_list }
 
-    // build channel from in_data.csv file for analysis
+    // build channel from in_data.csv file for main workflow
     // groupTuple will collapse by sample_id (as defined in the in_data.csv file), creating a list of files per sample_id
     Channel
         .fromPath( in_data )
@@ -947,76 +1012,104 @@ workflow {
     if ( in_file.isEmpty() ) {
        exit 1, "Error processing '$in_data' file. There is an empty entry in the 'file' column."
     }
+    if ( !file(in_file).exists() ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't exist. Check file '$in_file'."
+    }
+    if ( file(in_file).getExtension() != 'bam' && file(in_file).getExtension() != 'gz' && file(in_file).getExtension() != 'fastq' ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
+    }
+    if ( in_data_format == 'aligned_bam' && !file(in_file + '.bai').exists() ) {
+       exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks '${in_file}' isn't indexed (ie. '${in_file}.bai doesn't exist')."
+    }
+    if ( in_data_format == 'aligned_bam' && !in_file.contains('bam') && in_data_format_override != 'yes' ) {
+       exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+    }
+    if ( in_data_format == 'snv_vcf' && !in_file.contains('vcf') && in_data_format_override != 'yes' ) {
+       exit 1, "Error processing '$in_data' file. You've specified that the in data format is SNV vcf, but it looks like you may not be passing a VCF file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+    }
     if ( data_type.isEmpty() ) {
        exit 1, "Error processing '$in_data' file. There is an empty entry in the 'data_type' column."
+    }
+    if ( in_data_format != 'snv_vcf' && data_type != 'ont' && data_type != 'pacbio' ) {
+       exit 1, "Error processing '$in_data' file. There is an entry in the 'data_type' column that is not 'ont' or 'pacbio', '$data_type' provided."
     }
     if ( regions_of_interest.isEmpty() ) {
        exit 1, "Error processing '$in_data' file. There is an empty entry in the 'regions_of_interest' column."
     }
-    if ( clair3_model.isEmpty() ) {
-       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'clair3_model' column."
-    }
-    if ( data_type != 'ont' && data_type != 'pacbio' ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'data_type' column that is not 'ont' or 'pacbio', '$data_type' provided."
-    }
-    if ( !file(in_file).exists() ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't exist. Check file '$in_file'."
-    }
     if ( !file(regions_of_interest).exists() ) {
        exit 1, "Error processing '$in_data' file. There is an entry in the 'regions_of_interest' column which doesn't exist. Check file '$regions_of_interest'."
+    }
+    if ( clair3_model.isEmpty() ) {
+       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'clair3_model' column."
     }
     if ( !file(clair3_model).exists() ) {
        exit 1, "Error processing '$in_data' file. There is an entry in the 'clair3_model' column which doesn't exist. Check path '$clair3_model'."
     }
-    if ( file(in_file).getExtension() != "bam" && file(in_file).getExtension() != "gz" && file(in_file).getExtension() != "fastq" ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
-    }
-    if ( snp_indel_caller != "clair3" && clair3_model != "NONE" ) {
+    if ( snp_indel_caller != 'clair3' && clair3_model != 'NONE' ) {
        exit 1, "Error processing '$in_data' file. Pass 'NONE' in the 'clair3_model' column when clair3 is NOT selected as the SNP/indel calling software, '$clair3_model' provided'."
     }
-    if ( snp_indel_caller == "clair3" && clair3_model == "NONE" ) {
+    if ( snp_indel_caller == 'clair3' && clair3_model == 'NONE' ) {
        exit 1, "Error processing '$in_data' file. When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column rather than setting it to 'NONE'."
     }
     }
 
     // workflow
-    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
+    // pre-process, alignment and qc
+    scrape_settings_to_publish = scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir)
     publish_settings(scrape_settings_to_publish, outdir, outdir2, ref_name)
-    bam_header = scrape_bam_header(in_data_list)
-    publish_bam_header(bam_header, outdir, outdir2)
-    merged = merge_runs(in_data_tuple)
-    (bam, minimap_to_publish1) = minimap2(merged, ref, ref_index)
-    if ( calculate_depth == 'yes' ) {
-        minimap_to_publish2 = mosdepth(minimap_to_publish1, mosdepth_binary)
-        publish_mosdepth(minimap_to_publish2, outdir, outdir2, ref_name)
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
+        bam_header = scrape_bam_header(in_data_list)
+        publish_bam_header(bam_header, outdir, outdir2)
     }
-    if ( snp_indel_caller == 'clair3' ) {
-        (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
+    if ( in_data_format == 'ubam_fastq' ) {
+        merged = merge_runs(in_data_tuple)
+        bam = minimap2(merged, ref, ref_index)
     }
-    else if ( snp_indel_caller == 'deepvariant' ) {
-        (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index, deepvariant_container)
+    if ( in_data_format == 'aligned_bam' ) {
+        bam = in_data_tuple
     }
-    (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
-    publish_whatshap_phase(whatshap_phase_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
-    if ( annotate == 'yes' ) {
-        vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
-        publish_vep_snv(vep_snv_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
+        if ( calculate_depth == 'yes' ) {
+            depth_to_publish = mosdepth(bam)
+            publish_mosdepth(depth_to_publish, outdir, outdir2, ref_name)
+        }
+        // snp/indel calling
+        if ( snp_indel_caller == 'clair3' ) {
+            (snp_indel_vcf_bam, snp_indel_vcf) = clair3(bam, ref, ref_index)
+        }
+        else if ( snp_indel_caller == 'deepvariant' ) {
+            (snp_indel_vcf_bam, snp_indel_vcf) = deepvariant(bam, ref, ref_index, deepvariant_container)
+        }
+        // phasing
+        (snp_indel_phased_vcf_bam, whatshap_phase_to_publish, snp_indel_phased_vcf) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index)
+        publish_whatshap_phase(whatshap_phase_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
+        // haplotagging
+        (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index)
+        publish_whatshap_haplotag(whatshap_haplotag_to_publish, outdir, outdir2, ref_name)
+        // sv calling
+        if ( sv_caller == 'sniffles' ) {
+            sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
+            publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
+        }
+        else if ( sv_caller == 'cutesv' ) {
+            cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
+            publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+        }
+        else if ( sv_caller == 'both' ) {
+            sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
+            publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
+            cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
+            publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+        }
     }
-    (haplotagged_bam, whatshap_haplotag_to_publish) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index)
-    publish_whatshap_haplotag(whatshap_haplotag_to_publish, outdir, outdir2, ref_name)
-    if ( sv_caller == 'sniffles' ) {
-        sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
+    if ( in_data_format == 'snv_vcf' ) {
+        snp_indel_phased_vcf = in_data_tuple
     }
-    else if ( sv_caller == 'cutesv' ) {
-        cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
+        // annotation
+        if ( annotate == 'yes' ) {
+            vep_snv_to_publish = vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db)
+            publish_vep_snv(vep_snv_to_publish, outdir, outdir2, ref_name, snp_indel_caller)
+        }
     }
-    else if ( sv_caller == 'both' ) {
-        sniffles_to_publish = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_sniffles(sniffles_to_publish, outdir, outdir2, ref_name)
-        cutesv_to_publish = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat)
-        publish_cutesv(cutesv_to_publish, outdir, outdir2, ref_name)
-    }
-
 }
