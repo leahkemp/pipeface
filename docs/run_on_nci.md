@@ -156,7 +156,7 @@ Requirements:
 - similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
 - provide full file paths
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
-- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz', '.fastq' (as appropriate)
+- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz' or '.fastq' (as appropriate)
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
