@@ -401,6 +401,7 @@ process whatshap_phase {
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
+        $snp_indel_vcf \
         --tsv snp_indel.phased.stats.tsv \
         --sample $sample_id
         """
