@@ -25,11 +25,13 @@ snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
+generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
+haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
 
 ```
@@ -80,6 +82,9 @@ haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <
 haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 
+generate_meth_probs_s2{{"Description: Generate site methylation probabilities (pacbio data only) <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
+generate_meth_probs_s4{{"Description: Generate site methylation probabilities (pacbio data only) <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
+
 sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
@@ -103,6 +108,9 @@ alignment_s2-.->haplotagging_s2
 alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
 
+haplotagging_s2-.->generate_meth_probs_s2
+haplotagging_s4-.->generate_meth_probs_s4
+
 snp_indel_phasing_s1-.->snp_indel_annotation_s1
 snp_indel_phasing_s2-.->snp_indel_annotation_s2
 snp_indel_phasing_s3-.->snp_indel_annotation_s3
@@ -125,6 +133,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
+- [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
 
 ## Main input files
 
@@ -135,6 +144,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - Clair3 models (if running Clair3)
 - [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
 - [mosdepth 0.3.9 binary](https://github.com/brentp/mosdepth/releases/tag/v0.3.9) (if running depth calculation)
+- [pb-CpG-tools 2.3.2 binary](https://github.com/PacificBiosciences/pb-CpG-tools/releases/tag/v2.3.2) (if processing pacbio data)
 
 ### Optional
 

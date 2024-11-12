@@ -187,6 +187,7 @@ process minimap2 {
         -T '*' \
         $merged | minimap2 \
         -y \
+        -Y \
         --secondary=no \
         --MD \
         -a \
@@ -205,6 +206,7 @@ process minimap2 {
         --secondary=no \
         --MD \
         -a \
+        -Y \
         -x $preset \
         -t ${task.cpus} \
         $ref \
@@ -531,6 +533,61 @@ process whatshap_haplotag {
 
 }
 
+process pbcpgtools {
+
+    def software = "pbcpgtools"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
+
+    input:
+        tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
+        val pbcpgtools_binary
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
+
+    script:
+    if( data_type == 'pacbio' )
+        """
+        # run pb-cpg-tools
+        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
+        --bam $haplotagged_bam \
+        --ref $ref \
+        --pileup-mode model \
+        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --modsites-mode denovo \
+        --hap-tag HP \
+        --threads ${task.cpus}
+        # rename file
+        ln -s aligned_bam_to_cpg_scores.hap1.bw cpg_scores_hap1.bw
+        ln -s aligned_bam_to_cpg_scores.hap1.bed cpg_scores_hap1.bed
+        ln -s aligned_bam_to_cpg_scores.hap2.bw cpg_scores_hap2.bw
+        ln -s aligned_bam_to_cpg_scores.hap2.bed cpg_scores_hap2.bed
+        ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores_combined.bw
+        ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores_combined.bed
+        """
+    else if( data_type == 'ont' )
+        """
+        echo "Data type is ONT, not running pb-CpG-tools on this data."
+        """
+
+    stub:
+        """
+        touch cpg_scores_hap1.bw
+        touch cpg_scores_hap1.bed
+        touch cpg_scores_hap2.bw
+        touch cpg_scores_hap2.bed
+        touch cpg_scores_combined.bw
+        touch cpg_scores_combined.bed
+        """
+
+}
+
 process sniffles {
 
     def sv_caller = "sniffles"
@@ -643,6 +700,7 @@ workflow {
     outdir2 = "$params.outdir2"
     deepvariant_container = "$params.deepvariant_container"
     mosdepth_binary = "$params.mosdepth_binary"
+    pbcpgtools_binary = "$params.pbcpgtools_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
@@ -777,6 +835,9 @@ workflow {
     if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
         exit 1, "Error: Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
     }
+    if ( !pbcpgtools_binary ) {
+        exit 1, "Error: No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
+    }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
     }
@@ -900,6 +961,7 @@ workflow {
         (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
         (haplotagged_bam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
+        pbcpgtools(haplotagged_bam, pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
             sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
