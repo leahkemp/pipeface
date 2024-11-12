@@ -187,6 +187,7 @@ process minimap2 {
         -T '*' \
         $merged | minimap2 \
         -y \
+        -Y \
         --secondary=no \
         --MD \
         -a \
@@ -205,6 +206,7 @@ process minimap2 {
         --secondary=no \
         --MD \
         -a \
+        -Y \
         -x $preset \
         -t ${task.cpus} \
         $ref \
@@ -262,6 +264,57 @@ process mosdepth {
     stub:
         """
         touch depth.txt
+        """
+
+}
+
+process pbcpgtools {
+
+    def software = "pbcpgtools"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
+
+    input:
+        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
+        val pbcpgtools_binary
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), path('cpg_scores.bw'), path('cpg_scores.bed'), optional: true
+
+    script:
+    if( data_type == 'pacbio' )
+        """
+        # stage bam and bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
+        # run pb-cpg-tools
+        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
+        --bam $bam \
+        --ref $ref \
+        --pileup-mode model \
+        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --threads ${task.cpus}
+        # rename file
+        ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores.bw
+        ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores.bed
+        """
+    else if( data_type == 'ont' )
+        """
+        echo "Data type is ONT, not running pb-CpG-tools on this data."
+        """
+
+    stub:
+        """
+        touch cpg_scores.bw
+        touch cpg_scores.bed
         """
 
 }
@@ -637,6 +690,7 @@ workflow {
     outdir2 = "$params.outdir2"
     deepvariant_container = "$params.deepvariant_container"
     mosdepth_binary = "$params.mosdepth_binary"
+    pbcpgtools_binary = "$params.pbcpgtools_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
@@ -883,6 +937,7 @@ workflow {
         if ( calculate_depth == 'yes' ) {
             mosdepth(bam, mosdepth_binary, outdir, outdir2, ref_name)
         }
+        pbcpgtools(bam, pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
             snp_indel_vcf_bam = clair3(bam, ref, ref_index)
