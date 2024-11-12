@@ -304,7 +304,7 @@ Specify the path to the mosdepth binary (if running depth calculation). Eg:
     "mosdepth_binary": "NONE"
 ```
 
-Specify the path to the pb-CpG-tools binary (if calculating pacbio methylation probabilities). Eg:
+Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
 
 ```json
     "pbcpgtools_binary": "./pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu/"
