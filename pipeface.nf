@@ -825,6 +825,9 @@ workflow {
     if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
         exit 1, "Error: Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
     }
+    if ( !pbcpgtools_binary ) {
+        exit 1, "Error: No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
+    }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
     }
