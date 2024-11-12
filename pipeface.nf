@@ -386,7 +386,7 @@ process whatshap_phase {
     output:
         tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
         tuple val(sample_id), val(extension), path('snp_indel.phased.vcf.gz'), val(data_type), val(regions_of_interest), val(clair3_model)
-        tuple val(sample_id), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.tsv')
+        tuple val(sample_id), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
         """
@@ -402,7 +402,7 @@ process whatshap_phase {
         # run whatshap stats
         whatshap stats \
         snp_indel.phased.vcf.gz \
-        --tsv snp_indel.phased.stats.tsv \
+        --gtf snp_indel.phased.stats.gtf \
         --sample $sample_id
         """
 
@@ -411,7 +411,7 @@ process whatshap_phase {
         touch snp_indel.phased.vcf.gz
         touch snp_indel.phased.vcf.gz.tbi
         touch snp_indel.phased.read_list.txt
-        touch snp_indel.phased.stats.tsv
+        touch snp_indel.phased.stats.gtf
         """
 
 }
