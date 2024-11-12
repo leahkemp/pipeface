@@ -301,6 +301,8 @@ process pbcpgtools {
         --ref $ref \
         --pileup-mode model \
         --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --modsites-mode denovo \
+        --hap-tag HP \
         --threads ${task.cpus}
         # rename file
         ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores.bw
