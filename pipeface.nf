@@ -268,59 +268,6 @@ process mosdepth {
 
 }
 
-process pbcpgtools {
-
-    def software = "pbcpgtools"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
-
-    input:
-        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
-        val pbcpgtools_binary
-        val ref
-        val ref_index
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        tuple val(sample_id), path('cpg_scores.bw'), path('cpg_scores.bed'), optional: true
-
-    script:
-    if( data_type == 'pacbio' )
-        """
-        # stage bam and bam index
-        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
-        bam_loc=\$(realpath ${bam})
-        ln -sf \${bam_loc} sorted.bam
-        ln -sf \${bam_loc}.bai .
-        ln -sf \${bam_loc}.bai sorted.bam.bai
-        # run pb-cpg-tools
-        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
-        --bam $bam \
-        --ref $ref \
-        --pileup-mode model \
-        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
-        --modsites-mode denovo \
-        --hap-tag HP \
-        --threads ${task.cpus}
-        # rename file
-        ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores.bw
-        ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores.bed
-        """
-    else if( data_type == 'ont' )
-        """
-        echo "Data type is ONT, not running pb-CpG-tools on this data."
-        """
-
-    stub:
-        """
-        touch cpg_scores.bw
-        touch cpg_scores.bed
-        """
-
-}
-
 process clair3 {
 
     input:
@@ -576,6 +523,61 @@ process whatshap_haplotag {
         touch sorted.haplotagged.bam
         touch sorted.haplotagged.bam.bai
         touch sorted.haplotagged.tsv
+        """
+
+}
+
+process pbcpgtools {
+
+    def software = "pbcpgtools"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
+
+    input:
+        tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
+        val pbcpgtools_binary
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
+
+    script:
+    if( data_type == 'pacbio' )
+        """
+        # run pb-cpg-tools
+        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
+        --bam $haplotagged_bam \
+        --ref $ref \
+        --pileup-mode model \
+        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --modsites-mode denovo \
+        --hap-tag HP \
+        --threads ${task.cpus}
+        # rename file
+        ln -s aligned_bam_to_cpg_scores.hap1.bw cpg_scores_hap1.bw
+        ln -s aligned_bam_to_cpg_scores.hap1.bed cpg_scores_hap1.bed
+        ln -s aligned_bam_to_cpg_scores.hap2.bw cpg_scores_hap2.bw
+        ln -s aligned_bam_to_cpg_scores.hap2.bed cpg_scores_hap2.bed
+        ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores_combined.bw
+        ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores_combined.bed
+        """
+    else if( data_type == 'ont' )
+        """
+        echo "Data type is ONT, not running pb-CpG-tools on this data."
+        """
+
+    stub:
+        """
+        touch cpg_scores_hap1.bw
+        touch cpg_scores_hap1.bed
+        touch cpg_scores_hap2.bw
+        touch cpg_scores_hap2.bed
+        touch cpg_scores_combined.bw
+        touch cpg_scores_combined.bed
         """
 
 }
@@ -942,7 +944,6 @@ workflow {
         if ( calculate_depth == 'yes' ) {
             mosdepth(bam, mosdepth_binary, outdir, outdir2, ref_name)
         }
-        pbcpgtools(bam, pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
             snp_indel_vcf_bam = clair3(bam, ref, ref_index)
@@ -954,6 +955,7 @@ workflow {
         (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
         (haplotagged_bam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
+        pbcpgtools(haplotagged_bam, pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
             sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
