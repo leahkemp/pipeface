@@ -11,7 +11,7 @@
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
     - [DeepVariant container (if running DeepVariant)](#deepvariant-container-if-running-deepvariant)
     - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
-    - [pb-CpG-tools binary (if calculating pacbio methylation probabilities)](#pb-cpg-tools-binary-if-calculating-pacbio-methylation-probabilities)
+    - [pb-CpG-tools binary (if processing pacbio data)](#pb-cpg-tools-binary-if-processing-pacbio-data)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
@@ -137,7 +137,7 @@ wget https://github.com/brentp/mosdepth/releases/download/v0.3.9/mosdepth -O mos
 chmod +x mosdepth_0.3.9
 ```
 
-### pb-CpG-tools binary (if calculating pacbio methylation probabilities)
+### pb-CpG-tools binary (if processing pacbio data)
 
 Get a local copy of the pb-CpG-tools v2.3.2 binary
 
