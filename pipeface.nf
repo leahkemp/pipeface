@@ -46,7 +46,7 @@ process scrape_settings {
         else if ( sv_caller == 'NONE' ) {
             reported_sv_caller = 'NONE'
         }
-                // conditionally define reported in data format
+        // conditionally define reported in data format
         if ( in_data_format == 'ubam_fastq' ) {
             reported_in_data_format = 'unaligned BAM and/or FASTQ'
         }
@@ -65,8 +65,8 @@ process scrape_settings {
         echo "Regions of interest file: $regions_of_interest" >> pipeface_settings.txt
         echo "Clair3 model: $clair3_model" >> pipeface_settings.txt
         echo "In data csv path: $in_data" >> pipeface_settings.txt
-        echo "Reference genome: $ref_genome" >> pipeface_settings.txt
-        echo "Reference genome index: $ref_genome_index" >> pipeface_settings.txt
+        echo "Reference genome: $ref" >> pipeface_settings.txt
+        echo "Reference genome index: $ref_index" >> pipeface_settings.txt
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
