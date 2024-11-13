@@ -132,8 +132,8 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
-- [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 - [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
+- [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
 ## Main input files
 
