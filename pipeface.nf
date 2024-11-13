@@ -934,6 +934,9 @@ workflow {
     if ( in_data_format != 'snv_vcf' && data_type != 'ont' && data_type != 'pacbio' ) {
        exit 1, "Error processing '$in_data' file. There is an entry in the 'data_type' column that is not 'ont' or 'pacbio', '$data_type' provided."
     }
+    if ( in_data_format == 'snv_vcf' && data_type != 'NONE' ) {
+       exit 1, "Error processing '$in_data' file. When the input data format is 'snv_vcf', please set the data type (data_type) to 'NONE'."
+    }
     if ( regions_of_interest.isEmpty() ) {
        exit 1, "Error processing '$in_data' file. There is an empty entry in the 'regions_of_interest' column."
     }
@@ -949,8 +952,11 @@ workflow {
     if ( snp_indel_caller != 'clair3' && clair3_model != 'NONE' ) {
        exit 1, "Error processing '$in_data' file. Pass 'NONE' in the 'clair3_model' column when clair3 is NOT selected as the SNP/indel calling software, '$clair3_model' provided'."
     }
-    if ( snp_indel_caller == 'clair3' && clair3_model == 'NONE' ) {
+    if ( in_data_format != 'snv_vcf' && snp_indel_caller == 'clair3' && clair3_model == 'NONE' ) {
        exit 1, "Error processing '$in_data' file. When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column rather than setting it to 'NONE'."
+    }
+    if ( in_data_format == 'snv_vcf' && clair3_model != 'NONE' ) {
+       exit 1, "Error processing '$in_data' file. When the input data format is 'snv_vcf', please set the Clair3 model (clair3_model) to 'NONE'."
     }
     }
 
