@@ -963,7 +963,9 @@ workflow {
     // workflow
     // pre-process, alignment and qc
     scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir, outdir2)
-    bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
+        bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
+    }
     if ( in_data_format == 'ubam_fastq' ) {
         merged = merge_runs(in_data_tuple)
         bam = minimap2(merged, ref, ref_index)
