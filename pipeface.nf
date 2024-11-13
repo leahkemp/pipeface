@@ -46,8 +46,8 @@ process scrape_settings {
         else if ( sv_caller == 'NONE' ) {
             reported_sv_caller = 'NONE'
         }
-        // conditionally define reported in data format
-        if( in_data_format == 'ubam_fastq' ) {
+                // conditionally define reported in data format
+        if ( in_data_format == 'ubam_fastq' ) {
             reported_in_data_format = 'unaligned BAM and/or FASTQ'
         }
         else if ( in_data_format == 'aligned_bam' ) {
@@ -56,6 +56,7 @@ process scrape_settings {
         else if ( in_data_format == 'snv_vcf' ) {
             reported_in_data_format = 'SNP/indel vcf'
         }
+        if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
@@ -64,13 +65,22 @@ process scrape_settings {
         echo "Regions of interest file: $regions_of_interest" >> pipeface_settings.txt
         echo "Clair3 model: $clair3_model" >> pipeface_settings.txt
         echo "In data csv path: $in_data" >> pipeface_settings.txt
-        echo "Reference genome: $ref" >> pipeface_settings.txt
-        echo "Reference genome index: $ref_index" >> pipeface_settings.txt
+        echo "Reference genome: $ref_genome" >> pipeface_settings.txt
+        echo "Reference genome index: $ref_genome_index" >> pipeface_settings.txt
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
+        echo "Outdir: $outdir" >> pipeface_settings.txt
+        """
+        else if( in_data_format == 'snv_vcf' )
+        """
+        echo "Sample ID: $sample_id" >> pipeface_settings.txt
+        echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
+        echo "Input data file/files: $files" >> pipeface_settings.txt
+        echo "In data csv path: $in_data" >> pipeface_settings.txt
+        echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
 
@@ -772,6 +782,9 @@ workflow {
     if ( in_data_format == 'snv_vcf' && ref == 'NONE' ) {
         exit 1, "Error: When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
     }
+    if ( in_data_format == 'snv_vcf' && ref_index == 'NONE' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please pass the reference genome index used to generate the input data to 'ref_index' instead of setting it to 'NONE'."
+    }
     if ( in_data_format == 'snv_vcf' && snp_indel_caller == 'NONE' ) {
         exit 1, "Error: When the input data format is 'snv_vcf', please pass the SNP/indel calling software used to generate the input data to 'snp_indel_caller' instead of setting it to 'NONE'."
     }
@@ -823,7 +836,10 @@ workflow {
     if ( !deepvariant_container ) {
         exit 1, "Error: No DeepVariant container provided. Either include in parameter file or pass to --deepvariant_container on the command line. Set to 'NONE' if not running DeepVariant."
     }
-    if ( deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant') {
+    if ( in_data_format == 'snv_vcf' && deepvariant_container != 'NONE' && snp_indel_caller == 'deepvariant' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please set the DeepVariant container (deepvariant_container) to 'NONE'."
+    }
+    if ( in_data_format != 'snv_vcf' && deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
     }
     if ( !mosdepth_binary ) {
@@ -837,6 +853,9 @@ workflow {
     }
     if ( !pbcpgtools_binary ) {
         exit 1, "Error: No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
+    }
+    if ( in_data_format == 'snv_vcf' && pbcpgtools_binary != 'NONE' ) {
+        exit 1, "Error: When the input data format is 'snv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
     }
     if ( !file(in_data).exists() ) {
         exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
