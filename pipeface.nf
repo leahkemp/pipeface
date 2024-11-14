@@ -6,9 +6,6 @@ nextflow.enable.dsl=2
 params.outdir2 = ""
 params.tandem_repeat = "NONE"
 params.annotate_override = ""
-// secret sauce option to pass pipeface an aligned bam or snp/indel VCF file
-// options include 'ubam_fastq', 'aligned_bam' or 'snv_vcf'
-params.in_data_format = "ubam_fastq"
 params.in_data_format_override = ""
 
 process scrape_settings {

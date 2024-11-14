@@ -194,6 +194,12 @@ Specify the path to `in_data.csv`. Eg:
     "in_data": "./config/in_data.csv",
 ```
 
+Specify the input data format ('ubam_fastq'). Eg:
+
+```json
+    "in_data_format": "ubam_fastq",
+```
+
 Specify the path to the reference genome and it's index. Eg:
 
 ```json
