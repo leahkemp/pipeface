@@ -311,7 +311,7 @@ process clair3 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
