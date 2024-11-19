@@ -1,3 +1,4 @@
+
 # Pipeface
 
 ## Overview
@@ -151,6 +152,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - Clair3 or DeepVariant phased SNP/indel VCF file
 - Clair3 or DeepVariant phased and annotated SNP/indel VCF file (optional - hg38 only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 
 ## Assumptions
 
