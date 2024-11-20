@@ -87,7 +87,7 @@ module load samtools/1.19
 samtools faidx hs1.fa
 ```
 
-*Note. SNP/indel variant annotation is only available for hg38*
+> **_Note:_** SNP/indel variant annotation is only available for hg38
 
 ### Clair3 models (if running clair3)
 
@@ -128,7 +128,7 @@ module load singularity
 singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
 ```
 
-*Note. running DeepVariant on ONT data assumes r10 data*
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
 ### mosdepth binary (if running depth calculation)
 
@@ -240,7 +240,7 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
     "snp_indel_caller": "deepvariant",
 ```
 
-*Note. running DeepVariant on ONT data assumes r10 data*
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -272,7 +272,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-*Note. SNP/indel variant annotation is only available for hg38*
+> **_Note:_** SNP/indel variant annotation is only available for hg38
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
