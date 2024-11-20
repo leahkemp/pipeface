@@ -669,7 +669,7 @@ process cutesv {
 
     def sv_caller = "cutesv"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
         tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
