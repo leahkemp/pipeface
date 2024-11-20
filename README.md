@@ -155,7 +155,7 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 
-*Note. running DeepVariant on ONT data assumes the r10 data*
+*Note. running DeepVariant on ONT data assumes r10 data*
 
 ## Assumptions
 
