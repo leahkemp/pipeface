@@ -118,8 +118,8 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 ## Main analyses
 
-- ONT and pacbio HiFi data
-- WGS and targeted
+- ONT and/or pacbio HiFi data
+- WGS and/or targeted
 - hg38 or hs1 reference genome
 
 ## Main tools
@@ -154,6 +154,8 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 - Clair3 or DeepVariant phased and annotated SNP/indel VCF file (optional - hg38 only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
+
+**Note. running DeepVariant on ONT data assumes the r10 data**
 
 ## Assumptions
 

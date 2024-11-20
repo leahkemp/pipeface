@@ -128,6 +128,8 @@ module load singularity
 singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
 ```
 
+**Note.	running	DeepVariant on ONT data assumes the r10 data**
+
 ### mosdepth binary (if running depth calculation)
 
 Get a local copy of the mosdepth v0.3.9 binary
@@ -237,6 +239,8 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 ```json
     "snp_indel_caller": "deepvariant",
 ```
+
+**Note.	running	DeepVariant on ONT data assumes the r10 data**
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
