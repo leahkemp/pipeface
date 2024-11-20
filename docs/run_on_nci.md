@@ -121,14 +121,14 @@ tar -xvf hifi_revio.tar.gz
 
 ### DeepVariant container (if running DeepVariant)
 
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
+
 Get a local copy of the DeepVariant GPU container v1.6.1 (singularity image file)
 
 ```bash
 module load singularity
 singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
 ```
-
-> **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
 ### mosdepth binary (if running depth calculation)
 
@@ -230,6 +230,8 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not 
 
 Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
+
 ```json
     "snp_indel_caller": "clair3",
 ```
@@ -239,8 +241,6 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 ```json
     "snp_indel_caller": "deepvariant",
 ```
-
-> **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
