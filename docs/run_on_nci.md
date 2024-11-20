@@ -10,6 +10,8 @@
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
     - [DeepVariant container (if running DeepVariant)](#deepvariant-container-if-running-deepvariant)
+    - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
+    - [pb-CpG-tools binary (if processing pacbio data)](#pb-cpg-tools-binary-if-processing-pacbio-data)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
@@ -27,9 +29,9 @@ cd pipeface
 
 ## 2. Get pipeline inputs
 
-*Please keep in mind that, while hs1 is new, smancy and exciting, hg38 is still the latest GRCh assembly and is better annotated by most projects.*
-
 ### Reference genome
+
+> **_Note:_** SNP/indel variant annotation is only available for hg38
 
 #### hg38
 
@@ -119,11 +121,31 @@ tar -xvf hifi_revio.tar.gz
 
 ### DeepVariant container (if running DeepVariant)
 
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
+
 Get a local copy of the DeepVariant GPU container v1.6.1 (singularity image file)
 
 ```bash
 module load singularity
 singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
+```
+
+### mosdepth binary (if running depth calculation)
+
+Get a local copy of the mosdepth v0.3.9 binary
+
+```bash
+wget https://github.com/brentp/mosdepth/releases/download/v0.3.9/mosdepth -O mosdepth_0.3.9
+chmod +x mosdepth_0.3.9
+```
+
+### pb-CpG-tools binary (if processing pacbio data)
+
+Get a local copy of the pb-CpG-tools v2.3.2 binary
+
+```bash
+wget https://github.com/PacificBiosciences/pb-CpG-tools/releases/download/v2.3.2/pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
 ```
 
 ## 3. Modify in_data.csv
@@ -171,7 +193,13 @@ Modify access to project specific directories. Eg:
 Specify the path to `in_data.csv`. Eg:
 
 ```json
-    "input": "./config/in_data.csv",
+    "in_data": "./config/in_data.csv",
+```
+
+Specify the input data format ('ubam_fastq'). Eg:
+
+```json
+    "in_data_format": "ubam_fastq",
 ```
 
 Specify the path to the reference genome and it's index. Eg:
@@ -188,7 +216,7 @@ Specify the path to the reference genome and it's index. Eg:
     "ref_index": "./hs1.fa.fai",
 ```
 
-Optionally specify the path to the tandem repeat bed file. Eg:
+Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
 
 ```json
     "tandem_repeat": "./*.trf.bed",
@@ -202,6 +230,7 @@ Optionally specify the path to the tandem repeat bed file. Eg:
 
 Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 
+
 ```json
     "snp_indel_caller": "clair3",
 ```
@@ -211,6 +240,8 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
 ```json
     "snp_indel_caller": "deepvariant",
 ```
+
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -242,16 +273,60 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
+> **_Note:_** SNP/indel variant annotation is only available for hg38
+
+Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
+
+```json
+    "calculate_depth": "no",
+```
+
+*OR*
+
+```json
+    "calculate_depth": "yes",
+```
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
     "outdir": "/g/data/ox63/results"
 ```
 
-Specify the path to DeepVariant GPU container v1.6.1 (singularity image file). Eg:
+Specify the path to the DeepVariant GPU container v1.6.1 (singularity image file) (if running DeepVariant). Eg:
 
 ```json
     "deepvariant_container": "./deepvariant_1.6.1-gpu.sif"
+```
+
+*OR*
+
+```json
+    "deepvariant_container": "NONE"
+```
+
+Specify the path to the mosdepth binary (if running depth calculation). Eg:
+
+```json
+    "mosdepth_binary": "./mosdepth_0.3.9"
+```
+
+*OR*
+
+```json
+    "mosdepth_binary": "NONE"
+```
+
+Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
+
+```json
+    "pbcpgtools_binary": "./pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu/"
+```
+
+*OR*
+
+```json
+    "pbcpgtools_binary": "NONE"
 ```
 
 ## 6. Get pipeline dependencies
