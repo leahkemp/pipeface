@@ -31,6 +31,8 @@ cd pipeface
 
 ### Reference genome
 
+> **_Note:_** SNP/indel variant annotation is only available for hg38
+
 #### hg38
 
 Get a copy of the hg38 reference genome
@@ -86,8 +88,6 @@ gunzip hs1.fa.gz
 module load samtools/1.19
 samtools faidx hs1.fa
 ```
-
-> **_Note:_** SNP/indel variant annotation is only available for hg38
 
 ### Clair3 models (if running clair3)
 
