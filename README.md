@@ -1,3 +1,4 @@
+
 # Pipeface
 
 ## Overview
@@ -25,12 +26,14 @@ snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
+generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
+haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
 
@@ -53,24 +56,24 @@ merging_m1{{"Description: merge runs <br><br> Main tools: GNU coreutils <br><br>
 merging_m2{{"Description: merge runs <br><br> Main tools: Samtools <br><br> Commands: samtools merge"}}
 
 alignment_s1{{"Description: alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
-alignment_s2{{"Description: alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
-alignment_s3{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s2{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s3{{"Description: alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
 alignment_s4{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
 
-depth_s1{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s2{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s3{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
-depth_s4{{"Description: calculate alignment depth <br><br> Main tools: Samtools <br><br> Commands: samtools depth"}}
+depth_s1{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s2{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s3{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s4{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
 
 snp_indel_calling_s1{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s2{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s3{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 
-snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
-snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
-snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
-snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
 
 snp_indel_annotation_s1{{"Description: SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 snp_indel_annotation_s2{{"Description: SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
@@ -81,6 +84,8 @@ haplotagging_s1{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <
 haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+
+generate_meth_probs_s2{{"Description: Generate site methylation probabilities <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
 
 sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
@@ -94,11 +99,10 @@ sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 o
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
-ont_data_f5-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
-ont_data_f6-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
-
-pacbio_data_f3-.->merging_m2-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+pacbio_data_f3-.->merging_m2-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
 pacbio_data_f4-.->merging_m2
+ont_data_f5-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
+ont_data_f6-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
 
 alignment_s1-.->depth_s1
 alignment_s2-.->depth_s2
@@ -109,6 +113,8 @@ alignment_s1-.->haplotagging_s1
 alignment_s2-.->haplotagging_s2
 alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
+
+haplotagging_s2-.->generate_meth_probs_s2
 
 snp_indel_phasing_s1-.->snp_indel_annotation_s1
 snp_indel_phasing_s2-.->snp_indel_annotation_s2
@@ -124,8 +130,8 @@ sv_calling_s4-.->sv_annotation_s4
 
 ## Main analyses
 
-- ONT and pacbio HiFi data
-- WGS and targeted
+- ONT and/or pacbio HiFi data
+- WGS and/or targeted
 - hg38 or hs1 reference genome
 
 ## Main tools
@@ -135,6 +141,8 @@ sv_calling_s4-.->sv_annotation_s4
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)
+- [mosdepth](https://github.com/brentp/mosdepth)
+- [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
 ## Main input files
@@ -144,7 +152,6 @@ sv_calling_s4-.->sv_annotation_s4
 - ONT/pacbio HiFi FASTQ (gzipped or uncompressed) or unaligned BAM
 - Indexed reference genome
 - Clair3 models (if running Clair3)
-- [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
 
 ### Optional
 
@@ -154,9 +161,13 @@ sv_calling_s4-.->sv_annotation_s4
 ## Main output files
 
 - Aligned, sorted and haplotagged bam
+- Depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Clair3 or DeepVariant phased SNP/indel VCF file
 - Clair3 or DeepVariant phased and annotated SNP/indel VCF file (optional - hg38 only)
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
+
+> **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
 ## Assumptions
 
@@ -164,9 +175,10 @@ sv_calling_s4-.->sv_annotation_s4
 - Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to xy86 project on [National Computational Infrastructure (NCI)](https://nci.org.au/) (if running variant annotation)
 - Access to pipeline dependencies:
-    - [Nextflow and it's java dependency](https://nf-co.re/docs/usage/installation). Validated to run on:
-        - Nextflow 24.04.1
-        - Java 17.0.2
+    - [Nextflow 24.04.1 and it's Java 17.0.2 dependency](https://nf-co.re/docs/usage/installation)
+    - [DeepVariant GPU 1.6.1 docker container](https://hub.docker.com/layers/google/deepvariant/1.6.1-gpu/images/sha256-7929c55106d3739daa18d52802913c43af4ca2879db29656056f59005d1d46cb?context=explore) pulled via singularity (if running DeepVariant)
+    - [mosdepth 0.3.9 binary](https://github.com/brentp/mosdepth/releases/tag/v0.3.9) (if running depth calculation)
+    - [pb-CpG-tools 2.3.2 binary](https://github.com/PacificBiosciences/pb-CpG-tools/releases/tag/v2.3.2) (if processing pacbio data)
 
 *[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 
