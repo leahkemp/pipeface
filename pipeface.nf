@@ -705,6 +705,8 @@ process vep_sniffles_sv {
         val gnomad_sv_db
         val clinvar_db
         val cadd_sv_db
+        val outdir
+        val outdir2
         val ref_name
 
     output:
@@ -767,6 +769,8 @@ process vep_cutesv_sv {
         val gnomad_sv_db
         val clinvar_db
         val cadd_sv_db
+        val outdir
+        val outdir2
         val ref_name
 
     output:
@@ -1135,10 +1139,10 @@ workflow {
         if ( annotate == 'yes' ) {
             vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, ref_name)
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, ref_name)
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
