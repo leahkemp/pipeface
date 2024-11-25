@@ -705,6 +705,7 @@ process vep_sniffles_sv {
         val gnomad_sv_db
         val clinvar_db
         val cadd_sv_db
+        val ref_name
 
     output:
         tuple val(sample_id), path('sv.phased.annotated.vcf.gz'), path('sv.phased.annotated.vcf.gz.tbi')
@@ -766,6 +767,7 @@ process vep_cutesv_sv {
         val gnomad_sv_db
         val clinvar_db
         val cadd_sv_db
+        val ref_name
 
     output:
         tuple val(sample_id), path('sv.annotated.vcf.gz'), path('sv.annotated.vcf.gz.tbi')
@@ -1133,10 +1135,10 @@ workflow {
         if ( annotate == 'yes' ) {
             vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db)
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db)
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, ref_name)
             }
         }
     }
