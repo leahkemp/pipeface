@@ -327,16 +327,15 @@ process clair3 {
 
 }
 
-process deepvariant {
+process deepvariant_dry_run {
 
     input:
         tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
-        val deepvariant_container
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), path('sorted.bam'), path('sorted.bam.bai'), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), env(make_examples_args), env(call_variants_args)
 
     script:
     // conditionally define model type
@@ -346,8 +345,6 @@ process deepvariant {
     else if ( data_type == 'pacbio' ) {
         model = 'PACBIO'
     }
-    // define an optional string to pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -355,18 +352,98 @@ process deepvariant {
         ln -sf \${bam_loc} sorted.bam
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
-        # run deepvariant
-        singularity run $deepvariant_container run_deepvariant \
+
+        # do a dry-run of deepvariant
+        run_deepvariant \
         --reads=$bam \
         --ref=$ref \
         --sample_name=$sample_id \
         --output_vcf=snp_indel.raw.vcf.gz \
         --model_type=$model \
-        $regions_of_interest_optional \
-        --num_shards=${task.cpus} \
-        --postprocess_cpus=${task.cpus}
+        --dry_run=true > commands.txt
+
+        # extract arguments for make_examples and call_variants stages
+        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g')
+        call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
+        """
+    
+    stub:
+        """
+        make_examples_args=""
+        call_variants_args=""
+        touch sorted.bam
+        touch sorted.bam.bai
+        """
+
+}
+
+process deepvariant_make_examples {
+
+    input:
+        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(make_examples_args), val(call_variants_args)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path('*.gz{,.example_info.json}')
+
+    script:
+    // define an optional string to pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
+        """
+        seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
+            --mode calling --ref "${ref}" --reads "${bam}" --sample_name "${sample_id}" ${regions_of_interest_optional} --examples "make_examples.tfrecord@${task.cpus}.gz" ${make_examples_args}
+        """
+
+    stub:
+        """
+        touch make_examples.tfrecord-00000-of-00104.gz
+        touch make_examples.tfrecord-00000-of-00104.gz.example_info.json
+        """
+
+}
+
+process deepvariant_call_variants {
+
+    input:
+        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path(make_examples_out)
+
+    output:
+        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path('*.gz')
+
+    script:
+    def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+    def num_shards = matcher[0][2] as int
+        """
+        call_variants --outfile "call_variants_output.tfrecord.gz" --examples "make_examples.tfrecord@${num_shards}.gz" ${call_variants_args}
+        """
+
+    stub:
+        """
+        touch call_variants_output-00000-of-00016.tfrecord.gz
+        """
+
+}
+
+process deepvariant_post_processing {
+
+    input:
+        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path(call_variants_out)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+
+    script:
+        """
+        # postprocess_variants and vcf_stats_report stages in deepvariant
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
+        vcf_stats_report --input_vcf "snp_indel.raw.vcf.gz" --outfile_base "snp_indel.raw"
+
         # filter out refcall variants
         bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
+
         # index vcf
         tabix snp_indel.vcf.gz
         """
@@ -705,7 +782,6 @@ workflow {
     calculate_depth = "$params.calculate_depth"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
-    deepvariant_container = "$params.deepvariant_container"
     mosdepth_binary = "$params.mosdepth_binary"
     pbcpgtools_binary = "$params.pbcpgtools_binary"
     vep_db = "$params.vep_db"
@@ -767,9 +843,6 @@ workflow {
     if ( in_data_format != 'snv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
         exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
-    if ( in_data_format != 'snv_vcf' && snp_indel_caller == 'deepvariant' && deepvariant_container == 'NONE' ) {
-        exit 1, "Error: When DeepVariant is selected as the SNP/indel calling software, provide a path to an appropriate DeepVariant container in the parameter file or pass to --deepvariant_container on the command line rather than setting it to 'NONE'."
-    }
     if ( !sv_caller ) {
         exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
@@ -830,15 +903,6 @@ workflow {
     if ( !outdir ) {
         exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
-    if ( !deepvariant_container ) {
-        exit 1, "Error: No DeepVariant container provided. Either include in parameter file or pass to --deepvariant_container on the command line. Set to 'NONE' if not running DeepVariant."
-    }
-    if ( in_data_format == 'snv_vcf' && deepvariant_container != 'NONE' && snp_indel_caller == 'deepvariant' ) {
-        exit 1, "Error: When the input data format is 'snv_vcf', please set the DeepVariant container (deepvariant_container) to 'NONE'."
-    }
-    if ( in_data_format != 'snv_vcf' && deepvariant_container != 'NONE' && snp_indel_caller != 'deepvariant' ) {
-        exit 1, "Error: Pass 'NONE' to 'deepvariant_container' when DeepVariant is NOT selected as the SNP/indel calling software, '${deepvariant_container}' and '${snp_indel_caller}' respectively provided'."
-    }
     if ( !mosdepth_binary ) {
         exit 1, "Error: No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
     }
@@ -865,9 +929,6 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
-    }
-    if ( !file(deepvariant_container).exists() ) {
-        exit 1, "Error: DeepVariant container file path does not exist, '${deepvariant_container}' provided."
     }
     if ( !file(mosdepth_binary).exists() ) {
         exit 1, "Error: mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
@@ -979,7 +1040,10 @@ workflow {
             snp_indel_vcf_bam = clair3(bam, ref, ref_index)
         }
         else if ( snp_indel_caller == 'deepvariant' ) {
-            snp_indel_vcf_bam = deepvariant(bam, ref, ref_index, deepvariant_container)
+            deepvariant_dry_run(bam, ref, ref_index)
+            deepvariant_make_examples(deepvariant_dry_run.out, ref, ref_index)
+            deepvariant_call_variants(deepvariant_make_examples.out)
+            snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)
         }
         // phasing
         (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)

@@ -9,7 +9,6 @@
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-    - [DeepVariant container (if running DeepVariant)](#deepvariant-container-if-running-deepvariant)
     - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
     - [pb-CpG-tools binary (if processing pacbio data)](#pb-cpg-tools-binary-if-processing-pacbio-data)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
@@ -117,17 +116,6 @@ Untar
 
 ```bash
 tar -xvf hifi_revio.tar.gz
-```
-
-### DeepVariant container (if running DeepVariant)
-
-> **_Note:_** Running DeepVariant on ONT data assumes r10 data
-
-Get a local copy of the DeepVariant GPU container v1.6.1 (singularity image file)
-
-```bash
-module load singularity
-singularity pull deepvariant_1.6.1-gpu.sif docker://google/deepvariant:deeptrio-1.6.1-gpu
 ```
 
 ### mosdepth binary (if running depth calculation)
@@ -291,18 +279,6 @@ Specify the directory in which to write the pipeline outputs (please provide a f
 
 ```json
     "outdir": "/g/data/ox63/results"
-```
-
-Specify the path to the DeepVariant GPU container v1.6.1 (singularity image file) (if running DeepVariant). Eg:
-
-```json
-    "deepvariant_container": "./deepvariant_1.6.1-gpu.sif"
-```
-
-*OR*
-
-```json
-    "deepvariant_container": "NONE"
 ```
 
 Specify the path to the mosdepth binary (if running depth calculation). Eg:
