@@ -174,7 +174,8 @@ Modify access to project specific directories. Eg:
 ```
 
 > **_Note:_** Don't remove access to if89 gdata (`gdata/if89`). This is required to access environmental modules used in the pipeline
-> **_Note:_** Similarly, don't remove access to xy86 gdata (`gdata/xy86`) if running variant annotation. This is required to access variant annotation databases used in the pipeline
+
+> **_Note:_** Don't remove access to xy86 gdata (`gdata/xy86`) if running variant annotation. This is required to access variant annotation databases used in the pipeline
 
 ## 5. Modify parameters_pipeface.json
 
