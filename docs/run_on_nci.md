@@ -30,7 +30,7 @@ cd pipeface
 
 ### Reference genome
 
-> **_Note:_** SNP/indel variant annotation is only available for hg38
+> **_Note:_** Variant annotation is only available for hg38
 
 #### hg38
 
@@ -170,12 +170,10 @@ Modify the NCI project to which to charge the analysis. Eg:
 Modify access to project specific directories. Eg:
 
 ```txt
-    storage = 'gdata/if89+gdata/xy86+scratch/kr68+gdata/kr68'
+    storage = 'gdata/if89+gdata/xy86+scratch/kr68+gdata/kr68+gdata/ox63'
 ```
 
-> **_Note:_** Don't remove access to if89 gdata (`gdata/if89`). This is required to access environmental modules used in the pipeline
-
-> **_Note:_** Don't remove access to xy86 gdata (`gdata/xy86`) if running variant annotation. This is required to access variant annotation databases used in the pipeline
+> **_Note:_** Don't remove access to if89 gdata (`gdata/if89`) and xy86 gdata (`gdata/xy86`). These are required to access environmental modules and  variant annotation databases used in the pipeline
 
 ## 5. Modify parameters_pipeface.json
 
@@ -208,7 +206,7 @@ Specify the path to the reference genome and it's index. Eg:
 Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
 
 ```json
-    "tandem_repeat": "./*.trf.bed",
+    "tandem_repeat": "./hg38.analysisSet.trf.bed",
 ```
 
 *OR*
@@ -262,7 +260,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-> **_Note:_** SNP/indel variant annotation is only available for hg38
+> **_Note:_** variant annotation is only available for hg38
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
