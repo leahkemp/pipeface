@@ -5,7 +5,7 @@
 
 Pipefaceee.
 
-Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and optionally annotate (SNP's, indels's) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
+Nextflow pipeline to align, variant call (SNP, indel, SV), phase and optionally annotate (SNP, indel, SV) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
 There currently exists tools and workflows that undertake comparable analyses, but pipeface serves as a central workflow to process long read data (both ONT and pacbio HiFi data). Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
 
@@ -166,6 +166,7 @@ sv_calling_s4-.->sv_annotation_s4
 - Clair3 or DeepVariant phased and annotated SNP/indel VCF file (optional - hg38 only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
+- Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
 > **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
