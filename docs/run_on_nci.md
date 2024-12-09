@@ -262,7 +262,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-> **_Note:_** SNP/indel variant annotation is only available for hg38
+> **_Note:_** variant annotation is only available for hg38
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
