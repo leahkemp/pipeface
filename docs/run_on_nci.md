@@ -30,7 +30,7 @@ cd pipeface
 
 ### Reference genome
 
-> **_Note:_** SNP/indel variant annotation is only available for hg38
+> **_Note:_** Variant annotation is only available for hg38
 
 #### hg38
 
