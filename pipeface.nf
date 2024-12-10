@@ -702,7 +702,7 @@ process sniffles {
         --sample-id $sample_id \
         --vcf sv.phased.vcf.gz \
         --output-rnames \
-        --minsvlen 20 \
+        --minsvlen 50 \
         --phase $tandem_repeat_optional
         """
 
@@ -750,6 +750,7 @@ process cutesv {
         -t ${task.cpus} \
         --genotype \
         --report_readid \
+        --min_size 50 \
         $settings
         # compress and index vcf
         bgzip \
@@ -762,6 +763,134 @@ process cutesv {
         """
         touch sv.vcf.gz
         touch sv.vcf.gz.tbi
+        """
+
+}
+
+process vep_sniffles_sv {
+
+    def sv_caller = "sniffles"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.annotated.vcf.gz*'
+
+    input:
+        tuple val(sample_id), path(sv_phased_vcf), path(sv_phased_vcf_index)
+        val ref
+        val ref_index
+        val vep_db
+        val gnomad_db
+        val gnomad_sv_db
+        val clinvar_db
+        val cadd_sv_db
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), path('sv.phased.annotated.vcf.gz'), path('sv.phased.annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $sv_phased_vcf \
+        -o sv.phased.annotated.vcf.gz \
+        --format vcf \
+        --vcf \
+        --fasta $ref \
+        --dir $vep_db \
+        --assembly GRCh38 \
+        --species homo_sapiens \
+        --cache \
+        --offline \
+        --merged \
+        --sift b \
+        --polyphen b \
+        --symbol \
+        --hgvs \
+        --hgvsg \
+        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=80,same_type=1,num_records=50,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=50,same_type=1,num_records=50,fields=CLNSIG \
+        --plugin CADD,sv=$cadd_sv_db \
+        --uploaded_allele \
+        --check_existing \
+        --filter_common \
+        --no_intergenic \
+        --pick \
+        --fork ${task.cpus} \
+        --no_stats \
+        --compress_output bgzip
+        # index vcf
+        tabix sv.phased.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.phased.annotated.vcf.gz
+        touch sv.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process vep_cutesv_sv {
+
+    def sv_caller = "cutesv"
+
+    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.annotated.vcf.gz*'
+
+    input:
+        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
+        val ref
+        val ref_index
+        val vep_db
+        val gnomad_db
+        val gnomad_sv_db
+        val clinvar_db
+        val cadd_sv_db
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), path('sv.annotated.vcf.gz'), path('sv.annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $sv_vcf \
+        -o sv.annotated.vcf.gz \
+        --format vcf \
+        --vcf \
+        --fasta $ref \
+        --dir $vep_db \
+        --assembly GRCh38 \
+        --species homo_sapiens \
+        --cache \
+        --offline \
+        --merged \
+        --sift b \
+        --polyphen b \
+        --symbol \
+        --hgvs \
+        --hgvsg \
+        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=80,same_type=1,num_records=50,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=50,same_type=1,num_records=50,fields=CLNSIG \
+        --plugin CADD,sv=$cadd_sv_db \
+        --uploaded_allele \
+        --check_existing \
+        --filter_common \
+        --no_intergenic \
+        --pick \
+        --fork ${task.cpus} \
+        --no_stats \
+        --compress_output bgzip
+        # index vcf
+        tabix sv.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.annotated.vcf.gz
+        touch sv.annotated.vcf.gz.tbi
         """
 
 }
@@ -787,9 +916,11 @@ workflow {
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
+    gnomad_sv_db = "$params.gnomad_sv_db"
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
+    cadd_sv_db = "$params.cadd_sv_db"
     spliceai_snv_db = "$params.spliceai_snv_db"
     spliceai_indel_db = "$params.spliceai_indel_db"
     alphamissense_db = "$params.alphamissense_db"
@@ -876,6 +1007,9 @@ workflow {
     if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
         exit 1, "Error gnomAD database file path does not exist, '${gnomad_db}' provided."
     }
+    if ( annotate == 'yes' && !file(gnomad_sv_db).exists() ) {
+        exit 1, "Error gnomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
+    }
     if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
         exit 1, "Error ClinVar database file path does not exist, '${clinvar_db}' provided."
     }
@@ -884,6 +1018,9 @@ workflow {
     }
     if ( annotate == 'yes' && !file(cadd_indel_db).exists() ) {
         exit 1, "Error CADD indel database file path does not exist, '${cadd_indel_db}' provided."
+    }
+    if ( annotate == 'yes' && !file(cadd_sv_db).exists() ) {
+        exit 1, "Error CADD SV database file path does not exist, '${cadd_sv_db}' provided."
     }
     if ( annotate == 'yes' && !file(spliceai_snv_db).exists() ) {
         exit 1, "Error SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
@@ -1052,10 +1189,10 @@ workflow {
         pbcpgtools(haplotagged_bam, pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-            sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            sv_vcf_sniffles = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            cutesv(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            sv_vcf_cutesv = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
@@ -1065,7 +1202,12 @@ workflow {
         // annotation
         if ( annotate == 'yes' ) {
             vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+            }
+            if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+            }
         }
     }
 }
-

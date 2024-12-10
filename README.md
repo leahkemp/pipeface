@@ -5,7 +5,7 @@
 
 Pipefaceee.
 
-Nextflow pipeline to align, variant call (SNP's, indels's, SV's), phase and optionally annotate (SNP's, indels's) long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
+Nextflow pipeline to merge, align, variant call (SNP, indel and SV), phase, haplotag and optionally annotate long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
 There currently exists tools and workflows that undertake comparable analyses, but pipeface serves as a central workflow to process long read data (both ONT and pacbio HiFi data). Pipeface's future hold's STR, CNV and tandem repeat calling, as well as the analysis of cohorts.
 
@@ -28,12 +28,14 @@ snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
+sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
+sv_calling-.->sv_annotation
 
 ```
 
@@ -90,6 +92,11 @@ sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sni
 sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 
+sv_annotation_s1{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s2{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s3{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
 pacbio_data_f3-.->merging_m2-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
@@ -113,6 +120,11 @@ snp_indel_phasing_s1-.->snp_indel_annotation_s1
 snp_indel_phasing_s2-.->snp_indel_annotation_s2
 snp_indel_phasing_s3-.->snp_indel_annotation_s3
 snp_indel_phasing_s4-.->snp_indel_annotation_s4
+
+sv_calling_s1-.->sv_annotation_s1
+sv_calling_s2-.->sv_annotation_s2
+sv_calling_s3-.->sv_annotation_s3
+sv_calling_s4-.->sv_annotation_s4
 
 ```
 
@@ -149,11 +161,12 @@ snp_indel_phasing_s4-.->snp_indel_annotation_s4
 ## Main output files
 
 - Aligned, sorted and haplotagged bam
-- Depth per chromosome (and per region in the case of targeted sequencing) (optional)
-- Clair3 or DeepVariant phased SNP/indel VCF file
-- Clair3 or DeepVariant phased and annotated SNP/indel VCF file (optional - hg38 only)
+- Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
+- Phased Clair3 or DeepVariant SNP/indel VCF file
+- Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (optional - hg38 only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
+- Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
 > **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
