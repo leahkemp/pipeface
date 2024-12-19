@@ -1218,7 +1218,7 @@ workflow {
         if ( snp_indel_caller == 'clair3' ) {
             snp_indel_vcf_bam = clair3(bam.join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
         }
-        else if ( snp_indel_caller == 'deepvariant' | snp_indel_caller == 'deeptrio' ) {
+        else if ( snp_indel_caller == 'deepvariant' ) {
             deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
             deepvariant_make_examples(deepvariant_dry_run.out.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index)
             deepvariant_call_variants(deepvariant_make_examples.out)
