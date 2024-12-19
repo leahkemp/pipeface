@@ -469,8 +469,8 @@ process whatshap_phase {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
         """
@@ -550,7 +550,7 @@ process vep_snv {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(snp_indel_phased_vcf), path(snp_indel_phased_vcf_index)
+        tuple val(sample_id), val(family_id), path(snp_indel_phased_vcf)
         val ref
         val ref_index
         val vep_db
