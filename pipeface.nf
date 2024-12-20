@@ -10,10 +10,10 @@ params.in_data_format_override = ""
 
 process scrape_settings {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$filename" }, pattern: 'pipeface_settings.txt'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
 
     input:
-        tuple val(sample_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
         val in_data
         val in_data_format
         val ref
@@ -27,7 +27,7 @@ process scrape_settings {
         val outdir2
 
     output:
-        tuple val(sample_id), path('pipeface_settings.txt')
+        tuple val(sample_id), val(family_id), path('pipeface_settings.txt')
 
     script:
         // conditionally define reported SV caller
@@ -56,6 +56,7 @@ process scrape_settings {
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
+        echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
         echo "Data type: $data_type" >> pipeface_settings.txt
@@ -74,6 +75,7 @@ process scrape_settings {
         else if( in_data_format == 'snv_vcf' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
+        echo "Family ID: $family_id" >>	pipeface_settings.txt
         echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
         echo "In data csv path: $in_data" >> pipeface_settings.txt
@@ -90,15 +92,15 @@ process scrape_settings {
 
 process scrape_bam_header {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$file_short.$filename" }
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$file_short.$filename" }
 
     input:
-        tuple val(sample_id), val(extension), val(file), val(file_short)
+        tuple val(sample_id), val(family_id), val(extension), val(file), val(file_short)
         val outdir
         val outdir2
 
     output:
-        tuple val(sample_id), val(file_short), path('header')
+        tuple val(sample_id), val(family_id), val(file_short), path('header')
 
     script:
     if( extension == 'gz' )
@@ -124,10 +126,10 @@ process scrape_bam_header {
 process merge_runs {
 
     input:
-        tuple val(sample_id), val(extension), path(files), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), val(extension), path(files)
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('merged')
+        tuple val(sample_id), val(family_id), path('merged')
 
     script:
     if( extension == 'gz' )
@@ -171,12 +173,12 @@ process merge_runs {
 process minimap2 {
 
     input:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(merged)
+        tuple val(sample_id), val(family_id), path(merged), val(extension), val(data_type)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), val(extension), path('sorted.bam'), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path('sorted.bam')
 
     script:
     // conditionally define preset
@@ -236,17 +238,17 @@ process mosdepth {
 
     def depth_software = "mosdepth"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
 
     input:
-        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest)
         val mosdepth_binary
         val outdir
         val outdir2
         val ref_name
 
     output:
-        tuple val(sample_id), path('depth.txt')
+        tuple val(sample_id), val(family_id), path('depth.txt')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -278,12 +280,12 @@ process mosdepth {
 process clair3 {
 
     input:
-        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -330,12 +332,12 @@ process clair3 {
 process deepvariant_dry_run {
 
     input:
-        tuple val(sample_id), val(extension), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path(bam), val(data_type)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), path('sorted.bam'), path('sorted.bam.bai'), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), env(make_examples_args), env(call_variants_args)
+        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
 
     script:
     // conditionally define model type
@@ -352,7 +354,6 @@ process deepvariant_dry_run {
         ln -sf \${bam_loc} sorted.bam
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
-
         # do a dry-run of deepvariant
         run_deepvariant \
         --reads=$bam \
@@ -361,7 +362,6 @@ process deepvariant_dry_run {
         --output_vcf=snp_indel.raw.vcf.gz \
         --model_type=$model \
         --dry_run=true > commands.txt
-
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g')
         call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
@@ -380,12 +380,12 @@ process deepvariant_dry_run {
 process deepvariant_make_examples {
 
     input:
-        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(make_examples_args), val(call_variants_args)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_args), val(call_variants_args), val(regions_of_interest)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path('*.gz{,.example_info.json}')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('*.gz{,.example_info.json}')
 
     script:
     // define an optional string to pass regions of interest bed file
@@ -406,10 +406,10 @@ process deepvariant_make_examples {
 process deepvariant_call_variants {
 
     input:
-        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path(make_examples_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out)
 
     output:
-        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path('*.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('*.gz')
 
     script:
     def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -428,22 +428,20 @@ process deepvariant_call_variants {
 process deepvariant_post_processing {
 
     input:
-        tuple val(sample_id), path(bam), path(bam_index), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), val(call_variants_args), path(call_variants_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(call_variants_out)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
         postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
         vcf_stats_report --input_vcf "snp_indel.raw.vcf.gz" --outfile_base "snp_indel.raw"
-
         # filter out refcall variants
         bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
-
         # index vcf
         tabix snp_indel.vcf.gz
         """
@@ -458,10 +456,10 @@ process deepvariant_post_processing {
 
 process whatshap_phase {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
-        tuple val(sample_id), val(extension), val(data_type), val(regions_of_interest), val(clair3_model), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
         val outdir
@@ -470,9 +468,9 @@ process whatshap_phase {
         val snp_indel_caller
 
     output:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), val(extension), path('snp_indel.phased.vcf.gz'), val(data_type), val(regions_of_interest), val(clair3_model)
-        tuple val(sample_id), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
         """
@@ -502,12 +500,57 @@ process whatshap_phase {
 
 }
 
-process vep_snv {
+process whatshap_haplotag {
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+    def mapper_phaser = "minimap2.whatshap"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
 
     input:
-        tuple val(sample_id), val(extension), path(snp_indel_phased_vcf), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path('sorted.haplotagged.bam'), path('sorted.haplotagged.bam.bai')
+        tuple val(sample_id), val(family_id), path('sorted.haplotagged.tsv')
+
+    script:
+        """
+        # run whatshap haplotag
+        whatshap haplotag \
+        --reference $ref \
+        --output sorted.haplotagged.bam \
+        --sample $sample_id \
+        --tag-supplementary \
+        --ignore-read-groups \
+        --output-threads ${task.cpus} \
+        --output-haplotag-list sorted.haplotagged.tsv \
+        $snp_indel_vcf $bam
+        # index bam
+        samtools index \
+        -@ ${task.cpus} \
+        sorted.haplotagged.bam
+        """
+
+    stub:
+        """
+        touch sorted.haplotagged.bam
+        touch sorted.haplotagged.bam.bai
+        touch sorted.haplotagged.tsv
+        """
+
+}
+
+process vep_snv {
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(snp_indel_phased_vcf)
         val ref
         val ref_index
         val vep_db
@@ -525,7 +568,7 @@ process vep_snv {
         val snp_indel_caller
 
     output:
-        tuple val(sample_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
 
     script:
         """
@@ -572,59 +615,14 @@ process vep_snv {
 
 }
 
-process whatshap_haplotag {
-
-    def mapper_phaser = "minimap2.whatshap"
-
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
-
-    input:
-        tuple val(sample_id), val(data_type), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
-        val ref
-        val ref_index
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        tuple val(sample_id), val(data_type), path('sorted.haplotagged.bam'), path('sorted.haplotagged.bam.bai')
-        tuple val(sample_id), path('sorted.haplotagged.tsv')
-
-    script:
-        """
-        # run whatshap haplotag
-        whatshap haplotag \
-        --reference $ref \
-        --output sorted.haplotagged.bam \
-        --sample $sample_id \
-        --tag-supplementary \
-        --ignore-read-groups \
-        --output-threads ${task.cpus} \
-        --output-haplotag-list sorted.haplotagged.tsv \
-        $snp_indel_vcf $bam
-        # index bam
-        samtools index \
-        -@ ${task.cpus} \
-        sorted.haplotagged.bam
-        """
-
-    stub:
-        """
-        touch sorted.haplotagged.bam
-        touch sorted.haplotagged.bam.bai
-        touch sorted.haplotagged.tsv
-        """
-
-}
-
 process pbcpgtools {
 
     def software = "pbcpgtools"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
 
     input:
-        tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
         val pbcpgtools_binary
         val ref
         val ref_index
@@ -633,7 +631,7 @@ process pbcpgtools {
         val ref_name
 
     output:
-        tuple val(sample_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
+        tuple val(sample_id), val(family_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
 
     script:
     if( data_type == 'pacbio' )
@@ -647,7 +645,7 @@ process pbcpgtools {
         --modsites-mode denovo \
         --hap-tag HP \
         --threads ${task.cpus}
-        # rename file
+        # rename files
         ln -s aligned_bam_to_cpg_scores.hap1.bw cpg_scores_hap1.bw
         ln -s aligned_bam_to_cpg_scores.hap1.bed cpg_scores_hap1.bed
         ln -s aligned_bam_to_cpg_scores.hap2.bw cpg_scores_hap2.bw
@@ -676,10 +674,10 @@ process sniffles {
 
     def sv_caller = "sniffles"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index)
         val ref
         val ref_index
         val tandem_repeat
@@ -688,7 +686,7 @@ process sniffles {
         val ref_name
 
     output:
-        tuple val(sample_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass tandem repeat bed file
@@ -718,10 +716,10 @@ process cutesv {
 
     def sv_caller = "cutesv"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(data_type), path(haplotagged_bam), path(haplotagged_bam_index)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
         val ref
         val ref_index
         val tandem_repeat
@@ -730,7 +728,7 @@ process cutesv {
         val ref_name
 
     output:
-        tuple val(sample_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
     if( data_type == 'ont' ) {
@@ -771,10 +769,10 @@ process vep_sniffles_sv {
 
     def sv_caller = "sniffles"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.annotated.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), path(sv_phased_vcf), path(sv_phased_vcf_index)
+        tuple val(sample_id), val(family_id), path(sv_phased_vcf), path(sv_phased_vcf_index)
         val ref
         val ref_index
         val vep_db
@@ -787,7 +785,7 @@ process vep_sniffles_sv {
         val ref_name
 
     output:
-        tuple val(sample_id), path('sv.phased.annotated.vcf.gz'), path('sv.phased.annotated.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('sv.phased.annotated.vcf.gz'), path('sv.phased.annotated.vcf.gz.tbi')
 
     script:
         """
@@ -835,10 +833,10 @@ process vep_cutesv_sv {
 
     def sv_caller = "cutesv"
 
-    publishDir "$outdir/$sample_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.annotated.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), path(sv_vcf), path(sv_vcf_index)
+        tuple val(sample_id), val(family_id), path(sv_vcf), path(sv_vcf_index)
         val ref
         val ref_index
         val vep_db
@@ -851,7 +849,7 @@ process vep_cutesv_sv {
         val ref_name
 
     output:
-        tuple val(sample_id), path('sv.annotated.vcf.gz'), path('sv.annotated.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('sv.annotated.vcf.gz'), path('sv.annotated.vcf.gz.tbi')
 
     script:
         """
@@ -1074,21 +1072,65 @@ workflow {
     // build variable
     ref_name = file(ref).getSimpleName()
 
-    // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
-    Channel
-	.fromPath( in_data )
-        .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file,file(row.file).getName() ) }
-        .set { in_data_list }
-
     // build channel from in_data.csv file for main workflow
     // groupTuple will collapse by sample_id (as defined in the in_data.csv file), creating a list of files per sample_id
     Channel
         .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, file(row.file).getExtension(), row.file, row.data_type, row.regions_of_interest, row.clair3_model ) }
-        .groupTuple(by: [0,1,3,4,5] )
+        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension(), row.file, row.data_type, row.regions_of_interest, row.clair3_model ) }
+        .groupTuple(by: [0,1,2,4,5,6] )
         .set { in_data_tuple }
+
+    // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
+    Channel
+	.fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension(), row.file,file(row.file).getName() ) }
+        .set { in_data_list }
+
+    // build channels from in_data.csv file for describing each metadata associated with samples/families
+    // I can use these downstream to join to input tuples throughout the pipeline as needed to avoid needing to have all sample metadata in all process input/output tuples
+    Channel
+	.fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id ) }
+        .groupTuple(by: [0,1] )
+        .set { id_tuple }
+
+    Channel
+        .fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension() ) }
+        .groupTuple(by: [0,1,2] )
+        .set { extension_tuple }
+
+    Channel
+	.fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id, row.file ) }
+        .groupTuple(by: [0,1] )
+        .set { files_tuple }
+
+    Channel
+	.fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id, row.data_type ) }
+        .groupTuple(by: [0,1,2] )
+        .set { data_type_tuple }
+
+    Channel
+	.fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id, row.regions_of_interest ) }
+        .groupTuple(by: [0,1,2] )
+        .set { regions_of_interest_tuple }
+
+    Channel
+        .fromPath( in_data )
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple( row.sample_id, row.family_id, row.clair3_model ) }
+        .groupTuple(by: [0,1,2] )
+	.set { clair3_model_tuple }
 
     // build channel from in_data.csv file for user input checks
     Channel
@@ -1162,41 +1204,41 @@ workflow {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
     if ( in_data_format == 'ubam_fastq' ) {
-        merged = merge_runs(in_data_tuple)
-        bam = minimap2(merged, ref, ref_index)
+        merged = merge_runs(id_tuple.join(extension_tuple, by: [0,1]).join(files_tuple, by: [0,1]))
+        bam = minimap2(merged.join(extension_tuple, by: [0,1]).join(data_type_tuple, by: [0,1]), ref, ref_index)
     }
     if ( in_data_format == 'aligned_bam' ) {
-        bam = in_data_tuple
+        bam = id_tuple.join(files_tuple, by: [0,1])
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
-            mosdepth(bam, mosdepth_binary, outdir, outdir2, ref_name)
+            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), mosdepth_binary, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
-            snp_indel_vcf_bam = clair3(bam, ref, ref_index)
+            snp_indel_vcf_bam = clair3(bam.join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
         }
         else if ( snp_indel_caller == 'deepvariant' ) {
-            deepvariant_dry_run(bam, ref, ref_index)
-            deepvariant_make_examples(deepvariant_dry_run.out, ref, ref_index)
+            deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
+            deepvariant_make_examples(deepvariant_dry_run.out.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index)
             deepvariant_call_variants(deepvariant_make_examples.out)
             snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)
         }
         // phasing
         (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
-        (haplotagged_bam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
-        pbcpgtools(haplotagged_bam, pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
+        pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
             sv_vcf_sniffles = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            sv_vcf_cutesv = cutesv(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            sv_vcf_cutesv = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
-        snp_indel_phased_vcf = in_data_tuple
+        snp_indel_phased_vcf = id_tuple.join(files_tuple, by: [0,1])
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
         // annotation
@@ -1211,3 +1253,4 @@ workflow {
         }
     }
 }
+
