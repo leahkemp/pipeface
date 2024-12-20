@@ -153,6 +153,7 @@ sample_04,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_mini
 Requirements:
 
 - leave `family_id` empty if not required
+- family_id is currently only used to organise the output files into subdirectories of family_id (if provided). Please provide all entries for a given `sample_id` the same family_id (this is currently not error checked)
 - set `regions_of_interest` to 'NONE' if not required
 - similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
 - provide full file paths
