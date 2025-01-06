@@ -280,7 +280,7 @@ process mosdepth {
 process clair3 {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
 
@@ -1216,7 +1216,7 @@ workflow {
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
-            snp_indel_vcf_bam = clair3(bam.join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
+            snp_indel_vcf_bam = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
         }
         else if ( snp_indel_caller == 'deepvariant' ) {
             deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
