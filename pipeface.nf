@@ -53,6 +53,9 @@ process scrape_settings {
         else if ( in_data_format == 'snv_vcf' ) {
             reported_in_data_format = 'SNP/indel vcf'
         }
+        else if ( in_data_format == 'sv_vcf' ) {
+            reported_in_data_format = 'SV vcf'
+        }
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
@@ -72,7 +75,7 @@ process scrape_settings {
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
-        else if( in_data_format == 'snv_vcf' )
+        else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >>	pipeface_settings.txt
@@ -772,7 +775,7 @@ process vep_sniffles_sv {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(sv_phased_vcf), path(sv_phased_vcf_index)
+        tuple val(sample_id), val(family_id), path(sv_phased_vcf)
         val ref
         val ref_index
         val vep_db
@@ -836,7 +839,7 @@ process vep_cutesv_sv {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(sv_vcf), path(sv_vcf_index)
+        tuple val(sample_id), val(family_id), path(sv_vcf)
         val ref
         val ref_index
         val vep_db
@@ -925,148 +928,166 @@ workflow {
 
     // check user provided parameters
     if ( !in_data ) {
-        exit 1, "Error: No in data csv file specified. Either include in parameter file or pass to --in_data on the command line."
+        exit 1, "No in data csv file specified. Either include in parameter file or pass to --in_data on the command line."
     }
     if ( !file(in_data).exists() ) {
-        exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
+        exit 1, "In data csv file path does not exist, '${in_data}' provided."
     }
     if ( !in_data_format ) {
-        exit 1, "Error: No in data format selected. Either include in parameter file or pass to --in_data_format on the command line. Should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf'."
+        exit 1, "No in data format selected. Either include in parameter file or pass to --in_data_format on the command line. Should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf'."
     }
-    if ( in_data_format != 'ubam_fastq' && in_data_format != 'aligned_bam' && in_data_format != 'snv_vcf' ) {
-        exit 1, "Error: In data format should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf', '${in_data_format}' selected."
+    if ( in_data_format != 'ubam_fastq' && in_data_format != 'aligned_bam' && in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' ) {
+        exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snv_vcf' or 'sv_vcf', '${in_data_format}' selected."
     }
     if ( in_data_format == 'snv_vcf' && tandem_repeat != 'NONE' ) {
-        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
+        exit 1, "In data format is SNP/indel VCF, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
+    }
+    if ( in_data_format == 'sv_vcf' && tandem_repeat != 'NONE' ) {
+        exit 1, "In data format is SV VCF, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
     }
     if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
-        exit 1, "Error: In data format is SNP/indel vcf, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
+        exit 1, "In data format is SNP/indel VCF, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
+    }
+    if ( in_data_format == 'sv_vcf' && snp_indel_caller != 'NONE' ) {
+        exit 1, "In data format is SV VCF, but you haven't set the SNP/indel calling software to 'NONE'. Either set snp_indel_caller to 'NONE' in parameter file or pass '--snp_indel_caller NONE' on the command line."
     }
     if ( in_data_format == 'snv_vcf' && annotate == 'no' ) {
-        exit 1, "Error: In data format is SNP/indel vcf, but you've chosen not to annotate. Nothing for pipeface to do."
+        exit 1, "In data format is SNP/indel VCF, but you've chosen not to annotate. Nothing for pipeface to do."
+    }
+    if ( in_data_format == 'sv_vcf' && annotate == 'no' ) {
+        exit 1, "In data format is SV VCF, but you've chosen not to annotate. Nothing for pipeface to do."
     }
     if ( in_data_format == 'snv_vcf' && calculate_depth == 'yes' ) {
-        exit 1, "Error: In data format is SNP/indel vcf, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
+        exit 1, "In data format is SNP/indel VCF, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
+    }
+    if ( in_data_format == 'sv_vcf' && calculate_depth == 'yes' ) {
+        exit 1, "In data format is SV VCF, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
     }
     if ( !ref ) {
-        exit 1, "Error: No reference genome provided. Either include in parameter file or pass to --ref on the command line."
+        exit 1, "No reference genome provided. Either include in parameter file or pass to --ref on the command line."
     }
     if ( !file(ref).exists() ) {
-        exit 1, "Error: Reference genome file path does not exist, '${ref}' provided."
+        exit 1, "Reference genome file path does not exist, '${ref}' provided."
     }
     if ( !ref_index ) {
-        exit 1, "Error: No reference genome index provided. Either include in parameter file or pass to --ref_index on the command line."
+        exit 1, "No reference genome index provided. Either include in parameter file or pass to --ref_index on the command line."
     }
     if ( !file(ref_index).exists() ) {
-        exit 1, "Error: Reference genome index file path does not exist, '${ref_index}' provided."
+        exit 1, "Reference genome index file path does not exist, '${ref_index}' provided."
     }
     if ( !tandem_repeat ) {
-        exit 1, "Error: No tandem repeat bed file provided. Either include in parameter file or pass to --tandem_repeat on the command line. Set to 'NONE' if you do not wish to use a tandem repeat bed file."
+        exit 1, "No tandem repeat bed file provided. Either include in parameter file or pass to --tandem_repeat on the command line. Set to 'NONE' if you do not wish to use a tandem repeat bed file."
     }
     if ( !file(tandem_repeat).exists() ) {
-        exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+        exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
     }
     if ( !snp_indel_caller ) {
-        exit 1, "Error: No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
+        exit 1, "No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
     }
-    if ( in_data_format != 'snv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
-        exit 1, "Error: SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
+    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' ) {
+        exit 1, "SNP/indel calling software should be either 'clair3' or 'deepvariant', '${snp_indel_caller}' selected."
     }
     if ( !sv_caller ) {
-        exit 1, "Error: No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
+        exit 1, "No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
     if ( in_data_format != 'snv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
-        exit 1, "Error: SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
+        exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
     }
     if ( in_data_format == 'snv_vcf' && ref == 'NONE' ) {
-        exit 1, "Error: When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
+        exit 1, "When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
     }
     if ( in_data_format == 'snv_vcf' && ref_index == 'NONE' ) {
-        exit 1, "Error: When the input data format is 'snv_vcf', please pass the reference genome index used to generate the input data to 'ref_index' instead of setting it to 'NONE'."
+        exit 1, "When the input data format is 'snv_vcf', please pass the reference genome index used to generate the input data to 'ref_index' instead of setting it to 'NONE'."
     }
     if ( in_data_format == 'snv_vcf' && snp_indel_caller == 'NONE' ) {
-        exit 1, "Error: When the input data format is 'snv_vcf', please pass the SNP/indel calling software used to generate the input data to 'snp_indel_caller' instead of setting it to 'NONE'."
+        exit 1, "When the input data format is 'snv_vcf', please pass the SNP/indel calling software used to generate the input data to 'snp_indel_caller' instead of setting it to 'NONE'."
+    }
+    if ( in_data_format == 'sv_vcf' && sv_caller == 'NONE' ) {
+        exit 1, "When the input data format is 'sv_vcf', please pass the SV calling software used to generate the input data to 'sv_caller' instead of setting it to 'NONE'."
     }
     if ( !annotate ) {
-        exit 1, "Error: Choice to annotate not made. Either include in parameter file or pass to --annotate on the command line. Should be either 'yes' or 'no'."
+        exit 1, "Choice to annotate not made. Either include in parameter file or pass to --annotate on the command line. Should be either 'yes' or 'no'."
     }
     if ( annotate != 'yes' && annotate != 'no' ) {
-        exit 1, "Error: Choice to annotate should be either 'yes', or 'no', '${annotate}' selected."
+        exit 1, "Choice to annotate should be either 'yes', or 'no', '${annotate}' selected."
     }
     if ( annotate == 'yes' && !ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes' ) {
-        exit 1, "Warning: Annotation of only hg38/GRCh38 is supported. You've chosen to annotate, but it looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. '${ref}' passed. Pass '--annotate_override yes' on the command line to override this error."
+        exit 1, "Annotation of only hg38/GRCh38 is supported. You've chosen to annotate, but it looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. '${ref}' passed. Pass '--annotate_override yes' on the command line to override this error."
     }
     if ( annotate == 'yes' && !file(vep_db).exists() ) {
-        exit 1, "Error VEP cache directory does not exist, '${vep_db}' provided."
+        exit 1, "VEP cache directory does not exist, '${vep_db}' provided."
     }
     if ( annotate == 'yes' && !file(revel_db).exists() ) {
-        exit 1, "Error REVEL database file path does not exist, '${revel_db}' provided."
+        exit 1, "REVEL database file path does not exist, '${revel_db}' provided."
     }
     if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
-        exit 1, "Error gnomAD database file path does not exist, '${gnomad_db}' provided."
+        exit 1, "gnomAD database file path does not exist, '${gnomad_db}' provided."
     }
     if ( annotate == 'yes' && !file(gnomad_sv_db).exists() ) {
-        exit 1, "Error gnomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
+        exit 1, "nomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
     }
     if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
-        exit 1, "Error ClinVar database file path does not exist, '${clinvar_db}' provided."
+        exit 1, "ClinVar database file path does not exist, '${clinvar_db}' provided."
     }
     if ( annotate == 'yes' && !file(cadd_snv_db).exists() ) {
-        exit 1, "Error CADD SNV database file path does not exist, '${cadd_snv_db}' provided."
+        exit 1, "CADD SNV database file path does not exist, '${cadd_snv_db}' provided."
     }
     if ( annotate == 'yes' && !file(cadd_indel_db).exists() ) {
-        exit 1, "Error CADD indel database file path does not exist, '${cadd_indel_db}' provided."
+        exit 1, "CADD indel database file path does not exist, '${cadd_indel_db}' provided."
     }
     if ( annotate == 'yes' && !file(cadd_sv_db).exists() ) {
-        exit 1, "Error CADD SV database file path does not exist, '${cadd_sv_db}' provided."
+        exit 1, "CADD SV database file path does not exist, '${cadd_sv_db}' provided."
     }
     if ( annotate == 'yes' && !file(spliceai_snv_db).exists() ) {
-        exit 1, "Error SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
+        exit 1, "SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
     }
     if ( annotate == 'yes' && !file(spliceai_indel_db).exists() ) {
-        exit 1, "Error SpliceAI indel database file path does not exist, '${spliceai_indel_db}' provided."
+        exit 1, "SpliceAI indel database file path does not exist, '${spliceai_indel_db}' provided."
     }
     if ( annotate == 'yes' && !file(alphamissense_db).exists() ) {
-        exit 1, "Error AlphaMissense database file path does not exist, '${alphamissense_db}' provided."
+        exit 1, "AlphaMissense database file path does not exist, '${alphamissense_db}' provided."
     }
     if ( !calculate_depth ) {
-        exit 1, "Error: Choice to calculate depth not made. Either include in parameter file or pass to --calculate_depth on the command line. Should be either 'yes' or 'no'."
+        exit 1, "Choice to calculate depth not made. Either include in parameter file or pass to --calculate_depth on the command line. Should be either 'yes' or 'no'."
     }
     if ( calculate_depth != 'yes' && calculate_depth != 'no' ) {
-        exit 1, "Error: Choice to calculate depth should be either 'yes', or 'no', '${calculate_depth}' selected."
+        exit 1, "Choice to calculate depth should be either 'yes', or 'no', '${calculate_depth}' selected."
     }
     if ( !outdir ) {
-        exit 1, "Error: No output directory provided. Either include in parameter file or pass to --outdir on the command line."
+        exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
     if ( !mosdepth_binary ) {
-        exit 1, "Error: No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
+        exit 1, "No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
     }
     if ( mosdepth_binary != 'NONE' && calculate_depth == 'no') {
-        exit 1, "Error: Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
+        exit 1, "Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
     }
     if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
-        exit 1, "Error: Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
+        exit 1, "Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
     }
     if ( !pbcpgtools_binary ) {
-        exit 1, "Error: No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
+        exit 1, "No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
     }
     if ( in_data_format == 'snv_vcf' && pbcpgtools_binary != 'NONE' ) {
-        exit 1, "Error: When the input data format is 'snv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
+        exit 1, "When the input data format is 'snv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
+    }
+    if ( in_data_format == 'sv_vcf' && pbcpgtools_binary != 'NONE' ) {
+        exit 1, "When the input data format is 'sv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
     }
     if ( !file(in_data).exists() ) {
-        exit 1, "Error: In data csv file path does not exist, '${in_data}' provided."
+        exit 1, "In data csv file path does not exist, '${in_data}' provided."
     }
     if ( !file(ref).exists() ) {
-        exit 1, "Error: Reference genome file path does not exist, '${ref}' provided."
+        exit 1, "Reference genome file path does not exist, '${ref}' provided."
     }
     if ( !file(ref_index).exists() ) {
-        exit 1, "Error: Reference genome index file path does not exist, '${ref_index}' provided."
+        exit 1, "Reference genome index file path does not exist, '${ref_index}' provided."
     }
     if ( !file(tandem_repeat).exists() ) {
-        exit 1, "Error: Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+        exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
     }
     if ( !file(mosdepth_binary).exists() ) {
-        exit 1, "Error: mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
+        exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
     // build variable
@@ -1145,55 +1166,64 @@ workflow {
 
     // check user provided parameters in in_data.csv file
     if ( sample_id.isEmpty() ) {
-       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'sample_id' column"
+       exit 1, "There is an empty entry in the 'sample_id' column of '$in_data'."
     }
     if ( in_file.isEmpty() ) {
-       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'file' column."
+       exit 1, "There is an empty entry in the 'file' column of '$in_data'."
     }
     if ( !file(in_file).exists() ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't exist. Check file '$in_file'."
+       exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't exist. Check file '$in_file'."
     }
     if ( file(in_file).getExtension() != 'bam' && file(in_file).getExtension() != 'gz' && file(in_file).getExtension() != 'fastq' ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'file' column which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
+       exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
     }
     if ( in_data_format == 'aligned_bam' && !file(in_file + '.bai').exists() ) {
-       exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks '${in_file}' isn't indexed (ie. '${in_file}.bai doesn't exist')."
+       exit 1, "You've specified that the in data format is aligned BAM, but it looks '${in_file}' defined in the file column of '$in_data' isn't indexed (ie. '${in_file}.bai doesn't exist')."
     }
     if ( in_data_format == 'aligned_bam' && !in_file.contains('bam') && in_data_format_override != 'yes' ) {
-       exit 1, "Error processing '$in_data' file. You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+       exit 1, "You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file names defined in the file column of '$in_data'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
     }
     if ( in_data_format == 'snv_vcf' && !in_file.contains('vcf') && in_data_format_override != 'yes' ) {
-       exit 1, "Error processing '$in_data' file. You've specified that the in data format is SNV vcf, but it looks like you may not be passing a VCF file based on the file name. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+       exit 1, "You've specified that the in data format is SNV vcf, but it looks like you may not be passing a VCF file based on the file names defined in the file column of '$in_data'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+    }
+    if ( in_data_format == 'sv_vcf' && !in_file.contains('vcf') && in_data_format_override != 'yes' ) {
+       exit 1, "You've specified that the in data format is SV vcf, but it looks like you may not be passing a VCF file based on the file names defined in the file column of '$in_data'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
     }
     if ( data_type.isEmpty() ) {
-       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'data_type' column."
+       exit 1, "There is an empty entry in the 'data_type' column of '$in_data'."
     }
-    if ( in_data_format != 'snv_vcf' && data_type != 'ont' && data_type != 'pacbio' ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'data_type' column that is not 'ont' or 'pacbio', '$data_type' provided."
+    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && data_type != 'ont' && data_type != 'pacbio' ) {
+       exit 1, "There is an entry in the 'data_type' column of '$in_data' that is not 'ont' or 'pacbio', '$data_type' provided."
     }
     if ( in_data_format == 'snv_vcf' && data_type != 'NONE' ) {
-       exit 1, "Error processing '$in_data' file. When the input data format is 'snv_vcf', please set the data type (data_type) to 'NONE'."
+       exit 1, "When the input data format is 'snv_vcf', please set the data type (data_type column of '$in_data') to 'NONE'."
+    }
+    if ( in_data_format == 'sv_vcf' && data_type != 'NONE' ) {
+       exit 1, "When the input data format is 'sv_vcf', please set the data type (data_type column of '$in_data') to 'NONE'."
     }
     if ( regions_of_interest.isEmpty() ) {
-       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'regions_of_interest' column."
+       exit 1, "There is an empty entry in the 'regions_of_interest' column of '$in_data'."
     }
     if ( !file(regions_of_interest).exists() ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'regions_of_interest' column which doesn't exist. Check file '$regions_of_interest'."
+       exit 1, "There is an entry in the 'regions_of_interest' column of '$in_data' which doesn't exist. Check file '$regions_of_interest'."
     }
     if ( clair3_model.isEmpty() ) {
-       exit 1, "Error processing '$in_data' file. There is an empty entry in the 'clair3_model' column."
+       exit 1, "There is an empty entry in the 'clair3_model' column of '$in_data'."
     }
     if ( !file(clair3_model).exists() ) {
-       exit 1, "Error processing '$in_data' file. There is an entry in the 'clair3_model' column which doesn't exist. Check path '$clair3_model'."
+       exit 1, "There is an entry in the 'clair3_model' column of '$in_data' which doesn't exist. Check path '$clair3_model'."
     }
     if ( snp_indel_caller != 'clair3' && clair3_model != 'NONE' ) {
-       exit 1, "Error processing '$in_data' file. Pass 'NONE' in the 'clair3_model' column when clair3 is NOT selected as the SNP/indel calling software, '$clair3_model' provided'."
+       exit 1, "Pass 'NONE' in the 'clair3_model' column of '$in_data' when clair3 is NOT selected as the SNP/indel calling software, '$clair3_model' provided'."
     }
-    if ( in_data_format != 'snv_vcf' && snp_indel_caller == 'clair3' && clair3_model == 'NONE' ) {
-       exit 1, "Error processing '$in_data' file. When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column rather than setting it to 'NONE'."
+    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && snp_indel_caller == 'clair3' && clair3_model == 'NONE' ) {
+       exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column of '$in_data' rather than setting it to 'NONE'."
     }
     if ( in_data_format == 'snv_vcf' && clair3_model != 'NONE' ) {
-       exit 1, "Error processing '$in_data' file. When the input data format is 'snv_vcf', please set the Clair3 model (clair3_model) to 'NONE'."
+       exit 1, "When the input data format is 'snv_vcf', please set the Clair3 model (clair3_model column of '$in_data') to 'NONE'."
+    }
+    if ( in_data_format == 'sv_vcf' && clair3_model != 'NONE' ) {
+       exit 1, "When the input data format is 'sv_vcf', please set the Clair3 model (clair3_model column of '$in_data') to 'NONE'."
     }
     }
 
@@ -1244,6 +1274,14 @@ workflow {
         // annotation
         if ( annotate == 'yes' ) {
             vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+        }
+    }
+    if ( in_data_format == 'sv_vcf' ) {
+        sv_vcf_sniffles = id_tuple.join(files_tuple, by: [0,1])
+        sv_vcf_cutesv = id_tuple.join(files_tuple, by: [0,1])
+    }
+    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'sv_vcf' ) {
+        if ( annotate == 'yes' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
                 vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
