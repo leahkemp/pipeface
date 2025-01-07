@@ -253,13 +253,13 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
-    "annotate": "no",
+    "annotate": "yes",
 ```
 
 *OR*
 
 ```json
-    "annotate": "yes",
+    "annotate": "no",
 ```
 
 > **_Note:_** variant annotation is only available for hg38
@@ -267,13 +267,13 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
 ```json
-    "calculate_depth": "no",
+    "calculate_depth": "yes",
 ```
 
 *OR*
 
 ```json
-    "calculate_depth": "yes",
+    "calculate_depth": "no",
 ```
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
