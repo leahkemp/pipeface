@@ -1159,6 +1159,7 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row ->
             def sample_id = row.sample_id
+            def family_id = row.family_id
             def in_file = row.file
             def data_type = row.data_type
             def regions_of_interest = row.regions_of_interest
