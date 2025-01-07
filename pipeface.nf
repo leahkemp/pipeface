@@ -1,6 +1,10 @@
 
 nextflow.enable.dsl=2
 
+// create dummy NONE file for optional pipeface inputs
+def filePath = "NONE"
+new File(filePath).text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
+
 // set defaults for optional params (set default optional input files to dummy NONE file)
 // secret sauce second outdir
 params.outdir2 = ""
