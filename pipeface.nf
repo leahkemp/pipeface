@@ -689,6 +689,7 @@ process sniffles {
         val ref_name
 
     output:
+        tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz')
         tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
 
     script:
@@ -731,6 +732,7 @@ process cutesv {
         val ref_name
 
     output:
+        tuple val(sample_id), val(family_id), path('sv.vcf.gz')
         tuple val(sample_id), val(family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
@@ -990,8 +992,11 @@ workflow {
     if ( !sv_caller ) {
         exit 1, "No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
     }
-    if ( in_data_format != 'snv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
+    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
         exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
+    }
+    if ( in_data_format == 'sv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' ) {
+        exit 1, "When the input data format is 'sv_vcf', SV calling software should be 'sniffles' or 'cutesv', '${sv_caller}' selected."
     }
     if ( in_data_format == 'snv_vcf' && ref == 'NONE' ) {
         exit 1, "When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
@@ -1262,10 +1267,10 @@ workflow {
         pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-            sv_vcf_sniffles = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed) = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            sv_vcf_cutesv = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
