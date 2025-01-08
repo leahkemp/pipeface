@@ -55,10 +55,10 @@ process scrape_settings {
             reported_in_data_format = 'aligned BAM'
         }
         else if ( in_data_format == 'snv_vcf' ) {
-            reported_in_data_format = 'SNP/indel vcf'
+            reported_in_data_format = 'SNP/indel VCF'
         }
         else if ( in_data_format == 'sv_vcf' ) {
-            reported_in_data_format = 'SV vcf'
+            reported_in_data_format = 'SV VCF'
         }
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
