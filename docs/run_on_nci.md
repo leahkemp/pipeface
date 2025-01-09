@@ -153,7 +153,7 @@ sample_04,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_mini
 Requirements:
 
 - leave `family_id` empty if not required
-- family_id is currently only used to organise the output files into subdirectories of family_id (if provided). Please provide all entries for a given `sample_id` the same family_id (this is currently not error checked)
+- `family_id` is currently only used to organise the output files into subdirectories of `family_id` (if provided). Please provide all entries for a given `sample_id` the same `family_id` (this is currently not error checked)
 - set `regions_of_interest` to 'NONE' if not required
 - similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
 - provide full file paths
@@ -253,13 +253,13 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
-    "annotate": "no",
+    "annotate": "yes",
 ```
 
 *OR*
 
 ```json
-    "annotate": "yes",
+    "annotate": "no",
 ```
 
 > **_Note:_** variant annotation is only available for hg38
@@ -267,13 +267,13 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
 ```json
-    "calculate_depth": "no",
+    "calculate_depth": "yes",
 ```
 
 *OR*
 
 ```json
-    "calculate_depth": "yes",
+    "calculate_depth": "no",
 ```
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
