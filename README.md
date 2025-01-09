@@ -131,6 +131,7 @@ sv_calling_s4-.->sv_annotation_s4
 ## Main analyses
 
 - ONT and/or pacbio HiFi data
+- Individuals or cohorts
 - WGS and/or targeted
 - hg38 or hs1 reference genome
 
