@@ -17,7 +17,7 @@ process scrape_settings {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
 
     input:
-        tuple val(sample_id), val(family_id), val(family_position), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
         val in_data
         val in_data_format
         val ref
