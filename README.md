@@ -14,6 +14,10 @@ There currently exists tools and workflows that undertake comparable analyses, b
 
 ## Workflow
 
+### Overview
+
+#### Singleton
+
 ```mermaid
 %%{init: {'theme':'dark'}}%%
 flowchart LR
@@ -39,7 +43,38 @@ sv_calling-.->sv_annotation
 
 ```
 
+#### Cohort
+
+```mermaid
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+
+input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
+merging{{"Merge runs (if needed)"}}
+alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
+depth{{"Calculate alignment depth"}}
+snp_indel_calling{{"SNP/indel variant calling"}}
+snp_indel_phasing{{"SNP/indel phasing"}}
+joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
+joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
+joint_snp_indel_annotation{{"Joint SNP/indel annotation (optional - hg38 only)"}}
+haplotagging{{"Haplotagging bams"}}
+generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
+sv_calling{{"Structural variant calling"}}
+sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
+
+input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+alignment-.->depth
+alignment-.->haplotagging
+haplotagging-.->generate_meth_probs
+snp_indel_phasing-.->joint_snp_indel_calling-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
+sv_calling-.->sv_annotation
+
+```
+
 ### Detailed
+
+#### Singleton
 
 ```mermaid
 %%{init: {'theme':'dark'}}%%
