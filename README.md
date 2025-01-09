@@ -137,8 +137,9 @@ sv_calling_s4-.->sv_annotation_s4
 ## Main tools
 
 - [Minimap2](https://github.com/lh3/minimap2)
-- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)
+- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)/[DeepTrio](https://github.com/google/deepvariant/blob/r1.8/docs/deeptrio-details.md)
 - [WhatsHap](https://github.com/whatshap/whatshap)
+- [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
@@ -160,6 +161,8 @@ sv_calling_s4-.->sv_annotation_s4
 
 ## Main output files
 
+### Singleton
+
 - Aligned, sorted and haplotagged bam
 - Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
@@ -168,7 +171,17 @@ sv_calling_s4-.->sv_annotation_s4
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
-> **_Note:_** Running DeepVariant on ONT data assumes r10 data
+### Cohort
+
+- Aligned, sorted and haplotagged bam
+- Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
+- Joint phased DeepTrio SNP/indel VCF file
+- Joint phased and annotated DeepTrio SNP/indel VCF file (optional - hg38 only)
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
+- Individual phased Sniffles2 and/or un-phased cuteSV SV VCF file
+- Individual phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
+
+> **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
 ## Assumptions
 
