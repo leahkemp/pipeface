@@ -56,6 +56,7 @@ depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
+gvcf_merging{{"gVCF merging"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
@@ -67,7 +68,7 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
-snp_indel_phasing-.->joint_snp_indel_calling-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
+snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_annotation
 
 ```
@@ -200,12 +201,12 @@ snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tool
 snp_indel_calling_s5{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
 snp_indel_calling_s6{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
 
-snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
-snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
-snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
-snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
-snp_indel_phasing_s5{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
-snp_indel_phasing_s6{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s5{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
+snp_indel_phasing_s6{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
 
 haplotagging_s1{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
@@ -213,6 +214,18 @@ haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <
 haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s5{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s6{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+
+joint_snp_indel_calling_f1{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
+joint_snp_indel_calling_f2{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
+
+gvcf_merging_f1{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
+gvcf_merging_f2{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
+
+joint_snp_indel_phasing_f1{{"Description: Joint SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and and whatshap stats"}}
+joint_snp_indel_phasing_f2{{"Description: Joint SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and and whatshap stats"}}
+
+joint_snp_indel_annotation_f1{{"Description: Joint SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+joint_snp_indel_annotation_f2{{"Description: Joint SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
@@ -249,6 +262,16 @@ alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
 alignment_s5-.->haplotagging_s5
 alignment_s6-.->haplotagging_s6
+
+haplotagging_s1-.->joint_snp_indel_calling_f1
+haplotagging_s2-.->joint_snp_indel_calling_f1
+haplotagging_s3-.->joint_snp_indel_calling_f1
+haplotagging_s4-.->joint_snp_indel_calling_f2
+haplotagging_s5-.->joint_snp_indel_calling_f2
+haplotagging_s6-.->joint_snp_indel_calling_f2
+
+joint_snp_indel_calling_f1-.->gvcf_merging_f1-.->joint_snp_indel_phasing_f1-.->joint_snp_indel_annotation_f1
+joint_snp_indel_calling_f2-.->gvcf_merging_f2-.->joint_snp_indel_phasing_f2-.->joint_snp_indel_annotation_f2
 
 sv_calling_s1-.->sv_annotation_s1
 sv_calling_s2-.->sv_annotation_s2
