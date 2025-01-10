@@ -163,6 +163,103 @@ sv_calling_s4-.->sv_annotation_s4
 
 ```
 
+#### Cohort
+
+```mermaid
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+
+ont_data_f1("Sample 1 <br><br> Input data: <br><br> ONT uBAM")
+ont_data_f2("Sample 1 <br><br> Input data: <br><br> ONT uBAM")
+ont_data_f3("Sample 2 <br><br> Input data: <br><br> ONT uBAM")
+ont_data_f4("Sample 3 <br><br> Input data: <br><br> ONT uBAM")
+ont_data_f5("Sample 4 <br><br> Input data: <br><br> ONT uBAM")
+ont_data_f6("Sample 5 <br><br> Input data: <br><br> ONT uBAM")
+ont_data_f7("Sample 6 <br><br> Input data: <br><br> ONT uBAM")
+
+merging_m1{{"Description: merge runs <br><br> Main tools: Samtools <br><br> Commands: samtools merge"}}
+
+alignment_s1{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s2{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s3{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s4{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s5{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+alignment_s6{{"Description: bam to fastq conversion, alignment, sorting <br><br> Main tools: Minimap2 and Samtools <br><br> Commands: minimap2 and samtools sort"}}
+
+depth_s1{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s2{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s3{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s4{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s5{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+depth_s6{{"Description: calculate alignment depth <br><br> Main tools: mosdepth <br><br> Commands: mosdepth depth"}}
+
+snp_indel_calling_s1{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
+snp_indel_calling_s2{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
+snp_indel_calling_s3{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
+snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
+snp_indel_calling_s5{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
+snp_indel_calling_s6{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
+
+snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s5{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+snp_indel_phasing_s6{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
+
+haplotagging_s1{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+haplotagging_s5{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+haplotagging_s6{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
+
+sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+sv_calling_s5{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+sv_calling_s6{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
+
+sv_annotation_s1{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s2{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s3{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s5{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s6{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+
+ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
+ont_data_f2-.->merging_m1
+ont_data_f3-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
+ont_data_f4-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
+ont_data_f5-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+ont_data_f6-.->alignment_s5-.->snp_indel_calling_s5-.->snp_indel_phasing_s5-.->haplotagging_s5-.->sv_calling_s5
+ont_data_f7-.->alignment_s6-.->snp_indel_calling_s6-.->snp_indel_phasing_s6-.->haplotagging_s6-.->sv_calling_s6
+
+alignment_s1-.->depth_s1
+alignment_s2-.->depth_s2
+alignment_s3-.->depth_s3
+alignment_s4-.->depth_s4
+alignment_s5-.->depth_s5
+alignment_s6-.->depth_s6
+
+alignment_s1-.->haplotagging_s1
+alignment_s2-.->haplotagging_s2
+alignment_s3-.->haplotagging_s3
+alignment_s4-.->haplotagging_s4
+alignment_s5-.->haplotagging_s5
+alignment_s6-.->haplotagging_s6
+
+sv_calling_s1-.->sv_annotation_s1
+sv_calling_s2-.->sv_annotation_s2
+sv_calling_s3-.->sv_annotation_s3
+sv_calling_s4-.->sv_annotation_s4
+sv_calling_s5-.->sv_annotation_s5
+sv_calling_s6-.->sv_annotation_s6
+
+```
+
+
 ## Main analyses
 
 - ONT and/or pacbio HiFi data
