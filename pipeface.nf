@@ -570,7 +570,7 @@ process deeptrio {
         val ref_index
 
     output:
-        tuple val(proband_family_id), path('proband.g.vcf'), path('father.g.vcf'), path('mother.g.vcf')
+        tuple val(proband_family_id), path('proband_snp_indel.g.vcf'), path('father_snp_indel.g.vcf'), path('mother_snp_indel.g.vcf')
 
     script:
     // conditionally define model type
