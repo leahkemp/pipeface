@@ -624,25 +624,33 @@ process deeptrio {
 
 process glnexus {
 
-    publishDir "$outdir/$proband_family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'joint_snp_indel.vcf.gz*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'joint_snp_indel.vcf.gz*'
 
     input:
         tuple val(proband_family_id), path(proband_gvcf), path(father_gvcf), path(mother_gvcf)
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
 
     output:
-        tuple val(proband_family_id), path('joint_snp_indel.vcf.gz'), path('joint_snp_indel.vcf.gz.tbi')
+        tuple val(proband_family_id), path('joint_snp_indel.vcf.gz')
 
     script:
         """
         # run glnexus
         glnexus_cli \
         --config DeepVariant \
-        $proband_gvcf $father_gvcf $mother_gvcf > joint_snp_indel.vcf
+        $proband_gvcf $father_gvcf $mother_gvcf > joint_snp_indel.bcf
         # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        joint_snp_indel.vcf
+        bcftools view joint_snp_indel.bcf | bgzip -@ ${task.cpus} -c > joint_snp_indel.vcf.gz
         tabix joint_snp_indel.vcf.gz
+        """
+
+    stub:
+        """
+        touch joint_snp_indel.vcf.gz
+        touch joint_snp_indel.vcf.gz.tbi
         """
 
 }
@@ -1397,7 +1405,7 @@ workflow {
                 }
                 .join(data_type_tuple, by: [0,1])
             gvcfs = deeptrio(proband_tuple, father_tuple, mother_tuple, ref, ref_index)
-            glnexus(gvcfs)
+            glnexus(gvcfs, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
