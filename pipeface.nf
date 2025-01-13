@@ -570,7 +570,7 @@ process deeptrio {
         val ref_index
 
     output:
-        tuple val(proband_family_id), path('proband_snp_indel.g.vcf'), path('father_snp_indel.g.vcf'), path('mother_snp_indel.g.vcf')
+        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('proband_snp_indel.g.vcf'), path('father_snp_indel.g.vcf'), path('mother_snp_indel.g.vcf')
 
     script:
     // conditionally define model type
@@ -624,17 +624,11 @@ process deeptrio {
 
 process glnexus {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'joint_snp_indel.vcf.gz*'
-
     input:
-        tuple val(proband_family_id), path(proband_gvcf), path(father_gvcf), path(mother_gvcf)
-        val outdir
-        val outdir2
-        val ref_name
-        val snp_indel_caller
+        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(proband_gvcf), path(father_gvcf), path(mother_gvcf)
 
     output:
-        tuple val(proband_family_id), path('joint_snp_indel.vcf.gz')
+        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('joint_snp_indel.vcf.gz'), path('joint_snp_indel.vcf.gz.tbi')
 
     script:
         """
@@ -651,6 +645,77 @@ process glnexus {
         """
         touch joint_snp_indel.vcf.gz
         touch joint_snp_indel.vcf.gz.tbi
+        """
+
+}
+
+process whatshap_joint_phase {
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'joint_snp_indel.phased.*'
+
+    input:
+        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(joint_snp_indel_vcf), path(joint_snp_indel_vcf_index)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+
+    output:
+        tuple val(proband_family_id), path('joint_snp_indel.phased.vcf.gz')
+        tuple val(proband_family_id), path('joint_snp_indel.phased.vcf.gz'), path('joint_snp_indel.phased.vcf.gz.tbi'), path('joint_snp_indel.phased.read_list.txt'), path('joint_snp_indel.phased.stats.gtf')
+
+    script:
+        """
+        # create pedigree file
+        printf "$proband_family_id\t$proband_sample_id\t$father_sample_id\t$mother_sample_id\t0\t1\n" > pedigree.ped
+        # label bams with sample ID (required for joint whatshap phase)
+        samtools addreplacerg \
+        -@ ${task.cpus} \
+        -r ID:$proband_sample_id \
+        -r SM:$proband_sample_id \
+        -o proband.sorted.haplotagged.mod.bam proband.sorted.haplotagged.bam
+        samtools addreplacerg \
+        -@ ${task.cpus}	\
+        -r ID:$father_sample_id \
+        -r SM:$father_sample_id \
+        -o father.sorted.haplotagged.mod.bam father.sorted.haplotagged.bam
+        samtools addreplacerg \
+        -@ ${task.cpus}	\
+        -r ID:$mother_sample_id \
+        -r SM:$mother_sample_id \
+        -o mother.sorted.haplotagged.mod.bam mother.sorted.haplotagged.bam
+        # index bams
+        samtools index \
+        -@ ${task.cpus} \
+        proband.sorted.haplotagged.mod.bam
+        samtools index \
+        -@ ${task.cpus} \
+        father.sorted.haplotagged.mod.bam
+        samtools index \
+        -@ ${task.cpus} \
+        mother.sorted.haplotagged.mod.bam
+        # run whatshap phase
+        whatshap phase \
+        --reference $ref \
+        --output joint_snp_indel.phased.vcf.gz \
+        --output-read-list joint_snp_indel.phased.read_list.txt \
+        --ped pedigree.ped $joint_snp_indel_vcf proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
+        # index vcf
+        tabix joint_snp_indel.phased.vcf.gz
+        # run whatshap stats
+        whatshap stats \
+        joint_snp_indel.phased.vcf.gz \
+        --gtf joint_snp_indel.phased.stats.gtf \
+        """
+
+    stub:
+        """
+        touch joint_snp_indel.phased.vcf.gz
+        touch joint_snp_indel.phased.vcf.gz.tbi
+        touch joint_snp_indel.phased.read_list.txt
+        touch joint_snp_indel.phased.stats.gtf
         """
 
 }
@@ -1404,8 +1469,9 @@ workflow {
                     tuple[2].contains("mother")
                 }
                 .join(data_type_tuple, by: [0,1])
-            gvcfs = deeptrio(proband_tuple, father_tuple, mother_tuple, ref, ref_index)
-            glnexus(gvcfs, outdir, outdir2, ref_name, snp_indel_caller)
+            gvcfs_bams = deeptrio(proband_tuple, father_tuple, mother_tuple, ref, ref_index)
+            joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)
+            (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
