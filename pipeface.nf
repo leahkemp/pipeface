@@ -465,9 +465,14 @@ process deepvariant_post_processing {
 
 process whatshap_phase {
 
-    if ( params.snp_indel_caller != "deeptrio"  ) {
-        publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
-    }
+    // conditionally publish files in 'publish_bin' when cohort analysis is carried out and we don't need individual vcf's pubished
+    publishDir { task ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$outdir/$family_id/$outdir2/$sample_id"
+        } else {
+            return "publish_bin"
+        }
+    }, mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
@@ -628,33 +633,33 @@ process glnexus {
         tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(proband_gvcf), path(father_gvcf), path(mother_gvcf)
 
     output:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('joint_snp_indel.vcf.gz'), path('joint_snp_indel.vcf.gz.tbi')
+        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
         # run glnexus
         glnexus_cli \
         --config DeepVariant \
-        $proband_gvcf $father_gvcf $mother_gvcf > joint_snp_indel.bcf
+        $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
         # compress and index vcf
-        bcftools view joint_snp_indel.bcf | bgzip -@ ${task.cpus} -c > joint_snp_indel.vcf.gz
-        tabix joint_snp_indel.vcf.gz
+        bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
+        tabix snp_indel.vcf.gz
         """
 
     stub:
         """
-        touch joint_snp_indel.vcf.gz
-        touch joint_snp_indel.vcf.gz.tbi
+        touch snp_indel.vcf.gz
+        touch snp_indel.vcf.gz.tbi
         """
 
 }
 
 process whatshap_joint_phase {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'joint_snp_indel.phased.*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(joint_snp_indel_vcf), path(joint_snp_indel_vcf_index)
+        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
         val outdir
@@ -663,8 +668,8 @@ process whatshap_joint_phase {
         val snp_indel_caller
 
     output:
-        tuple val(proband_family_id), path('joint_snp_indel.phased.vcf.gz')
-        tuple val(proband_family_id), path('joint_snp_indel.phased.vcf.gz'), path('joint_snp_indel.phased.vcf.gz.tbi'), path('joint_snp_indel.phased.read_list.txt'), path('joint_snp_indel.phased.stats.gtf')
+        tuple val(proband_sample_id), val(proband_family_id), path('snp_indel.phased.vcf.gz')
+        tuple val(proband_family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
         """
@@ -699,30 +704,30 @@ process whatshap_joint_phase {
         # run whatshap phase
         whatshap phase \
         --reference $ref \
-        --output joint_snp_indel.phased.vcf.gz \
-        --output-read-list joint_snp_indel.phased.read_list.txt \
-        --ped pedigree.ped $joint_snp_indel_vcf proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
+        --output snp_indel.phased.vcf.gz \
+        --output-read-list snp_indel.phased.read_list.txt \
+        --ped pedigree.ped $snp_indel_vcf proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
         # index vcf
-        tabix joint_snp_indel.phased.vcf.gz
+        tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
-        joint_snp_indel.phased.vcf.gz \
-        --gtf joint_snp_indel.phased.stats.gtf \
+        snp_indel.phased.vcf.gz \
+        --gtf snp_indel.phased.stats.gtf \
         """
 
     stub:
         """
-        touch joint_snp_indel.phased.vcf.gz
-        touch joint_snp_indel.phased.vcf.gz.tbi
-        touch joint_snp_indel.phased.read_list.txt
-        touch joint_snp_indel.phased.stats.gtf
+        touch snp_indel.phased.vcf.gz
+        touch snp_indel.phased.vcf.gz.tbi
+        touch snp_indel.phased.read_list.txt
+        touch snp_indel.phased.stats.gtf
         """
 
 }
 
 process vep_snv {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(snp_indel_phased_vcf)
@@ -1469,9 +1474,15 @@ workflow {
                     tuple[2].contains("mother")
                 }
                 .join(data_type_tuple, by: [0,1])
+            // gvcf merging
             gvcfs_bams = deeptrio(proband_tuple, father_tuple, mother_tuple, ref, ref_index)
+            // joint phasing
             joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)
             (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            // joint annotation
+            if ( annotate == 'yes' ) {
+                vep_snv(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            }
         }
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
