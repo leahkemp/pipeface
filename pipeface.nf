@@ -241,6 +241,52 @@ process minimap2 {
 
 }
 
+process minimod {
+
+    def software = "minimod"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.tsv'
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), val(data_type)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path('modfreqs.tsv'), optional: true
+
+    script:
+    if( data_type == 'ont' )
+        """
+        # stage bam and bam index
+        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
+        bam_loc=\$(realpath ${bam})
+        ln -sf \${bam_loc} sorted.bam
+        ln -sf \${bam_loc}.bai .
+        ln -sf \${bam_loc}.bai sorted.bam.bai
+        # run minimod
+        /g/data/ox63/install/minimod/minimod \
+        mod-freq \
+        -b $ref \
+        $bam \
+        -t ${task.cpus} \
+        -o modfreqs.tsv
+        """
+    else if( data_type == 'pacbio' )
+        """
+        echo "Data type is pacbio, not running minimod on this data."
+        """
+
+    stub:
+        """
+        touch modfreqs.tsv
+        """
+
+}
+
 process mosdepth {
 
     def depth_software = "mosdepth"
@@ -1251,6 +1297,7 @@ workflow {
         bam = id_tuple.join(files_tuple, by: [0,1])
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
+        minimod(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         if ( calculate_depth == 'yes' ) {
             mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), mosdepth_binary, outdir, outdir2, ref_name)
         }
