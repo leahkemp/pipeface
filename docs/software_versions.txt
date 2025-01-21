@@ -1,5 +1,6 @@
 Samtools: 1.19
 Minimap2: 2.28-r1209
+minimod: 0.2.0
 mosdepth: 0.3.9
 Clair3: 1.0.9
 DeepVariant 1.6.1
