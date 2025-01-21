@@ -245,7 +245,7 @@ process minimod {
 
     def software = "minimod"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.tsv'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.bed'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), val(data_type)
@@ -256,7 +256,7 @@ process minimod {
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path('modfreqs.tsv'), optional: true
+        tuple val(sample_id), val(family_id), path('modfreqs.bed'), optional: true
 
     script:
     if( data_type == 'ont' )
@@ -268,12 +268,13 @@ process minimod {
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run minimod
-        /g/data/ox63/install/minimod/minimod \
+        minimod \
         mod-freq \
-        -b $ref \
+        -b \
+        $ref \
         $bam \
         -t ${task.cpus} \
-        -o modfreqs.tsv
+        -o modfreqs.bed
         """
     else if( data_type == 'pacbio' )
         """
@@ -282,7 +283,7 @@ process minimod {
 
     stub:
         """
-        touch modfreqs.tsv
+        touch modfreqs.bed
         """
 
 }
