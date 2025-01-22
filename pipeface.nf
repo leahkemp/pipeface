@@ -219,10 +219,11 @@ process minimap2 {
         """
         # run minimap
         minimap2 \
+        -y \
+        -Y \
         --secondary=no \
         --MD \
-        -a \
-        -Y \
+	-a \
         -x $preset \
         -t ${task.cpus} \
         $ref \
