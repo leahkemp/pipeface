@@ -26,12 +26,14 @@ snp_indel_calling{{"SNP/indel variant calling"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ont data only)"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->calculate_base_mod_freqs
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
@@ -85,17 +87,20 @@ haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <
 haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 
-generate_meth_probs_s2{{"Description: Generate site methylation probabilities <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
+calculate_base_mod_freqs_s1{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+generate_meth_probs_s2{{"Description: generate site methylation probabilities <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
+calculate_base_mod_freqs_s3{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+calculate_base_mod_freqs_s4{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
 
 sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 
-sv_annotation_s1{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s2{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s3{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s1{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s2{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s3{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s4{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
@@ -108,6 +113,10 @@ alignment_s1-.->depth_s1
 alignment_s2-.->depth_s2
 alignment_s3-.->depth_s3
 alignment_s4-.->depth_s4
+
+alignment_s1-.->calculate_base_mod_freqs_s1
+alignment_s3-.->calculate_base_mod_freqs_s3
+alignment_s4-.->calculate_base_mod_freqs_s4
 
 alignment_s1-.->haplotagging_s1
 alignment_s2-.->haplotagging_s2
@@ -142,6 +151,7 @@ sv_calling_s4-.->sv_annotation_s4
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
+- [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
@@ -164,6 +174,7 @@ sv_calling_s4-.->sv_annotation_s4
 - Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (optional - hg38 only)
+- Bed base modification frequencies (ont only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
