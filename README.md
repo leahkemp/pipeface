@@ -33,7 +33,7 @@ sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
-alignment-.->summarise_base_mods
+alignment-.->calculate_base_mod_freqs
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
