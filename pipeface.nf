@@ -257,7 +257,7 @@ process minimod {
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path('modfreqs.bed'), optional: true
+        tuple val(sample_id), val(family_id), path('modfreqs.bed'), path('modfreqs.bw'), optional: true
 
     script:
     if( data_type == 'ont' )
@@ -278,12 +278,14 @@ process minimod {
         -o modfreqs_tmp.bed
         # sort
         sort -k1,1 -k2,2n modfreqs_tmp.bed > modfreqs.bed
+        cut -f1-3,11 modfreqs.bed > modfreqs_formatted.bed
         # generate bigwig
-        cut -f1,2 $ref > chrom.sizes
+        cut -f1,2 $ref_index > chrom.sizes
         bedGraphToBigWig \
-        modfreqs.bed \
+        modfreqs_formatted.bed \
         chrom.sizes \
         modfreqs.bw
+        echo "DONE"
         """
     else if( data_type == 'pacbio' )
         """
