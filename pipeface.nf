@@ -285,7 +285,6 @@ process minimod {
         modfreqs_formatted.bed \
         chrom.sizes \
         modfreqs.bw
-        echo "DONE"
         """
     else if( data_type == 'pacbio' )
         """
