@@ -10,5 +10,6 @@ Sniffles2: 2.3.3
 cuteSV: 1.0.13
 GNU coreutils: 8.30
 HTSlib: 1.16
+bcftools: 1.12
 GNU Awk: 4.2.1
 ensembl-vep: 112
