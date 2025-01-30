@@ -509,7 +509,7 @@ process deepvariant_post_processing {
 
 }
 
-process multiallele_to_biallele {
+process split_multiallele {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
@@ -1347,8 +1347,8 @@ workflow {
             deepvariant_call_variants(deepvariant_make_examples.out)
             snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)
         }
-        // convert multiallelic variants to biallelic variants
-        snp_indel_split_vcf_bam = multiallele_to_biallele(snp_indel_vcf_bam, ref, ref_index)
+        // split multiallelic variants
+        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
         // phasing
         (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
