@@ -246,7 +246,7 @@ process minimod {
 
     def software = "minimod"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.bed'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.b*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), val(data_type)
@@ -257,7 +257,7 @@ process minimod {
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path('modfreqs.bed'), optional: true
+        tuple val(sample_id), val(family_id), path('modfreqs.bed'), path('modfreqs.bw'), optional: true
 
     script:
     if( data_type == 'ont' )
@@ -275,7 +275,16 @@ process minimod {
         $ref \
         $bam \
         -t ${task.cpus} \
-        -o modfreqs.bed
+        -o modfreqs_tmp.bed
+        # sort
+        sort -k1,1 -k2,2n modfreqs_tmp.bed > modfreqs.bed
+        cut -f1-3,11 modfreqs.bed > modfreqs_formatted.bed
+        # generate bigwig
+        cut -f1,2 $ref_index > chrom.sizes
+        bedGraphToBigWig \
+        modfreqs_formatted.bed \
+        chrom.sizes \
+        modfreqs.bw
         """
     else if( data_type == 'pacbio' )
         """
@@ -285,6 +294,7 @@ process minimod {
     stub:
         """
         touch modfreqs.bed
+        touch modfreqs.bw
         """
 
 }

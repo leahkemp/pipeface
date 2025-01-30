@@ -8,7 +8,10 @@ WhatsHap: 2.3
 pb-CpG-tools: 2.3.2
 Sniffles2: 2.3.3
 cuteSV: 1.0.13
+ensembl-vep: 112
 GNU coreutils: 8.30
+kentUtils: 0.0
 HTSlib: 1.16
 GNU Awk: 4.2.1
-ensembl-vep: 112
+GNU parallel: 20191022
+singularity-ce: 3.11.3
