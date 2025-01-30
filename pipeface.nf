@@ -566,15 +566,15 @@ process whatshap_phase {
         # run whatshap phase
         whatshap phase \
         --reference $ref \
-        --output snp_indel.phased.vcf.gz \
-        --output-read-list snp_indel.phased.read_list.txt \
+        --output snp_indel.split.phased.vcf.gz \
+        --output-read-list snp_indel.split.phased.read_list.txt \
         --sample $sample_id \
         --ignore-read-groups $snp_indel_split_vcf $bam
         # index vcf
-        tabix snp_indel.phased.vcf.gz
+        tabix snp_indel.split.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
-        snp_indel.phased.vcf.gz \
+        snp_indel.split.phased.vcf.gz \
         --gtf snp_indel.split.phased.stats.gtf \
         --sample $sample_id
         """
@@ -618,7 +618,7 @@ process whatshap_haplotag {
         --ignore-read-groups \
         --output-threads ${task.cpus} \
         --output-haplotag-list sorted.haplotagged.tsv \
-        $snp_indel_vcf $bam
+        $snp_indel_split_vcf $bam
         # index bam
         samtools index \
         -@ ${task.cpus} \
