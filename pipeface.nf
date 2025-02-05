@@ -242,63 +242,6 @@ process minimap2 {
 
 }
 
-process minimod {
-
-    def software = "minimod"
-
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.b*'
-
-    input:
-        tuple val(sample_id), val(family_id), path(bam), val(data_type)
-        val ref
-        val ref_index
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        tuple val(sample_id), val(family_id), path('modfreqs.bed'), path('modfreqs.bw'), optional: true
-
-    script:
-    if( data_type == 'ont' )
-        """
-        # stage bam and bam index
-        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
-        bam_loc=\$(realpath ${bam})
-        ln -sf \${bam_loc} sorted.bam
-        ln -sf \${bam_loc}.bai .
-        ln -sf \${bam_loc}.bai sorted.bam.bai
-        # run minimod
-        minimod \
-        mod-freq \
-        -b \
-        $ref \
-        $bam \
-        -t ${task.cpus} \
-        -o modfreqs_tmp.bed
-        # sort
-        sort -k1,1 -k2,2n modfreqs_tmp.bed > modfreqs.bed
-        cut -f1-3,11 modfreqs.bed > modfreqs_formatted.bed
-        # generate bigwig
-        cut -f1,2 $ref_index > chrom.sizes
-        bedGraphToBigWig \
-        modfreqs_formatted.bed \
-        chrom.sizes \
-        modfreqs.bw
-        """
-    else if( data_type == 'pacbio' )
-        """
-        echo "Data type is pacbio, not running minimod on this data."
-        """
-
-    stub:
-        """
-        touch modfreqs.bed
-        touch modfreqs.bw
-        """
-
-}
-
 process mosdepth {
 
     def depth_software = "mosdepth"
@@ -676,6 +619,62 @@ process vep_snv {
         """
         touch snp_indel.phased.annotated.vcf.gz
         touch snp_indel.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process minimod {
+
+    def software = "minimod"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.b*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path('modfreqs_hap1.bw'), path('modfreqs_hap1.bed'), path('modfreqs_hap2.bw'), path('modfreqs_hap2.bed'), path('modfreqs_combined.bw'), path('modfreqs_combined.bed'), optional: true
+
+    script:
+    if( data_type == 'ont' )
+        """
+        # run minimod
+        minimod \
+        mod-freq \
+        $ref \
+        $bam \
+        -t ${task.cpus} \
+        --haplotypes \
+        -o modfreqs_tmp.bed
+        # sort
+        awk 'NR > 1 { print }' modfreqs_tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
+        # seperate haplotypes
+        awk '$9==1' modfreqs.bed > modfreqs_hap1.bed
+        awk '$9==2' modfreqs.bed > modfreqs_hap2.bed
+        awk '$9=="*" || $9==0' modfreqs.bed > modfreqs_combined.bed
+        # generate bigwig
+        for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 ${FILE}.bed > ${FILE}_formatted.bed; done
+        cut -f1,2 $ref_index > chrom.sizes
+        for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig ${FILE}_formatted.bed chrom.sizes ${FILE}.bw; done
+        """
+    else if( data_type == 'pacbio' )
+        """
+        echo "Data type is pacbio, not running minimod on this data."
+        """
+
+    stub:
+        """
+        touch modfreqs_hap1.bed
+        touch modfreqs_hap1.bw
+        touch modfreqs_hap2.bed
+        touch modfreqs_hap2.bw
+        touch modfreqs_combined.bed
+        touch modfreqs_combined.bw
         """
 
 }
@@ -1309,7 +1308,6 @@ workflow {
         bam = id_tuple.join(files_tuple, by: [0,1])
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
-        minimod(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         if ( calculate_depth == 'yes' ) {
             mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), mosdepth_binary, outdir, outdir2, ref_name)
         }
@@ -1328,6 +1326,7 @@ workflow {
         // haplotagging
         (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
         // methylation analysis
+        minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
