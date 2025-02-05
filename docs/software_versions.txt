@@ -12,6 +12,7 @@ ensembl-vep: 112
 GNU coreutils: 8.30
 kentUtils: 0.0
 HTSlib: 1.16
+bcftools: 1.12
 GNU Awk: 4.2.1
 GNU parallel: 20191022
 singularity-ce: 3.11.3

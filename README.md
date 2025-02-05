@@ -23,6 +23,7 @@ merging{{"Merge runs (if needed)"}}
 alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
+split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
@@ -31,7 +32,7 @@ generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->calculate_base_mod_freqs
 alignment-.->haplotagging
@@ -71,6 +72,11 @@ snp_indel_calling_s1{{"Description: SNP/indel variant calling <br><br> Main tool
 snp_indel_calling_s2{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s3{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
+
+split_multiallele_s1{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s2{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s3{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s4{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
 
 snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
 snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
@@ -125,10 +131,10 @@ alignment_s4-.->haplotagging_s4
 
 haplotagging_s2-.->generate_meth_probs_s2
 
-snp_indel_phasing_s1-.->snp_indel_annotation_s1
-snp_indel_phasing_s2-.->snp_indel_annotation_s2
-snp_indel_phasing_s3-.->snp_indel_annotation_s3
-snp_indel_phasing_s4-.->snp_indel_annotation_s4
+snp_indel_phasing_s1-.->split_multiallele_s1-.->snp_indel_annotation_s1
+snp_indel_phasing_s2-.->split_multiallele_s2-.->snp_indel_annotation_s2
+snp_indel_phasing_s3-.->split_multiallele_s3-.->snp_indel_annotation_s3
+snp_indel_phasing_s4-.->split_multiallele_s4-.->snp_indel_annotation_s4
 
 sv_calling_s1-.->sv_annotation_s1
 sv_calling_s2-.->sv_annotation_s2

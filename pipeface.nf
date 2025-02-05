@@ -519,12 +519,46 @@ process deepvariant_post_processing {
 
 }
 
-process whatshap_phase {
-
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+process split_multiallele {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+
+    script:
+        """
+        # run bcftools norm
+        bcftools norm \
+        --threads ${task.cpus} \
+        -m \
+        -any \
+        -f $ref \
+        snp_indel.vcf.gz > snp_indel.split.vcf
+        # compress and index vcf
+        bgzip \
+        -@ ${task.cpus} \
+        snp_indel.split.vcf
+        tabix snp_indel.split.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.split.vcf.gz
+        touch snp_indel.split.vcf.gz.tbi
+        """
+
+}
+
+process whatshap_phase {
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.split.phased.*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
         val ref
         val ref_index
         val outdir
@@ -533,34 +567,34 @@ process whatshap_phase {
         val snp_indel_caller
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz')
-        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.split.phased.vcf.gz'), path('snp_indel.split.phased.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.split.phased.vcf.gz')
+        tuple val(sample_id), val(family_id), path('snp_indel.split.phased.vcf.gz'), path('snp_indel.split.phased.vcf.gz.tbi'), path('snp_indel.split.phased.read_list.txt'), path('snp_indel.split.phased.stats.gtf')
 
     script:
         """
         # run whatshap phase
         whatshap phase \
         --reference $ref \
-        --output snp_indel.phased.vcf.gz \
-        --output-read-list snp_indel.phased.read_list.txt \
+        --output snp_indel.split.phased.vcf.gz \
+        --output-read-list snp_indel.split.phased.read_list.txt \
         --sample $sample_id \
-        --ignore-read-groups $snp_indel_vcf $bam
+        --ignore-read-groups $snp_indel_split_vcf $bam
         # index vcf
-        tabix snp_indel.phased.vcf.gz
+        tabix snp_indel.split.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
-        snp_indel.phased.vcf.gz \
-        --gtf snp_indel.phased.stats.gtf \
+        snp_indel.split.phased.vcf.gz \
+        --gtf snp_indel.split.phased.stats.gtf \
         --sample $sample_id
         """
 
     stub:
         """
-        touch snp_indel.phased.vcf.gz
-        touch snp_indel.phased.vcf.gz.tbi
-        touch snp_indel.phased.read_list.txt
-        touch snp_indel.phased.stats.gtf
+        touch snp_indel.split.phased.vcf.gz
+        touch snp_indel.split.phased.vcf.gz.tbi
+        touch snp_indel.split.phased.read_list.txt
+        touch snp_indel.split.phased.stats.gtf
         """
 
 }
@@ -572,7 +606,7 @@ process whatshap_haplotag {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
         val ref
         val ref_index
         val outdir
@@ -594,7 +628,7 @@ process whatshap_haplotag {
         --ignore-read-groups \
         --output-threads ${task.cpus} \
         --output-haplotag-list sorted.haplotagged.tsv \
-        $snp_indel_vcf $bam
+        $snp_indel_split_vcf $bam
         # index bam
         samtools index \
         -@ ${task.cpus} \
@@ -612,10 +646,10 @@ process whatshap_haplotag {
 
 process vep_snv {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.split.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(snp_indel_phased_vcf)
+        tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
         val ref
         val ref_index
         val vep_db
@@ -633,13 +667,13 @@ process vep_snv {
         val snp_indel_caller
 
     output:
-        tuple val(sample_id), val(family_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.split.phased.annotated.vcf.gz'), path('snp_indel.split.phased.annotated.vcf.gz.tbi')
 
     script:
         """
         # run vep
-        vep -i $snp_indel_phased_vcf \
-        -o snp_indel.phased.annotated.vcf.gz \
+        vep -i $snp_indel_split_phased_vcf \
+        -o snp_indel.split.phased.annotated.vcf.gz \
         --format vcf \
         --vcf \
         --fasta $ref \
@@ -669,13 +703,13 @@ process vep_snv {
         --no_stats \
         --compress_output bgzip
         # index vcf
-        tabix snp_indel.phased.annotated.vcf.gz
+        tabix snp_indel.split.phased.annotated.vcf.gz
         """
 
     stub:
         """
-        touch snp_indel.phased.annotated.vcf.gz
-        touch snp_indel.phased.annotated.vcf.gz.tbi
+        touch snp_indel.split.phased.annotated.vcf.gz
+        touch snp_indel.split.phased.annotated.vcf.gz.tbi
         """
 
 }
@@ -1323,10 +1357,12 @@ workflow {
             deepvariant_call_variants(deepvariant_make_examples.out)
             snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)
         }
+        // split multiallelic variants
+        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
         // phasing
-        (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
-        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
+        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_split_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
         // methylation analysis
         pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
@@ -1338,12 +1374,12 @@ workflow {
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
-        snp_indel_phased_vcf = id_tuple.join(files_tuple, by: [0,1])
+        snp_indel_split_phased_vcf = id_tuple.join(files_tuple, by: [0,1])
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
         // annotation
         if ( annotate == 'yes' ) {
-            vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            vep_snv(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
     }
     if ( in_data_format == 'sv_vcf' ) {
