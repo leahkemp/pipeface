@@ -647,20 +647,22 @@ process minimod {
         minimod \
         mod-freq \
         $ref \
-        $bam \
+        $haplotagged_bam \
         -t ${task.cpus} \
         --haplotypes \
         -o modfreqs_tmp.bed
         # sort
         awk 'NR > 1 { print }' modfreqs_tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
-        # seperate haplotypes
-        awk '\$9==1' modfreqs.bed > modfreqs_hap1.bed
-        awk '\$9==2' modfreqs.bed > modfreqs_hap2.bed
-        awk '\$9=="*" || \$9==0' modfreqs.bed > modfreqs_combined.bed
-        # generate bigwig
-        for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 ${FILE}.bed > ${FILE}_formatted.bed; done
-        cut -f1,2 $ref_index > chrom.sizes
-        for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig ${FILE}_formatted.bed chrom.sizes ${FILE}.bw; done
+        if [ -s modfreqs.bed ]; then
+            # seperate haplotypes
+            awk '\$9==1' modfreqs.bed > modfreqs_hap1.bed
+            awk '\$9==2' modfreqs.bed > modfreqs_hap2.bed
+            awk '\$9=="*" || \$9==0' modfreqs.bed > modfreqs_combined.bed
+            # generate bigwig
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \${FILE}.bed > \${FILE}_formatted.bed; done
+            cut -f1,2 $ref_index > chrom.sizes
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}_formatted.bed chrom.sizes \${FILE}.bw; done
+        fi
         """
     else if( data_type == 'pacbio' )
         """
