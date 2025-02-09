@@ -663,7 +663,7 @@ process minimod {
 
     def software = "minimod"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs.b*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs_*.b*'
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
@@ -686,18 +686,18 @@ process minimod {
         $haplotagged_bam \
         -t ${task.cpus} \
         --haplotypes \
-        -o modfreqs_tmp.bed
+        -o modfreqs.tmp.bed
         # sort
-        awk 'NR > 1 { print }' modfreqs_tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
+        awk 'NR > 1 { print }' modfreqs.tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # seperate haplotypes
             awk '\$9==1' modfreqs.bed > modfreqs_hap1.bed
             awk '\$9==2' modfreqs.bed > modfreqs_hap2.bed
             awk '\$9=="*" || \$9==0' modfreqs.bed > modfreqs_combined.bed
             # generate bigwig
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \${FILE}.bed > \${FILE}_formatted.bed; done
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \${FILE}.bed > \${FILE}.formatted.bed; done
             cut -f1,2 $ref_index > chrom.sizes
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}_formatted.bed chrom.sizes \${FILE}.bw; done
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}.formatted.bed chrom.sizes \${FILE}.bw; done
         fi
         """
     else if( data_type == 'pacbio' )
