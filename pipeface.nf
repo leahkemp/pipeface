@@ -498,7 +498,7 @@ process split_multiallele {
 
 process whatshap_phase {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.split.phased.*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
@@ -510,34 +510,36 @@ process whatshap_phase {
         val snp_indel_caller
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.split.phased.vcf.gz'), path('snp_indel.split.phased.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), path('snp_indel.split.phased.vcf.gz')
-        tuple val(sample_id), val(family_id), path('snp_indel.split.phased.vcf.gz'), path('snp_indel.split.phased.vcf.gz.tbi'), path('snp_indel.split.phased.read_list.txt'), path('snp_indel.split.phased.stats.gtf')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
         """
+        # rename file for publishing purposes
+        ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
         # run whatshap phase
         whatshap phase \
         --reference $ref \
-        --output snp_indel.split.phased.vcf.gz \
-        --output-read-list snp_indel.split.phased.read_list.txt \
+        --output snp_indel.phased.vcf.gz \
+        --output-read-list snp_indel.phased.read_list.txt \
         --sample $sample_id \
-        --ignore-read-groups $snp_indel_split_vcf $bam
+        --ignore-read-groups snp_indel.vcf.gz $bam
         # index vcf
-        tabix snp_indel.split.phased.vcf.gz
+        tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
-        snp_indel.split.phased.vcf.gz \
-        --gtf snp_indel.split.phased.stats.gtf \
+        snp_indel.phased.vcf.gz \
+        --gtf snp_indel.phased.stats.gtf \
         --sample $sample_id
         """
 
     stub:
         """
-        touch snp_indel.split.phased.vcf.gz
-        touch snp_indel.split.phased.vcf.gz.tbi
-        touch snp_indel.split.phased.read_list.txt
-        touch snp_indel.split.phased.stats.gtf
+        touch snp_indel.phased.vcf.gz
+        touch snp_indel.phased.vcf.gz.tbi
+        touch snp_indel.phased.read_list.txt
+        touch snp_indel.phased.stats.gtf
         """
 
 }
@@ -589,7 +591,7 @@ process whatshap_haplotag {
 
 process vep_snv {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.split.phased.annotated.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
@@ -610,13 +612,13 @@ process vep_snv {
         val snp_indel_caller
 
     output:
-        tuple val(sample_id), val(family_id), path('snp_indel.split.phased.annotated.vcf.gz'), path('snp_indel.split.phased.annotated.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
 
     script:
         """
         # run vep
         vep -i $snp_indel_split_phased_vcf \
-        -o snp_indel.split.phased.annotated.vcf.gz \
+        -o snp_indel.phased.annotated.vcf.gz \
         --format vcf \
         --vcf \
         --fasta $ref \
@@ -646,13 +648,13 @@ process vep_snv {
         --no_stats \
         --compress_output bgzip
         # index vcf
-        tabix snp_indel.split.phased.annotated.vcf.gz
+        tabix snp_indel.phased.annotated.vcf.gz
         """
 
     stub:
         """
-        touch snp_indel.split.phased.annotated.vcf.gz
-        touch snp_indel.split.phased.annotated.vcf.gz.tbi
+        touch snp_indel.phased.annotated.vcf.gz
+        touch snp_indel.phased.annotated.vcf.gz.tbi
         """
 
 }
