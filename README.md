@@ -131,10 +131,10 @@ alignment_s4-.->haplotagging_s4
 
 haplotagging_s2-.->generate_meth_probs_s2
 
-snp_indel_phasing_s1-.->split_multiallele_s1-.->snp_indel_annotation_s1
-snp_indel_phasing_s2-.->split_multiallele_s2-.->snp_indel_annotation_s2
-snp_indel_phasing_s3-.->split_multiallele_s3-.->snp_indel_annotation_s3
-snp_indel_phasing_s4-.->split_multiallele_s4-.->snp_indel_annotation_s4
+split_multiallele_s1-.->snp_indel_phasing_s1-.->snp_indel_annotation_s1
+split_multiallele_s2-.->snp_indel_phasing_s2-.->snp_indel_annotation_s2
+split_multiallele_s3-.->snp_indel_phasing_s3-.->snp_indel_annotation_s3
+split_multiallele_s4-.->snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 sv_calling_s1-.->sv_annotation_s1
 sv_calling_s2-.->sv_annotation_s2
