@@ -27,7 +27,7 @@ split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ont data only)"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT data only)"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
@@ -179,8 +179,8 @@ sv_calling_s4-.->sv_annotation_s4
 - Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (optional - hg38 only)
-- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ont only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT data only)
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio data only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
