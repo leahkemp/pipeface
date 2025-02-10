@@ -108,33 +108,32 @@ sv_annotation_s2{{"Description: structural variant annotation (optional - hg38 o
 sv_annotation_s3{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 sv_annotation_s4{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
-ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
+ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
-pacbio_data_f3-.->merging_m2-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
+pacbio_data_f3-.->merging_m2-.->alignment_s2-.->snp_indel_calling_s2-.->split_multiallele_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
 pacbio_data_f4-.->merging_m2
-ont_data_f5-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
-ont_data_f6-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+ont_data_f5-.->alignment_s3-.->snp_indel_calling_s3-.->split_multiallele_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
+ont_data_f6-.->alignment_s4-.->snp_indel_calling_s4-.->split_multiallele_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
 
 alignment_s1-.->depth_s1
 alignment_s2-.->depth_s2
 alignment_s3-.->depth_s3
 alignment_s4-.->depth_s4
 
-alignment_s1-.->calculate_base_mod_freqs_s1
-alignment_s3-.->calculate_base_mod_freqs_s3
-alignment_s4-.->calculate_base_mod_freqs_s4
-
 alignment_s1-.->haplotagging_s1
 alignment_s2-.->haplotagging_s2
 alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
 
+haplotagging_s1-.->calculate_base_mod_freqs_s1
 haplotagging_s2-.->generate_meth_probs_s2
+haplotagging_s3-.->calculate_base_mod_freqs_s3
+haplotagging_s4-.->calculate_base_mod_freqs_s4
 
-snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->snp_indel_annotation_s1
-snp_indel_calling_s2-.->split_multiallele_s2-.->snp_indel_phasing_s2-.->snp_indel_annotation_s2
-snp_indel_calling_s3-.->split_multiallele_s3-.->snp_indel_phasing_s3-.->snp_indel_annotation_s3
-snp_indel_calling_s4-.->split_multiallele_s4-.->snp_indel_phasing_s4-.->snp_indel_annotation_s4
+snp_indel_phasing_s1-.->snp_indel_annotation_s1
+snp_indel_phasing_s2-.->snp_indel_annotation_s2
+snp_indel_phasing_s3-.->snp_indel_annotation_s3
+snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 sv_calling_s1-.->sv_annotation_s1
 sv_calling_s2-.->sv_annotation_s2
