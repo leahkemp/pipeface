@@ -34,8 +34,8 @@ sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
-alignment-.->calculate_base_mod_freqs
 alignment-.->haplotagging
+haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
@@ -131,10 +131,10 @@ alignment_s4-.->haplotagging_s4
 
 haplotagging_s2-.->generate_meth_probs_s2
 
-split_multiallele_s1-.->snp_indel_phasing_s1-.->snp_indel_annotation_s1
-split_multiallele_s2-.->snp_indel_phasing_s2-.->snp_indel_annotation_s2
-split_multiallele_s3-.->snp_indel_phasing_s3-.->snp_indel_annotation_s3
-split_multiallele_s4-.->snp_indel_phasing_s4-.->snp_indel_annotation_s4
+snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->snp_indel_annotation_s1
+snp_indel_calling_s2-.->split_multiallele_s2-.->snp_indel_phasing_s2-.->snp_indel_annotation_s2
+snp_indel_calling_s3-.->split_multiallele_s3-.->snp_indel_phasing_s3-.->snp_indel_annotation_s3
+snp_indel_calling_s4-.->split_multiallele_s4-.->snp_indel_phasing_s4-.->snp_indel_annotation_s4
 
 sv_calling_s1-.->sv_annotation_s1
 sv_calling_s2-.->sv_annotation_s2
