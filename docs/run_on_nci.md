@@ -150,6 +150,8 @@ sample_04,,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_mini
 sample_04,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
 ```
 
+> **_Note:_** Files with the same value in the sample_id column will be merged before analysis, this is used to handle multiple seqeuncing runs of the same sample
+
 Requirements:
 
 - leave `family_id` empty if not required
