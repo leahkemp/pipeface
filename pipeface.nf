@@ -1016,6 +1016,7 @@ workflow {
     annotate = "$params.annotate"
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
+    analyse_base_mods = "$params.analyse_base_mods"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     mosdepth_binary = "$params.mosdepth_binary"
@@ -1161,6 +1162,12 @@ workflow {
     }
     if ( calculate_depth != 'yes' && calculate_depth != 'no' ) {
         exit 1, "Choice to calculate depth should be either 'yes', or 'no', '${calculate_depth}' selected."
+    }
+    if ( !analyse_base_mods ) {
+        exit 1, "Choice to analyse base modifications not made. Either include in parameter file or pass to --analyse_base_mods on the command line. Should be either 'yes' or 'no'."
+    }
+    if ( analyse_base_mods != 'yes' && analyse_base_mods != 'no' ) {
+        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', '${analyse_base_mods}' selected."
     }
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -1371,8 +1378,10 @@ workflow {
         // haplotagging
         (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_split_phased_vcf_bam, ref, ref_index, outdir, outdir2, ref_name)
         // methylation analysis
-        minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-        pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+        if ( analyse_base_mods == 'yes' ) {
+            minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+        }
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
             (sv_vcf_sniffles, sv_vcf_sniffles_indexed) = sniffles(haplotagged_bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)

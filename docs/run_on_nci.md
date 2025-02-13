@@ -277,6 +277,20 @@ Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
     "calculate_depth": "no",
 ```
 
+Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
+
+```json
+    "analyse_base_mods": "yes",
+```
+
+*OR*
+
+```json
+    "analyse_base_mods": "no",
+```
+
+> **_Note:_** these analyses assumes base modifications are present in the input data
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
