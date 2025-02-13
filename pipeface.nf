@@ -219,7 +219,6 @@ process minimap2 {
         """
         # run minimap
         minimap2 \
-        -y \
         -Y \
         --secondary=no \
         --MD \

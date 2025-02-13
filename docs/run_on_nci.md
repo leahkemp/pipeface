@@ -289,7 +289,9 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
     "analyse_base_mods": "no",
 ```
 
-> **_Note:_** these analyses assumes base modifications are present in the input data
+> **_Note:_** these analyses assume base modifications are present in the input data
+
+> **_Note:_** these analyses assume the input data is in unaligned BAM (uBAM) format
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
