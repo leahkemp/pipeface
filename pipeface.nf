@@ -824,7 +824,7 @@ process cutesv {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(regions_of_interest)
         val ref
         val ref_index
         val tandem_repeat
@@ -837,6 +837,9 @@ process cutesv {
         tuple val(sample_id), val(family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
+    // define an optional string to pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-include_bed $regions_of_interest" : ''
+    // define platform specific settings
     if( data_type == 'ont' ) {
         settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
     }
@@ -855,7 +858,7 @@ process cutesv {
         --genotype \
         --report_readid \
         --min_size 50 \
-        $settings
+        $settings $regions_of_interest_optional
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -1375,7 +1378,7 @@ workflow {
             (sv_vcf_sniffles, sv_vcf_sniffles_indexed) = sniffles(haplotagged_bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
