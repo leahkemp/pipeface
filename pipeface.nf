@@ -779,7 +779,7 @@ process sniffles {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(regions_of_interest)
         val ref
         val ref_index
         val tandem_repeat
@@ -792,6 +792,8 @@ process sniffles {
         tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
 
     script:
+    // define an optional string to pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
     // define a string to optionally pass tandem repeat bed file
     def tandem_repeat_optional = file(tandem_repeat).name != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
         """
@@ -804,7 +806,7 @@ process sniffles {
         --vcf sv.phased.vcf.gz \
         --output-rnames \
         --minsvlen 50 \
-        --phase $tandem_repeat_optional
+        --phase $tandem_repeat_optional $regions_of_interest_optional
         """
 
     stub:
@@ -1370,7 +1372,7 @@ workflow {
         pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed) = sniffles(haplotagged_bam, ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed) = sniffles(haplotagged_bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
             (sv_vcf_cutesv, sv_vcf_cutesv_indexed) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
