@@ -312,7 +312,7 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
 
 ```bash
-module load nextflow/24.04.1
+module load nextflow/24.04.4
 ```
 
 ## 7. Stub (dry) run
