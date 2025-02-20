@@ -150,6 +150,8 @@ sample_04,,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_mini
 sample_04,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
 ```
 
+> **_Note:_** Files with the same value in the sample_id column will be merged before analysis, this is used to handle multiple sequencing runs of the same sample
+
 Requirements:
 
 - leave `family_id` empty if not required
@@ -277,6 +279,22 @@ Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
     "calculate_depth": "no",
 ```
 
+Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
+
+```json
+    "analyse_base_mods": "yes",
+```
+
+*OR*
+
+```json
+    "analyse_base_mods": "no",
+```
+
+> **_Note:_** these analyses assume base modifications are present in the input data
+
+> **_Note:_** these analyses assume the input data is in unaligned BAM (uBAM) format
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
@@ -312,7 +330,7 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
 
 ```bash
-module load nextflow/24.04.1
+module load nextflow/24.04.4
 ```
 
 ## 7. Stub (dry) run

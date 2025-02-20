@@ -10,6 +10,7 @@
     "sv_caller": "",
     "annotate": "",
     "calculate_depth": "",
+    "analyse_base_mods": "",
     "outdir": "",
     "mosdepth_binary": "",
     "pbcpgtools_binary": ""
