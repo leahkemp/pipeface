@@ -182,6 +182,8 @@ sv_calling_s4-.->sv_annotation_s4
 
 > **_Note:_** Running DeepVariant on ONT data assumes r10 data
 
+> **_Note:_** Running base modification analyses assume the input data is un uBAM format and base modifications are present in these data
+
 ## Assumptions
 
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
