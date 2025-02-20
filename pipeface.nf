@@ -27,6 +27,7 @@ process scrape_settings {
         val sv_caller
         val annotate
         val calculate_depth
+        val analyse_base_mods
         val outdir
         val outdir2
 
@@ -77,6 +78,7 @@ process scrape_settings {
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
+        echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
@@ -1345,7 +1347,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir, outdir2)
+    scrape_settings(in_data_tuple, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
