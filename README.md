@@ -347,10 +347,6 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to xy86 project on [National Computational Infrastructure (NCI)](https://nci.org.au/) (if running variant annotation)
-- Access to pipeline dependencies:
-    - [Nextflow 24.04.1 and it's Java 17.0.2 dependency](https://nf-co.re/docs/usage/installation)
-    - [mosdepth 0.3.9 binary](https://github.com/brentp/mosdepth/releases/tag/v0.3.9) (if running depth calculation)
-    - [pb-CpG-tools 2.3.2 binary](https://github.com/PacificBiosciences/pb-CpG-tools/releases/tag/v2.3.2) (if processing pacbio data)
 
 *[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 
