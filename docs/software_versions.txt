@@ -9,6 +9,7 @@ WhatsHap: 2.3
 pb-CpG-tools: 2.3.2
 Sniffles2: 2.3.3
 cuteSV: 1.0.13
+jasmine: 1.1.5-r1
 GNU coreutils: 8.30
 HTSlib: 1.16
 GNU Awk: 4.2.1
