@@ -32,15 +32,14 @@ snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
-sv_vcf_merging{{"Structural variant VCF merging"}}
-joint_sv_annotation{{"Joint structural variant annotation (optional - hg38 only)"}}
+sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
+sv_calling-.->sv_annotation
 ```
 
 #### Cohort
@@ -62,14 +61,15 @@ joint_snp_indel_annotation{{"Joint SNP/indel annotation (optional - hg38 only)"}
 haplotagging{{"Haplotagging bams"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
-sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
+sv_vcf_merging{{"Structural variant VCF merging"}}
+joint_sv_annotation{{"Joint structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_annotation
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
 ```
 
