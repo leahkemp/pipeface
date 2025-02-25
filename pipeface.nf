@@ -611,23 +611,13 @@ process deeptrio {
         --output_gvcf_child proband_snp_indel.g.vcf \
         --output_gvcf_parent1 father_snp_indel.g.vcf \
         --output_gvcf_parent2 mother_snp_indel.g.vcf
-        # compress and index vcf
-        bgzip -@ ${task.cpus} proband_snp_indel.vcf
-        bgzip -@ ${task.cpus} father_snp_indel.vcf
-        bgzip -@ ${task.cpus} mother_snp_indel.vcf
-        tabix proband_snp_indel.vcf.gz
-        tabix father_snp_indel.vcf.gz
-        tabix mother_snp_indel.vcf.gz
         """
 
     stub:
         """
-        touch proband_snp_indel.vcf.gz
-        touch proband_snp_indel.vcf.gz.tbi
-        touch father_snp_indel.vcf.gz
-        touch father_snp_indel.vcf.gz.tbi
-        touch mother_snp_indel.vcf.gz
-        touch mother_snp_indel.vcf.gz.tbi
+        touch proband_snp_indel.vcf
+        touch father_snp_indel.vcf
+        touch mother_snp_indel.vcf
         touch proband_snp_indel.g.vcf
         touch father_snp_indel.g.vcf
         touch mother_snp_indel.g.vcf
