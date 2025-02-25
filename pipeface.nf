@@ -1566,6 +1566,29 @@ workflow {
     }
     }
 
+    // check user provided parameters relating in in_data.csv file relating to cohorts
+    if ( snp_indel_caller == 'deeptrio' ) {
+        Channel
+            .fromPath(in_data)
+            .splitCsv(header: true, sep: ',', strip: true)
+            .map { row -> tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model) }
+            .groupTuple(by: 1)
+            .map { sample_ids, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
+                if ( ! family_positions.every { it in ['proband', 'father', 'mother'] } ) {
+                    exit 1, "Entries in the 'family_position' column of '$in_data' should be 'proband', 'father' or 'mother', '$family_positions' provided for family '$family_ids'."
+                }
+                if ( ! family_positions.contains('proband') ) {
+                    exit 1, "The proband is not defined for family: '$family_ids'. 'proband' is required in the 'family_position' column of '$in_data' for each 'family_id'."
+                }
+                if ( ! family_positions.contains('father') ) {
+                    exit 1, "The father is not defined for family: '$family_ids'. A 'father' is required in the 'family_position' column of '$in_data' for each 'family_id'."
+                }
+                if ( ! family_positions.contains('mother') ) {
+                    exit 1, "The mother is not defined for family: '$family_ids'. A 'mother' is required in the 'family_position' column of '$in_data' for each 'family_id'."
+                }
+        }
+    }
+
     // workflow
     // pre-process, alignment and qc
     scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir, outdir2)
