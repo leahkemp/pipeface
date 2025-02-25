@@ -272,6 +272,16 @@ haplotagging_s6-.->joint_snp_indel_calling_f2
 joint_snp_indel_calling_f1-.->gvcf_merging_f1-.->joint_snp_indel_phasing_f1-.->joint_snp_indel_annotation_f1
 joint_snp_indel_calling_f2-.->gvcf_merging_f2-.->joint_snp_indel_phasing_f2-.->joint_snp_indel_annotation_f2
 
+sv_calling_s1-.->sv_vcf_merging_f1
+sv_calling_s2-.->sv_vcf_merging_f1
+sv_calling_s3-.->sv_vcf_merging_f1
+sv_calling_s4-.->sv_vcf_merging_f2
+sv_calling_s5-.->sv_vcf_merging_f2
+sv_calling_s6-.->sv_vcf_merging_f2
+
+sv_vcf_merging_f1-.->joint_sv_annotation_s1
+sv_vcf_merging_f2-.->joint_sv_annotation_s2
+
 ```
 
 
