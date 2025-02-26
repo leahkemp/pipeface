@@ -344,24 +344,24 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 ### Singleton
 
 - Aligned, sorted and haplotagged bam
-- Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
+- Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
-- Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (optional - hg38 only)
+- Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
+- Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 
 ### Cohort
 
 - Aligned, sorted and haplotagged bam
-- Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
+- Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - Joint phased DeepTrio SNP/indel VCF file
-- Joint phased and annotated DeepTrio SNP/indel VCF file (optional - hg38 only)
+- Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 only)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
+- Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
