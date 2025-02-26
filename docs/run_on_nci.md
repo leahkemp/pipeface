@@ -12,6 +12,8 @@
     - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
     - [pb-CpG-tools binary (if processing pacbio data)](#pb-cpg-tools-binary-if-processing-pacbio-data)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
+    - [Singleton mode](#singleton-mode)
+    - [Cohort mode](#cohort-mode)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
@@ -138,24 +140,47 @@ tar -xzf pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
 
 ## 3. Modify in_data.csv
 
+### Singleton mode
+
 Specify the sample ID, family ID (optional), file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
 
 ```csv
-sample_id,family_id,file,data_type,regions_of_interest,clair3_model
-sample_01,,/g/data/kr68/test_data/PGXXXX240090_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_01,,/g/data/kr68/test_data/PGXXXX240091_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_02,,/g/data/kr68/test_data/PGXXXX240092_minimal.fastq,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_03,,/g/data/kr68/test_data/PGXXOX240065_minimal.bam,ont,NONE,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_04,,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
-sample_04,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
+sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
+sample_01,,,/g/data/kr68/test_data/PGXXXX240090_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_01,,,/g/data/kr68/test_data/PGXXXX240091_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_02,,,/g/data/kr68/test_data/PGXXXX240092_minimal.fastq,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_03,,,/g/data/kr68/test_data/PGXXOX240065_minimal.bam,ont,NONE,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_04,,,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
+sample_04,,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
 ```
 
-> **_Note:_** Files with the same value in the sample_id column will be merged before analysis, this is used to handle multiple sequencing runs of the same sample
+> **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
+
+### Cohort mode
+
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
+
+```csv
+sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
+sample_01,family01,proband,/g/data/kr68/PGXXOX240065.bam,ont,NONE,NONE
+sample_01,family01,proband,/g/data/kr68/PGXXOX240066.bam,ont,NONE,NONE
+sample_02,family01,father,/g/data/kr68/PGXXOX240067.bam,ont,NONE,NONE
+sample_03,family01,mother,/g/data/kr68/PGXXOX240068.bam,ont,NONE,NONE
+sample_04,family02,proband,/g/data/kr68/PGXXOX240069.bam,ont,NONE,NONE
+sample_05,family02,father,/g/data/kr68/PGXXOX240070.bam,ont,NONE,NONE
+sample_04,family02,mother,/g/data/kr68/PGXXOX240071.bam,ont,NONE,NONE
+```
+
+> **_Note:_** In cohort mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
+
+> **_Note:_** In cohort mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+
+> **_Note:_** Files with the same value in the `sample_id` column will be merged before analysis, this is used to handle multiple sequencing runs of the same sample
 
 Requirements:
 
-- leave `family_id` empty if not required
-- `family_id` is currently only used to organise the output files into subdirectories of `family_id` (if provided). Please provide all entries for a given `sample_id` the same `family_id` (this is currently not error checked)
+- leave `family_id` and `family_position` empty if not required
+- please provide all entries for a given `sample_id` the same `family_id` (this is currently not error checked)
 - set `regions_of_interest` to 'NONE' if not required
 - similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
 - provide full file paths
@@ -220,7 +245,7 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not 
     "tandem_repeat": "NONE"
 ```
 
-Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
+Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
 
 ```json
@@ -233,7 +258,13 @@ Specify the SNP/indel caller to use ('clair3' or 'deepvariant'). Eg:
     "snp_indel_caller": "deepvariant",
 ```
 
-> **_Note:_** Running DeepVariant on ONT data assumes r10 data
+*OR*
+
+```json
+    "snp_indel_caller": "deeptrio",
+```
+
+> **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
