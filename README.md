@@ -370,8 +370,8 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 ## Assumptions
 
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
-- Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
-- Access to xy86 project on [National Computational Infrastructure (NCI)](https://nci.org.au/) (if running variant annotation)
+- Access to if89 project (to access software installs used by pipeface)
+- Access to xy86 project (to access variant databases used by pipeface, only required if running variant annotation)
 
 *[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 
