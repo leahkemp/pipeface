@@ -18,8 +18,7 @@
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
   - [7. Start persistent session (optional)](#7-start-persistent-session-optional)
-  - [8. Stub (dry) run](#8-stub-dry-run)
-  - [9. Full run](#9-full-run)
+  - [8. Run pipeface](#8-run-pipeface)
   - [Advanced](#advanced)
 
 ## 1. Get pipeline
@@ -367,15 +366,9 @@ module load nextflow/24.04.4
 
 ## 7. Start persistent session (optional)
 
-[Persistent sessions](https://opus.nci.org.au/spaces/Help/pages/241927941/Persistent+Sessions...) can be used to run pipeface within.
+Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces/Help/pages/241927941/Persistent+Sessions...)
 
-## 8. Stub (dry) run
-
-```bash
-nextflow run pipeface.nf -stub -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
-```
-
-## 9. Full run
+## 8. Run pipeface
 
 ```bash
 nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config -with-timeline -with-dag -with-report
