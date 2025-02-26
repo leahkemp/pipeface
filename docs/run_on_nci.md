@@ -366,6 +366,7 @@ You may use the centrally installed nextflow environmental module available on N
 
 ```bash
 module load nextflow/24.04.4
+```
 
 ## 8. Run pipeface
 
