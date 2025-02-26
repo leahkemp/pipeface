@@ -173,6 +173,8 @@ sample_04,family02,mother,/g/data/kr68/PGXXOX240071.bam,ont,NONE,NONE
 
 > **_Note:_** In cohort mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
 
+> **_Note:_** In cohort mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+
 Requirements:
 
 - leave `family_id` and `family_position` empty if not required

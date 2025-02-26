@@ -5,7 +5,7 @@
 
 Pipefaceee.
 
-Nextflow pipeline to merge, align, variant call (SNP, indel and SV), phase, haplotag and optionally annotate long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data from individuals or cohorts.
+Nextflow pipeline to process long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
 There currently exists tools and workflows that undertake comparable analyses, but pipeface serves as a central workflow to process long read data (both ONT and pacbio HiFi data). Pipeface's future hold's STR, CNV and tandem repeat calling.
 
@@ -40,7 +40,6 @@ alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
-
 ```
 
 #### Cohort
@@ -62,14 +61,15 @@ joint_snp_indel_annotation{{"Joint SNP/indel annotation (optional - hg38 only)"}
 haplotagging{{"Haplotagging bams"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
-sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
+sv_vcf_merging{{"Structural variant VCF merging"}}
+joint_sv_annotation{{"Joint structural variant annotation (optional - hg38 only)"}}
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_annotation
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
 ```
 
@@ -234,12 +234,11 @@ sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sni
 sv_calling_s5{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s6{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 
-sv_annotation_s1{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s2{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s3{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s5{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s6{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_vcf_merging_f1{{"Description: Structural variant VCF merging <br><br> Main tools: Jasmine <br><br> Commands: jasmine"}}
+sv_vcf_merging_f2{{"Description: Structural variant VCF merging <br><br> Main tools: Jasmine <br><br> Commands: jasmine"}}
+
+joint_sv_annotation_s1{{"Description: Joint structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+joint_sv_annotation_s2{{"Description: Joint structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
@@ -273,12 +272,15 @@ haplotagging_s6-.->joint_snp_indel_calling_f2
 joint_snp_indel_calling_f1-.->gvcf_merging_f1-.->joint_snp_indel_phasing_f1-.->joint_snp_indel_annotation_f1
 joint_snp_indel_calling_f2-.->gvcf_merging_f2-.->joint_snp_indel_phasing_f2-.->joint_snp_indel_annotation_f2
 
-sv_calling_s1-.->sv_annotation_s1
-sv_calling_s2-.->sv_annotation_s2
-sv_calling_s3-.->sv_annotation_s3
-sv_calling_s4-.->sv_annotation_s4
-sv_calling_s5-.->sv_annotation_s5
-sv_calling_s6-.->sv_annotation_s6
+sv_calling_s1-.->sv_vcf_merging_f1
+sv_calling_s2-.->sv_vcf_merging_f1
+sv_calling_s3-.->sv_vcf_merging_f1
+sv_calling_s4-.->sv_vcf_merging_f2
+sv_calling_s5-.->sv_vcf_merging_f2
+sv_calling_s6-.->sv_vcf_merging_f2
+
+sv_vcf_merging_f1-.->joint_sv_annotation_s1
+sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 ```
 
@@ -297,6 +299,7 @@ sv_calling_s6-.->sv_annotation_s6
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
+- [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
 - [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
@@ -334,8 +337,8 @@ sv_calling_s6-.->sv_annotation_s6
 - Joint phased DeepTrio SNP/indel VCF file
 - Joint phased and annotated DeepTrio SNP/indel VCF file (optional - hg38 only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
-- Individual phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Individual phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
+- Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
+- Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
@@ -344,10 +347,6 @@ sv_calling_s6-.->sv_annotation_s6
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to if89 project on [National Computational Infrastructure (NCI)](https://nci.org.au/)
 - Access to xy86 project on [National Computational Infrastructure (NCI)](https://nci.org.au/) (if running variant annotation)
-- Access to pipeline dependencies:
-    - [Nextflow 24.04.1 and it's Java 17.0.2 dependency](https://nf-co.re/docs/usage/installation)
-    - [mosdepth 0.3.9 binary](https://github.com/brentp/mosdepth/releases/tag/v0.3.9) (if running depth calculation)
-    - [pb-CpG-tools 2.3.2 binary](https://github.com/PacificBiosciences/pb-CpG-tools/releases/tag/v2.3.2) (if processing pacbio data)
 
 *[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
 
