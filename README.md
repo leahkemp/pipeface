@@ -122,10 +122,10 @@ snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: Whats
 snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
 snp_indel_phasing_s4{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
 
-snp_indel_annotation_s1{{"Description: SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-snp_indel_annotation_s2{{"Description: SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-snp_indel_annotation_s3{{"Description: SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-snp_indel_annotation_s4{{"Description: SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+snp_indel_annotation_s1{{"Description: SNP/indel annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+snp_indel_annotation_s2{{"Description: SNP/indel annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+snp_indel_annotation_s3{{"Description: SNP/indel annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+snp_indel_annotation_s4{{"Description: SNP/indel annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 haplotagging_s1{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
@@ -140,10 +140,10 @@ sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sni
 sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 
-sv_annotation_s1{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s2{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s3{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s4{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s1{{"Description: structural variant annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s2{{"Description: structural variant annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s3{{"Description: structural variant annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s4{{"Description: structural variant annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
@@ -244,8 +244,8 @@ gvcf_merging_f2{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br
 joint_snp_indel_phasing_f1{{"Description: Joint SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and and whatshap stats"}}
 joint_snp_indel_phasing_f2{{"Description: Joint SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and and whatshap stats"}}
 
-joint_snp_indel_annotation_f1{{"Description: Joint SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-joint_snp_indel_annotation_f2{{"Description: Joint SNP/indel annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+joint_snp_indel_annotation_f1{{"Description: Joint SNP/indel annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+joint_snp_indel_annotation_f2{{"Description: Joint SNP/indel annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
@@ -257,8 +257,8 @@ sv_calling_s6{{"Description: structural variant calling <br><br> Main tools: Sni
 sv_vcf_merging_f1{{"Description: Structural variant VCF merging <br><br> Main tools: Jasmine <br><br> Commands: jasmine"}}
 sv_vcf_merging_f2{{"Description: Structural variant VCF merging <br><br> Main tools: Jasmine <br><br> Commands: jasmine"}}
 
-joint_sv_annotation_s1{{"Description: Joint structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-joint_sv_annotation_s2{{"Description: Joint structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+joint_sv_annotation_s1{{"Description: Joint structural variant annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+joint_sv_annotation_s2{{"Description: Joint structural variant annotation (hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
 ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
