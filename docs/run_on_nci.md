@@ -376,7 +376,7 @@ nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config 
 
 ## Advanced
 
-The resources requested and the queue each process is submitted to may be modified by modifying [nextflow_pipeface.config](https://github.com/leahkemp/pipeface/blob/main/config/nextflow_pipeface.config).
+The resources requested and the queue each process is submitted to may be modified by modifying [nextflow_pipeface.config](https://github.com/leahkemp/pipeface/blob/main/config/nextflow_pipeface.config). Please keep in mind that some datasets will require modifications to the default resources (particularly memory, disk usage, walltime). For example data with greater than typical (~30x) sequencing depth.
 
 Similarly, with some coding skills, the software installs used by each process in the pipeline may be modified. This means you're able to substitute in different software installs or different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
