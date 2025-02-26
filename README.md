@@ -235,6 +235,13 @@ haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <
 haplotagging_s5{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s6{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 
+calculate_base_mod_freqs_s1{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+calculate_base_mod_freqs_s2{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+calculate_base_mod_freqs_s3{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+calculate_base_mod_freqs_s4{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+calculate_base_mod_freqs_s5{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+calculate_base_mod_freqs_s6{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
+
 joint_snp_indel_calling_f1{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
 joint_snp_indel_calling_f2{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
 
@@ -281,6 +288,13 @@ alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
 alignment_s5-.->haplotagging_s5
 alignment_s6-.->haplotagging_s6
+
+haplotagging_s1-.->calculate_base_mod_freqs_s1
+haplotagging_s2-.->calculate_base_mod_freqs_s2
+haplotagging_s3-.->calculate_base_mod_freqs_s3
+haplotagging_s4-.->calculate_base_mod_freqs_s4
+haplotagging_s5-.->calculate_base_mod_freqs_s5
+haplotagging_s6-.->calculate_base_mod_freqs_s6
 
 haplotagging_s1-.->joint_snp_indel_calling_f1
 haplotagging_s2-.->joint_snp_indel_calling_f1
