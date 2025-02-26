@@ -31,8 +31,8 @@ split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only))"}}
-generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only))"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only)"}}
+generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (hg38 only)"}}
 
@@ -62,8 +62,8 @@ gvcf_merging{{"gVCF merging"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT data in uBAM format only)"}}
-generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only)"}}
+generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
