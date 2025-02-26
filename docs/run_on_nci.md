@@ -16,8 +16,8 @@
     - [Cohort mode](#cohort-mode)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
-  - [6. Get pipeline dependencies](#6-get-pipeline-dependencies)
-  - [7. Start persistent session (optional)](#7-start-persistent-session-optional)
+  - [6. Start persistent session (optional)](#6-start-persistent-session-optional)
+  - [7. Get pipeline dependencies](#7-get-pipeline-dependencies)
   - [8. Run pipeface](#8-run-pipeface)
   - [Advanced](#advanced)
 
@@ -356,17 +356,16 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
     "pbcpgtools_binary": "NONE"
 ```
 
-## 6. Get pipeline dependencies
+## 6. Start persistent session (optional)
+
+Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces/Help/pages/241927941/Persistent+Sessions...)
+
+## 7. Get pipeline dependencies
 
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
 
 ```bash
 module load nextflow/24.04.4
-```
-
-## 7. Start persistent session (optional)
-
-Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces/Help/pages/241927941/Persistent+Sessions...)
 
 ## 8. Run pipeface
 
