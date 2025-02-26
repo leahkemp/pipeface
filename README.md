@@ -31,8 +31,8 @@ split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT data in uBAM format only)"}}
-generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only))"}}
+generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only))"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (hg38 only)"}}
 
@@ -339,8 +339,8 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (optional - hg38 only)
-- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT data only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio data only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
@@ -350,7 +350,8 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Joint phased DeepTrio SNP/indel VCF file
 - Joint phased and annotated DeepTrio SNP/indel VCF file (optional - hg38 only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
