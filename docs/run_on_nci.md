@@ -203,7 +203,7 @@ Modify access to project specific directories. Eg:
     storage = 'gdata/if89+gdata/xy86+scratch/kr68+gdata/kr68+gdata/ox63'
 ```
 
-> **_Note:_** Don't remove access to if89 gdata (`gdata/if89`) and xy86 gdata (`gdata/xy86`). These are required to access environmental modules and  variant annotation databases used in the pipeline
+> **_Note:_** Don't remove access to if89 gdata (`gdata/if89`) and xy86 gdata (`gdata/xy86`). These are required to access software installs and variant annotation databases used in the pipeline
 
 ## 5. Modify parameters_pipeface.json
 
@@ -266,6 +266,8 @@ Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
+> **_Note:_** Selecting DeepTrio as the SNP/indel caller initates cohort analysis
+
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
 ```json
@@ -322,9 +324,7 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
     "analyse_base_mods": "no",
 ```
 
-> **_Note:_** these analyses assume base modifications are present in the input data
-
-> **_Note:_** these analyses assume the input data is in unaligned BAM (uBAM) format
+> **_Note:_** these analyses assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
