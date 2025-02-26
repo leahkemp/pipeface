@@ -573,7 +573,7 @@ process whatshap_haplotag {
 
 }
 
-process deeptrio {
+process deeptrio_dry_run {
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(proband_data_type)
@@ -583,8 +583,11 @@ process deeptrio {
         val ref_index
 
     output:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('proband_snp_indel.g.vcf'), path('father_snp_indel.g.vcf'), path('mother_snp_indel.g.vcf')
-
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(proband_data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(father_data_type)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(mother_data_type)
+        tuple env(make_examples_cs_args), env(make_examples_calling_args), env(call_variants_proband_args), env(call_variants_father_args), env(call_variants_mother_args)
+        
     script:
     // conditionally define model type
     if( proband_data_type == 'ont' ) {
@@ -593,36 +596,130 @@ process deeptrio {
     else if ( proband_data_type == 'pacbio' ) {
         model = 'PACBIO'
     }
-	"""
-        # run deeptrio
+	    """
         run_deeptrio \
-        --model_type=ONT \
+        --model_type=$model \
         --ref=$ref \
+        --sample_name_child=$proband_sample_id \
+        --sample_name_parent1=$father_sample_id \
+        --sample_name_parent2=$mother_sample_id \
         --reads_child=$proband_haplotagged_bam \
         --reads_parent1=$father_haplotagged_bam \
         --reads_parent2=$mother_haplotagged_bam \
-        --output_vcf_child proband_snp_indel.vcf \
-        --output_vcf_parent1 father_snp_indel.vcf \
-        --output_vcf_parent2 mother_snp_indel.vcf \
-        --sample_name_child $proband_sample_id \
-        --sample_name_parent1 $father_sample_id \
-        --sample_name_parent2 $mother_sample_id \
-        --num_shards ${task.cpus} \
-        --output_gvcf_child proband_snp_indel.g.vcf \
-        --output_gvcf_parent1 father_snp_indel.g.vcf \
-        --output_gvcf_parent2 mother_snp_indel.g.vcf
+        --output_vcf_child=child.vcf.gz \
+        --output_vcf_parent1=parent1.vcf.gz \
+        --output_vcf_parent2=parent2.vcf.gz \
+        --output_gvcf_child=child.g.vcf.gz \
+        --output_gvcf_parent1=parent1.g.vcf.gz \
+        --output_gvcf_parent2=parent2.g.vcf.gz \
+        --dry_run=true > commands.txt
+
+        make_examples_cs_args=\$(grep "/opt/deepvariant/bin/deeptrio/make_examples --mode candidate_sweep" commands.txt | awk -F'/opt/deepvariant/bin/deeptrio/make_examples' '{print \$2}' | sed 's/--ref "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name_parent1 "[^"]*"//g' | sed 's/--reads_parent1 "[^"]*"//g' | sed 's/--sample_name_parent2 "[^"]*"//g' | sed 's/--reads_parent2 "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--candidate_positions "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
+        make_examples_calling_args=\$(grep "/opt/deepvariant/bin/deeptrio/make_examples --mode calling" commands.txt | awk -F'/opt/deepvariant/bin/deeptrio/make_examples' '{print \$2}' | sed 's/--ref "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name_parent1 "[^"]*"//g' | sed 's/--reads_parent1 "[^"]*"//g' | sed 's/--sample_name_parent2 "[^"]*"//g' | sed 's/--reads_parent2 "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--candidate_positions "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
+        call_variants_proband_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | grep "child" | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
+        call_variants_father_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | grep "parent1" | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
+        call_variants_mother_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | grep "parent2" | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
         """
 
     stub:
         """
-        touch proband_snp_indel.vcf
-        touch father_snp_indel.vcf
-        touch mother_snp_indel.vcf
-        touch proband_snp_indel.g.vcf
-        touch father_snp_indel.g.vcf
-        touch mother_snp_indel.g.vcf
+        make_examples_cs_args=""
+        make_examples_calling_args=""
+        call_variants_proband_args=""
+        call_variants_father_args=""
+        call_variants_mother_args=""
         """
 
+}
+
+process deeptrio_make_examples {
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(proband_data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(father_data_type)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(mother_data_type)
+        tuple val(make_examples_cs_args), val(make_examples_calling_args), val(call_variants_proband_args), val(call_variants_father_args), val(call_variants_mother_args)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(proband_family_id), val(proband_family_position), val(proband_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path('make_examples_child.*.gz'), path('gvcf_child.*.gz'), path('*.example_info.json'), val(call_variants_proband_args)  , emit: proband
+        tuple val(proband_family_id), val(father_family_position), val(father_sample_id), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path('make_examples_parent1.*.gz'), path('gvcf_parent1.*.gz'), path('*.example_info.json'), val(call_variants_father_args) , emit: father
+        tuple val(proband_family_id), val(mother_family_position), val(mother_sample_id), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('make_examples_parent2.*.gz'), path('gvcf_parent2.*.gz'), path('*.example_info.json'), val(call_variants_mother_args) , emit: mother
+        
+    script:
+        """
+        seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
+            --ref "${ref}" --sample_name "${proband_sample_id}" --reads "${proband_haplotagged_bam}" --sample_name_parent1 "${father_sample_id}" --reads_parent1 "${father_haplotagged_bam}" \\
+            --sample_name_parent2 "${mother_sample_id}" --reads_parent2 "${mother_haplotagged_bam}" --examples "make_examples.tfrecord@${task.cpus}.gz" --gvcf "gvcf.tfrecord@${task.cpus}.gz" --candidate_positions "candidate_positions@${task.cpus}.gz" ${make_examples_cs_args}
+        
+        seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
+            --ref "${ref}" --sample_name "${proband_sample_id}" --reads "${proband_haplotagged_bam}" --sample_name_parent1 "${father_sample_id}" --reads_parent1 "${father_haplotagged_bam}" \\
+            --sample_name_parent2 "${mother_sample_id}" --reads_parent2 "${mother_haplotagged_bam}" --examples "make_examples.tfrecord@${task.cpus}.gz" --gvcf "gvcf.tfrecord@${task.cpus}.gz" --candidate_positions "candidate_positions@${task.cpus}.gz" ${make_examples_calling_args}
+        """
+
+    stub:
+        """
+        touch make_examples_child.tfrecord-00000-of-00104.gz
+        touch make_examples_parent1.tfrecord-00000-of-00104.gz
+        touch make_examples_parent2.tfrecord-00000-of-00104.gz
+        touch make_examples.tfrecord-00000-of-00104.gz.example_info.json
+        touch gvcf_child.tfrecord-00000-of-00104.gz
+        touch gvcf_parent1.tfrecord-00000-of-00104.gz
+        touch gvcf_parent2.tfrecord-00000-of-00104.gz
+        """
+
+}
+
+process deeptrio_call_variants {
+
+    input:
+        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), path(example_info), val(call_variants_args)
+
+    output:
+        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path('*.gz'), val(gvcf)
+
+    script:
+    def matcher = make_examples[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+    def make_examples_name = matcher[0][1]
+    def make_examples_num_shards = matcher[0][2] as int
+        """
+        call_variants --outfile "call_variants_output.tfrecord.gz" --examples "${make_examples_name}@${make_examples_num_shards}.gz" ${call_variants_args}
+        """
+
+    stub:
+        """
+        touch call_variants_output-00000-of-00016.tfrecord.gz
+        """
+
+}
+
+process deeptrio_postprocessing {
+    
+    input:
+        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf)
+        val ref
+        val ref_index
+        
+    output:
+        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path("${family_position}_snp_indel.g.vcf.gz")
+
+    script:
+    def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+    def gvcf_name = matcher[0][1]
+    def gvcf_num_shards = matcher[0][2] as int
+        """
+        postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${gvcf_num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
+        vcf_stats_report --input_vcf "${family_position}_snp_indel.vcf.gz" --outfile_base "${family_position}_snp_indel"
+        """
+
+    stub:
+        """
+        touch ${family_position}_snp_indel.vcf.gz
+        touch ${family_position}_snp_indel.vcf.gz.tbi
+        touch ${family_position}_snp_indel.g.vcf
+        """
+          
 }
 
 process glnexus {
@@ -1640,8 +1737,26 @@ workflow {
                     tuple[2].contains("mother")
                 }
             // gvcf merging
-            gvcfs_bams = deeptrio(proband_tuple.join(data_type_tuple, by: [0,1]), father_tuple.join(data_type_tuple, by: [0,1]), mother_tuple.join(data_type_tuple, by: [0,1]), ref, ref_index)
-            // joint snp/indel phasing
+            deeptrio_dry_run(proband_tuple, father_tuple, mother_tuple, ref, ref_index)
+            deeptrio_make_examples(deeptrio_dry_run.out, ref, ref_index)
+            deeptrio_call_variants(deeptrio_make_examples.out.proband.mix(deeptrio_make_examples.out.father, deeptrio_make_examples.out.mother))
+            deeptrio_postprocessing(deeptrio_call_variants.out, ref, ref_index)
+
+            proband_out = deeptrio_postprocessing.out.filter { tuple ->
+                tuple[1].contains("proband")
+            }
+            father_out = deeptrio_postprocessing.out.filter { tuple ->
+                tuple[1].contains("father")
+            }
+            mother_out = deeptrio_postprocessing.out.filter { tuple ->
+                tuple[1].contains("mother")
+            }
+
+            gvcfs_bams = proband_out.join(father_out).join(mother_out).map { tuple ->
+                [tuple[0], tuple[2], tuple[7], tuple[12], tuple[3], tuple[4], tuple[8], tuple[9], tuple[13], tuple[14], tuple[5], tuple[10], tuple[15]]
+            }
+
+            // joint phasing
             joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)
             (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             // joint snp/indel annotation
