@@ -1783,41 +1783,41 @@ workflow {
     }
     // joint sv calling
     if ( snp_indel_caller == 'deeptrio' ) {
-        sniffles_tmp = sv_vcf_haplotagged_bam_fam_sniffles
-            .groupTuple(by: 1 )
-            .transpose()
-        sniffles_proband_tuple = sniffles_tmp
-            .filter { tuple ->
-                tuple[2].contains("proband")
-            }
-        sniffles_father_tuple = sniffles_tmp
-            .filter { tuple ->
-                tuple[2].contains("father")
-            }
-        sniffles_mother_tuple = sniffles_tmp
-            .filter { tuple ->
-                tuple[2].contains("mother")
-            }
-        cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv
-            .groupTuple(by: 1 )
-            .transpose()
-        cutesv_proband_tuple = cutesv_tmp
-            .filter { tuple ->
-                tuple[2].contains("proband")
-            }
-        cutesv_father_tuple = cutesv_tmp
-            .filter { tuple ->
-                tuple[2].contains("father")
-	    }
-        cutesv_mother_tuple = cutesv_tmp
-            .filter { tuple ->
-                tuple[2].contains("mother")
-            }
         // sv vcf merging
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
+            sniffles_tmp = sv_vcf_haplotagged_bam_fam_sniffles
+                .groupTuple(by: 1 )
+                .transpose()
+            sniffles_proband_tuple = sniffles_tmp
+                .filter { tuple ->
+                    tuple[2].contains("proband")
+                }
+            sniffles_father_tuple = sniffles_tmp
+                .filter { tuple ->
+                    tuple[2].contains("father")
+                }
+            sniffles_mother_tuple = sniffles_tmp
+                .filter { tuple ->
+                    tuple[2].contains("mother")
+                }
             (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple, sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
+            cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv
+                .groupTuple(by: 1 )
+                .transpose()
+            cutesv_proband_tuple = cutesv_tmp
+                .filter { tuple ->
+                    tuple[2].contains("proband")
+                }
+            cutesv_father_tuple = cutesv_tmp
+                .filter { tuple ->
+                    tuple[2].contains("father")
+	        }
+            cutesv_mother_tuple = cutesv_tmp
+                .filter { tuple ->
+                    tuple[2].contains("mother")
+                }
             (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple, cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint sv annotation
