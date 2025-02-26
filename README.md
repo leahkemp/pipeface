@@ -56,6 +56,7 @@ merging{{"Merge runs (if needed)"}}
 alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
+split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
 gvcf_merging{{"gVCF merging"}}
@@ -68,7 +69,7 @@ sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
@@ -213,6 +214,13 @@ snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tool
 snp_indel_calling_s5{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
 snp_indel_calling_s6{{"Description: SNP/indel variant calling <br><br> Main tools: DeepVariant <br><br> Commands: run_deepvariant"}}
 
+split_multiallele_s1{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s2{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s3{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s4{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s5{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s6{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+
 snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
 snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
 snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase"}}
@@ -252,13 +260,13 @@ sv_vcf_merging_f2{{"Description: Structural variant VCF merging <br><br> Main to
 joint_sv_annotation_s1{{"Description: Joint structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 joint_sv_annotation_s2{{"Description: Joint structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
-ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
+ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
-ont_data_f3-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
-ont_data_f4-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
-ont_data_f5-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
-ont_data_f6-.->alignment_s5-.->snp_indel_calling_s5-.->snp_indel_phasing_s5-.->haplotagging_s5-.->sv_calling_s5
-ont_data_f7-.->alignment_s6-.->snp_indel_calling_s6-.->snp_indel_phasing_s6-.->haplotagging_s6-.->sv_calling_s6
+ont_data_f3-.->alignment_s2-.->snp_indel_calling_s2-.->split_multiallele_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
+ont_data_f4-.->alignment_s3-.->snp_indel_calling_s3-.->split_multiallele_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
+ont_data_f5-.->alignment_s4-.->snp_indel_calling_s4-.->split_multiallele_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+ont_data_f6-.->alignment_s5-.->snp_indel_calling_s5-.->split_multiallele_s5-.->snp_indel_phasing_s5-.->haplotagging_s5-.->sv_calling_s5
+ont_data_f7-.->alignment_s6-.->snp_indel_calling_s6-.->split_multiallele_s6-.->snp_indel_phasing_s6-.->haplotagging_s6-.->sv_calling_s6
 
 alignment_s1-.->depth_s1
 alignment_s2-.->depth_s2
