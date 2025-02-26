@@ -1826,7 +1826,7 @@ workflow {
         // phasing
         (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
-        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_split_phased_vcf_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         // methylation analysis
         if ( analyse_base_mods == 'yes' ) {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
