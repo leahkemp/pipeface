@@ -1850,7 +1850,7 @@ workflow {
                     tuple[2].contains("mother")
                 }
             // gvcf merging
-            deeptrio_dry_run(proband_tuple, father_tuple, mother_tuple, ref, ref_index)
+            deeptrio_dry_run(proband_tuple.join(data_type_tuple, by: [0,1]), father_tuple.join(data_type_tuple, by: [0,1]), mother_tuple.join(data_type_tuple, by: [0,1]), ref, ref_index)
             deeptrio_make_examples(deeptrio_dry_run.out, ref, ref_index)
             deeptrio_call_variants(deeptrio_make_examples.out.proband.mix(deeptrio_make_examples.out.father, deeptrio_make_examples.out.mother))
             deeptrio_postprocessing(deeptrio_call_variants.out, ref, ref_index)
