@@ -1,18 +1,18 @@
 
 {
 
-    "in_data": "./config/in_data.csv",
-    "in_data_format": "ubam_fastq",
-    "ref": "/g/data/kr68/genome/hg38.analysisSet.fa",
-    "ref_index": "/g/data/kr68/genome/hg38.analysisSet.fa.fai",
-    "tandem_repeat": "NONE",
-    "snp_indel_caller": "deeptrio",
-    "sv_caller": "sniffles",
-    "annotate": "no",
-    "calculate_depth": "no",
-    "outdir": "results",
-    "mosdepth_binary": "NONE",
-    "pbcpgtools_binary": "NONE"
+    "in_data": "",
+    "in_data_format": "",
+    "ref": "",
+    "ref_index": "",
+    "tandem_repeat": "",
+    "snp_indel_caller": "",
+    "sv_caller": "",
+    "annotate": "",
+    "calculate_depth": "",
+    "outdir": "",
+    "mosdepth_binary": "",
+    "pbcpgtools_binary": ""
 
 }
 
