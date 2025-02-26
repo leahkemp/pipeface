@@ -175,6 +175,8 @@ sample_04,family02,mother,/g/data/kr68/PGXXOX240071.bam,ont,NONE,NONE
 
 > **_Note:_** In cohort mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
 
+> **_Note:_** Files with the same value in the `sample_id` column will be merged before analysis, this is used to handle multiple sequencing runs of the same sample
+
 Requirements:
 
 - leave `family_id` and `family_position` empty if not required
@@ -184,6 +186,7 @@ Requirements:
 - provide full file paths
 - multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
 - for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz' or '.fastq' (as appropriate)
+- for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
 ## 4. Modify nextflow_pipeface.config
@@ -307,6 +310,22 @@ Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
     "calculate_depth": "no",
 ```
 
+Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
+
+```json
+    "analyse_base_mods": "yes",
+```
+
+*OR*
+
+```json
+    "analyse_base_mods": "no",
+```
+
+> **_Note:_** these analyses assume base modifications are present in the input data
+
+> **_Note:_** these analyses assume the input data is in unaligned BAM (uBAM) format
+
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
@@ -342,7 +361,7 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
 
 ```bash
-module load nextflow/24.04.1
+module load nextflow/24.04.4
 ```
 
 ## 7. Stub (dry) run

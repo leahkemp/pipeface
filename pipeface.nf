@@ -27,6 +27,7 @@ process scrape_settings {
         val sv_caller
         val annotate
         val calculate_depth
+        val analyse_base_mods
         val outdir
         val outdir2
 
@@ -78,6 +79,7 @@ process scrape_settings {
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
+        echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
@@ -221,10 +223,10 @@ process minimap2 {
         """
         # run minimap
         minimap2 \
+        -Y \
         --secondary=no \
         --MD \
-        -a \
-        -Y \
+	-a \
         -x $preset \
         -t ${task.cpus} \
         $ref \
@@ -463,6 +465,40 @@ process deepvariant_post_processing {
 
 }
 
+process split_multiallele {
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+
+    script:
+        """
+        # run bcftools norm
+        bcftools norm \
+        --threads ${task.cpus} \
+        -m \
+        -any \
+        -f $ref \
+        snp_indel.vcf.gz > snp_indel.split.vcf
+        # compress and index vcf
+        bgzip \
+        -@ ${task.cpus} \
+        snp_indel.split.vcf
+        tabix snp_indel.split.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.split.vcf.gz
+        touch snp_indel.split.vcf.gz.tbi
+        """
+
+}
+
 process whatshap_phase {
 
     def reported_snp_indel_caller = "deepvariant"
@@ -483,7 +519,7 @@ process whatshap_phase {
     }, pattern: 'snp_indel.phased.*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
         val ref
         val ref_index
         val outdir
@@ -498,13 +534,15 @@ process whatshap_phase {
 
     script:
         """
+        # rename file for publishing purposes
+        ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
         # run whatshap phase
         whatshap phase \
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
         --sample $sample_id \
-        --ignore-read-groups $snp_indel_vcf $bam
+        --ignore-read-groups snp_indel.vcf.gz $bam
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
@@ -531,7 +569,7 @@ process whatshap_haplotag {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index), val(family_position)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index), val(family_position)
         val ref
         val ref_index
         val outdir
@@ -554,7 +592,7 @@ process whatshap_haplotag {
         --ignore-read-groups \
         --output-threads ${task.cpus} \
         --output-haplotag-list sorted.haplotagged.tsv \
-        $snp_indel_vcf $bam
+        $snp_indel_split_vcf $bam
         # index bam
         samtools index \
         -@ ${task.cpus} \
@@ -825,7 +863,7 @@ process vep_snv {
     publishDir "$outdir/$family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(snp_indel_phased_vcf)
+        tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
         val ref
         val ref_index
         val vep_db
@@ -848,7 +886,7 @@ process vep_snv {
     script:
         """
         # run vep
-        vep -i $snp_indel_phased_vcf \
+        vep -i $snp_indel_split_phased_vcf \
         -o snp_indel.phased.annotated.vcf.gz \
         --format vcf \
         --vcf \
@@ -886,6 +924,64 @@ process vep_snv {
         """
         touch snp_indel.phased.annotated.vcf.gz
         touch snp_indel.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process minimod {
+
+    def software = "minimod"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs_*.b*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path('modfreqs_hap1.bw'), path('modfreqs_hap1.bed'), path('modfreqs_hap2.bw'), path('modfreqs_hap2.bed'), path('modfreqs_combined.bw'), path('modfreqs_combined.bed'), optional: true
+
+    script:
+    if( data_type == 'ont' )
+        """
+        # run minimod
+        minimod \
+        mod-freq \
+        $ref \
+        $haplotagged_bam \
+        -t ${task.cpus} \
+        --haplotypes \
+        -o modfreqs.tmp.bed
+        # sort
+        awk 'NR > 1 { print }' modfreqs.tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
+        if [ -s modfreqs.bed ]; then
+            # seperate haplotypes
+            awk '\$9==1' modfreqs.bed > modfreqs_hap1.bed
+            awk '\$9==2' modfreqs.bed > modfreqs_hap2.bed
+            awk '\$9=="*" || \$9==0' modfreqs.bed > modfreqs_combined.bed
+            # generate bigwig
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \${FILE}.bed > \${FILE}.formatted.bed; done
+            cut -f1,2 $ref_index > chrom.sizes
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}.formatted.bed chrom.sizes \${FILE}.bw; done
+        fi
+        """
+    else if( data_type == 'pacbio' )
+        """
+        echo "Data type is pacbio, not running minimod on this data."
+        """
+
+    stub:
+        """
+        touch modfreqs_hap1.bed
+        touch modfreqs_hap1.bw
+        touch modfreqs_hap2.bed
+        touch modfreqs_hap2.bw
+        touch modfreqs_combined.bed
+        touch modfreqs_combined.bw
         """
 
 }
@@ -959,7 +1055,7 @@ process sniffles {
     }, mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position), val(regions_of_interest)
         val ref
         val ref_index
         val tandem_repeat
@@ -973,6 +1069,8 @@ process sniffles {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.phased.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
+    // define an optional string to pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
     // define a string to optionally pass tandem repeat bed file
     def tandem_repeat_optional = file(tandem_repeat).name != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
         """
@@ -985,7 +1083,7 @@ process sniffles {
         --vcf sv.phased.vcf.gz \
         --output-rnames \
         --minsvlen 50 \
-        --phase $tandem_repeat_optional
+        --phase $tandem_repeat_optional $regions_of_interest_optional
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
@@ -1013,7 +1111,7 @@ process cutesv {
     }, mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position), val(regions_of_interest)
         val ref
         val ref_index
         val tandem_repeat
@@ -1027,6 +1125,9 @@ process cutesv {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
+    // define an optional string to pass regions of interest bed file
+    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-include_bed $regions_of_interest" : ''
+    // define platform specific settings
     if( data_type == 'ont' ) {
         settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
     }
@@ -1045,7 +1146,7 @@ process cutesv {
         --genotype \
         --report_readid \
         --min_size 50 \
-        $settings
+        $settings $regions_of_interest_optional
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -1334,6 +1435,7 @@ workflow {
     annotate = "$params.annotate"
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
+    analyse_base_mods = "$params.analyse_base_mods"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     mosdepth_binary = "$params.mosdepth_binary"
@@ -1479,6 +1581,12 @@ workflow {
     }
     if ( calculate_depth != 'yes' && calculate_depth != 'no' ) {
         exit 1, "Choice to calculate depth should be either 'yes', or 'no', '${calculate_depth}' selected."
+    }
+    if ( !analyse_base_mods ) {
+        exit 1, "Choice to analyse base modifications not made. Either include in parameter file or pass to --analyse_base_mods on the command line. Should be either 'yes' or 'no'."
+    }
+    if ( analyse_base_mods != 'yes' && analyse_base_mods != 'no' ) {
+        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', '${analyse_base_mods}' selected."
     }
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -1688,7 +1796,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, outdir, outdir2)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
@@ -1713,12 +1821,17 @@ workflow {
             deepvariant_call_variants(deepvariant_make_examples.out)
             snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)
         }
+        // split multiallelic variants
+        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
         // phasing
-        (snp_indel_phased_vcf_bam, snp_indel_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
         (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_phased_vcf_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         // methylation analysis
-        pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+        if ( analyse_base_mods == 'yes' ) {
+            minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+        }
         // joint snp/indel calling
         if ( snp_indel_caller == 'deeptrio' ) {
             tmp = haplotagged_bam_fam
@@ -1773,12 +1886,12 @@ workflow {
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
-        snp_indel_phased_vcf = id_tuple.join(files_tuple, by: [0,1])
+        snp_indel_split_phased_vcf = id_tuple.join(files_tuple, by: [0,1])
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
         // annotation
         if ( annotate == 'yes' && snp_indel_caller != 'deeptrio' ) {
-            vep_snv(snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            vep_snv(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
     }
     // joint sv calling

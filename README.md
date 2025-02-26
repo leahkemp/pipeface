@@ -27,16 +27,19 @@ merging{{"Merge runs (if needed)"}}
 alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
 depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
+split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (optional - hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT data only)"}}
 generate_meth_probs{{"Generate site methylation probabilities (pacbio data only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (optional - hg38 only)"}}
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->haplotagging
+haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
@@ -106,6 +109,11 @@ snp_indel_calling_s2{{"Description: SNP/indel variant calling <br><br> Main tool
 snp_indel_calling_s3{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 snp_indel_calling_s4{{"Description: SNP/indel variant calling <br><br> Main tools: Clair3 or DeepVariant <br><br> Commands: run_clair3.sh or run_deepvariant"}}
 
+split_multiallele_s1{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s2{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s3{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+split_multiallele_s4{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+
 snp_indel_phasing_s1{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
 snp_indel_phasing_s2{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
 snp_indel_phasing_s3{{"Description: SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and whatshap stats"}}
@@ -121,24 +129,25 @@ haplotagging_s2{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <
 haplotagging_s3{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 haplotagging_s4{{"Description: haplotagging bams <br><br> Main tools: WhatsHap <br><br> Commands: whatshap haplotag"}}
 
-generate_meth_probs_s2{{"Description: Generate site methylation probabilities <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
+generate_meth_probs_s2{{"Description: generate site methylation probabilities <br><br> Main tools: pb-CpG-tools <br><br> Commands: aligned_bam_to_cpg_scores"}}
+calculate_base_mod_freqs_s4{{"Description: calculate base modificiation frequencies <br><br> Main tools: minimod <br><br> Commands: minimod mod-freq"}}
 
 sv_calling_s1{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s2{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s3{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 sv_calling_s4{{"Description: structural variant calling <br><br> Main tools: Sniffles2 and/or cuteSV <br><br> Commands: sniffles and/or cuteSV"}}
 
-sv_annotation_s1{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s2{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s3{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
-sv_annotation_s4{{"Description: Structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s1{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s2{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s3{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
+sv_annotation_s4{{"Description: structural variant annotation (optional - hg38 only)" <br><br> Main tools: ensembl-vep <br><br> Commands: vep}}
 
-ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
+ont_data_f1-.->merging_m1-.->alignment_s1-.->snp_indel_calling_s1-.->split_multiallele_s1-.->snp_indel_phasing_s1-.->haplotagging_s1-.->sv_calling_s1
 ont_data_f2-.->merging_m1
-pacbio_data_f3-.->merging_m2-.->alignment_s2-.->snp_indel_calling_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
+pacbio_data_f3-.->merging_m2-.->alignment_s2-.->snp_indel_calling_s2-.->split_multiallele_s2-.->snp_indel_phasing_s2-.->haplotagging_s2-.->sv_calling_s2
 pacbio_data_f4-.->merging_m2
-ont_data_f5-.->alignment_s3-.->snp_indel_calling_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
-ont_data_f6-.->alignment_s4-.->snp_indel_calling_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
+ont_data_f5-.->alignment_s3-.->snp_indel_calling_s3-.->split_multiallele_s3-.->snp_indel_phasing_s3-.->haplotagging_s3-.->sv_calling_s3
+ont_data_f6-.->alignment_s4-.->snp_indel_calling_s4-.->split_multiallele_s4-.->snp_indel_phasing_s4-.->haplotagging_s4-.->sv_calling_s4
 
 alignment_s1-.->depth_s1
 alignment_s2-.->depth_s2
@@ -151,6 +160,7 @@ alignment_s3-.->haplotagging_s3
 alignment_s4-.->haplotagging_s4
 
 haplotagging_s2-.->generate_meth_probs_s2
+haplotagging_s4-.->calculate_base_mod_freqs_s4
 
 snp_indel_phasing_s1-.->snp_indel_annotation_s1
 snp_indel_phasing_s2-.->snp_indel_annotation_s2
@@ -302,6 +312,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
+- [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
@@ -326,7 +337,8 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Alignment depth per chromosome (and per region in the case of targeted sequencing) (optional)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (optional - hg38 only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT data only)
+- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio data only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
@@ -341,6 +353,8 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
+
+> **_Note:_** Running base modification analyses assume the input data is un uBAM format and base modifications are present in these data
 
 ## Assumptions
 
