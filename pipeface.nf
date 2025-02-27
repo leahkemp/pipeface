@@ -875,7 +875,7 @@ process whatshap_joint_phase {
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
-        --ped pedigree.ped $snp_indel_vcf proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
+        --ped pedigree.ped snp_indel.vcf.gz proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
