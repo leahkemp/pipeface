@@ -1925,15 +1925,15 @@ workflow {
             mother_out = deeptrio_postprocessing.out.filter { tuple ->
                 tuple[1].contains("mother")
             }
-            // gvcf merging
             gvcfs_bams = proband_out.join(father_out).join(mother_out).map { tuple ->
                 [tuple[0], tuple[2], tuple[7], tuple[12], tuple[3], tuple[4], tuple[8], tuple[9], tuple[13], tuple[14], tuple[5], tuple[10], tuple[15]]
             }
+            // gvcf merging
+            joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)
             // split joint multiallelic variants
-            joint_snp_indel_split_vcf_bam = joint_split_multiallele(gvcfs_bams, ref, ref_index)
+            joint_snp_indel_split_vcf_bam = joint_split_multiallele(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
-            joint_snp_indel_split_vcf_bam = glnexus(joint_snp_indel_split_vcf_bam)
-            (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             // joint snp/indel annotation
             if ( annotate == 'yes' ) {
                 vep_snv(joint_snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
