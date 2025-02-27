@@ -860,7 +860,19 @@ process whatshap_joint_phase {
 
 process vep_snv {
 
-    publishDir "$outdir/$family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+    publishDir { task ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$outdir/$family_id/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$sample_id.$ref_name.$snp_indel_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.$snp_indel_caller.$filename"
+        }
+    }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
@@ -1297,7 +1309,19 @@ process vep_sniffles_sv {
 
     def sv_caller = "sniffles"
 
-    publishDir "$outdir/$family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.annotated.vcf.gz*'
+    publishDir { task ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$outdir/$family_id/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$sample_id.$ref_name.$sv_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.$sv_caller.$filename"
+        }
+    }, pattern: 'sv.phased.annotated.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(sv_phased_vcf)
@@ -1361,7 +1385,19 @@ process vep_cutesv_sv {
 
     def sv_caller = "cutesv"
 
-    publishDir "$outdir/$family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.annotated.vcf.gz*'
+    publishDir { task ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$outdir/$family_id/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$sample_id.$ref_name.$sv_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.$sv_caller.$filename"
+        }
+    }, pattern: 'sv.annotated.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(sv_vcf)
