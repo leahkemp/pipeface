@@ -60,6 +60,7 @@ split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
 gvcf_merging{{"gVCF merging"}}
+joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
@@ -74,7 +75,7 @@ alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->generate_meth_probs
-snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
+snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
 ```
@@ -248,6 +249,9 @@ joint_snp_indel_calling_f2{{"Description: Joint SNP/indel variant calling <br><b
 gvcf_merging_f1{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
 gvcf_merging_f2{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
 
+joint_split_multiallele_f1{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+joint_split_multiallele_f2{{"Description: Split multiallelic variants into biallelic variants <br><br> Main tools: BCFtools <br><br> Commands: bcftools norm"}}
+
 joint_snp_indel_phasing_f1{{"Description: Joint SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and and whatshap stats"}}
 joint_snp_indel_phasing_f2{{"Description: Joint SNP/indel phasing <br><br> Main tools: WhatsHap <br><br> Commands: whatshap phase and and whatshap stats"}}
 
@@ -303,8 +307,8 @@ haplotagging_s4-.->joint_snp_indel_calling_f2
 haplotagging_s5-.->joint_snp_indel_calling_f2
 haplotagging_s6-.->joint_snp_indel_calling_f2
 
-joint_snp_indel_calling_f1-.->gvcf_merging_f1-.->joint_snp_indel_phasing_f1-.->joint_snp_indel_annotation_f1
-joint_snp_indel_calling_f2-.->gvcf_merging_f2-.->joint_snp_indel_phasing_f2-.->joint_snp_indel_annotation_f2
+joint_snp_indel_calling_f1-.->gvcf_merging_f1-.->joint_split_multiallele_f1-.->joint_snp_indel_phasing_f1-.->joint_snp_indel_annotation_f1
+joint_snp_indel_calling_f2-.->gvcf_merging_f2-.->joint_split_multiallele_f2-.->joint_snp_indel_phasing_f2-.->joint_snp_indel_annotation_f2
 
 sv_calling_s1-.->sv_vcf_merging_f1
 sv_calling_s2-.->sv_vcf_merging_f1
