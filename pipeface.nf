@@ -501,16 +501,10 @@ process split_multiallele {
 
 process whatshap_phase {
 
+    // for when deeptrio selected as the snp/indel caller
     def reported_snp_indel_caller = "deepvariant"
 
-    // conditionally publish files in 'publish_bin' when cohort analysis is carried out and we don't need individual vcf's pubished
-    publishDir { task ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
-            return "$outdir/$family_id/$outdir2/$sample_id"
-        } else {
-            return "publish_bin"
-        }
-    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename ->
         if ( params.snp_indel_caller != 'deeptrio' ) {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
@@ -1093,14 +1087,7 @@ process sniffles {
 
     def sv_caller = "sniffles"
 
-    // conditionally publish files in 'publish_bin' when cohort analysis is carried out and we don't need individual vcf's pubished
-    publishDir { task ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
-            return "$outdir/$family_id/$outdir2/$sample_id"
-        } else {
-            return "publish_bin"
-        }
-    }, mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position), val(regions_of_interest)
@@ -1149,14 +1136,7 @@ process cutesv {
 
     def sv_caller = "cutesv"
 
-    // conditionally publish files in 'publish_bin' when cohort analysis is carried out and we don't need individual vcf's pubished
-    publishDir { task ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
-            return "$outdir/$family_id/$outdir2/$sample_id"
-        } else {
-            return "publish_bin"
-        }
-    }, mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position), val(regions_of_interest)
@@ -1215,9 +1195,9 @@ process cutesv {
 
 process jasmine_sniffles {
 
-    def sv_caller = "sniffles"
+    def sv_caller_merger = "sniffles.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam)
@@ -1253,7 +1233,7 @@ process jasmine_sniffles {
         genome_file=$ref \
         file_list=vcfs.txt \
         bam_list=bams.txt \
-        out_file=sv.phased.vcf \
+        out_file=sv.phased.tmp.vcf \
         min_support=1 \
         --mark_specific spec_reads=7 spec_len=20 \
         --pre_normalize \
@@ -1263,9 +1243,14 @@ process jasmine_sniffles {
         --normalize_type \
         --require_first_sample \
         --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
-        # sort, compress and index vcf
-        sort -k 1,1V -k2,2n sv.phased.vcf | bgzip \
-        -@ ${task.cpus} > sv.phased.vcf.gz
+        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        grep '##' sv.phased.tmp.vcf > sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n >> sv.phased.vcf
+        # compress and index vcf
+        bgzip \
+        -@ ${task.cpus} \
+        sv.phased.vcf
         tabix sv.phased.vcf.gz
         """
 
@@ -1279,9 +1264,9 @@ process jasmine_sniffles {
 
 process jasmine_cutesv {
 
-    def sv_caller = "cutesv"
+    def sv_caller_merger = "cutesv.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam)
@@ -1317,7 +1302,7 @@ process jasmine_cutesv {
         genome_file=$ref \
         file_list=vcfs.txt \
         bam_list=bams.txt \
-        out_file=sv.vcf \
+        out_file=sv.tmp.vcf \
         min_support=1 \
         --mark_specific spec_reads=7 spec_len=20 \
         --pre_normalize \
@@ -1327,9 +1312,14 @@ process jasmine_cutesv {
         --normalize_type \
         --require_first_sample \
         --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
-        # sort, compress and index vcf
-        sort -k 1,1V -k2,2n sv.vcf | bgzip \
-        -@ ${task.cpus} > sv.vcf.gz
+        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        grep '##' sv.tmp.vcf > sv.vcf
+        grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
+        grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n >> sv.vcf
+        # compress and index vcf
+        bgzip \
+        -@ ${task.cpus}	\
+        sv.vcf
         tabix sv.vcf.gz
         """
 
@@ -1344,6 +1334,7 @@ process jasmine_cutesv {
 process vep_sniffles_sv {
 
     def sv_caller = "sniffles"
+    def sv_caller_merger = "sniffles.jasmine"
 
     publishDir { task ->
         if ( params.snp_indel_caller != 'deeptrio' ) {
@@ -1355,7 +1346,7 @@ process vep_sniffles_sv {
         if ( params.snp_indel_caller != 'deeptrio' ) {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
-            return "$family_id.$ref_name.$sv_caller.$filename"
+            return "$family_id.$ref_name.$sv_caller_merger.$filename"
         }
     }, pattern: 'sv.phased.annotated.vcf.gz*'
 
@@ -1420,6 +1411,7 @@ process vep_sniffles_sv {
 process vep_cutesv_sv {
 
     def sv_caller = "cutesv"
+    def sv_caller_merger = "cutesv.jasmine"
 
     publishDir { task ->
         if ( params.snp_indel_caller != 'deeptrio' ) {
@@ -1431,7 +1423,7 @@ process vep_cutesv_sv {
         if ( params.snp_indel_caller != 'deeptrio' ) {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
-            return "$family_id.$ref_name.$sv_caller.$filename"
+            return "$family_id.$ref_name.$sv_caller_merger.$filename"
         }
     }, pattern: 'sv.annotated.vcf.gz*'
 
