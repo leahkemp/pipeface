@@ -290,13 +290,20 @@ process mosdepth {
 
 process clair3 {
 
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
+
     input:
         tuple val(sample_id), val(family_id), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
 
     output:
         tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
     // define a string to optionally pass regions of interest bed file
@@ -330,6 +337,8 @@ process clair3 {
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
+        ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
+        ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
         """
 
     stub:
@@ -371,10 +380,11 @@ process deepvariant_dry_run {
         --ref=$ref \
         --sample_name=$sample_id \
         --output_vcf=snp_indel.raw.vcf.gz \
+        --output_gvcf=snp_indel.raw.g.vcf.gz \
         --model_type=$model \
         --dry_run=true > commands.txt
         # extract arguments for make_examples and call_variants stages
-        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g')
+        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g'| sed 's/--gvcf "[^"]*"//g')
         call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
         """
     
@@ -403,7 +413,7 @@ process deepvariant_make_examples {
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
         seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
-            --mode calling --ref "${ref}" --reads "${bam}" --sample_name "${sample_id}" ${regions_of_interest_optional} --examples "make_examples.tfrecord@${task.cpus}.gz" ${make_examples_args}
+            --mode calling --ref "${ref}" --reads "${bam}" --sample_name "${sample_id}" ${regions_of_interest_optional} --examples "make_examples.tfrecord@${task.cpus}.gz" --gvcf "gvcf.tfrecord@${task.cpus}.gz" ${make_examples_args}
         """
 
     stub:
@@ -420,7 +430,7 @@ process deepvariant_call_variants {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out)
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('*.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path('*.gz')
 
     script:
     def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -438,18 +448,36 @@ process deepvariant_call_variants {
 
 process deepvariant_post_processing {
 
+    // for when deeptrio selected as the snp/indel caller
+    def reported_snp_indel_caller = "deepvariant"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename ->
+        if ( params.snp_indel_caller != 'deeptrio' ) {
+            return "$sample_id.$ref_name.$snp_indel_caller.$filename"
+        } else {
+            return "$sample_id.$ref_name.$reported_snp_indel_caller.$filename"
+        }
+    }, pattern: 'snp_indel.g.vcf.gz*'
+
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(call_variants_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path(call_variants_out)
         val ref
         val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
+    def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+    def num_shards = matcher[0][2] as int
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
-        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
         vcf_stats_report --input_vcf "snp_indel.raw.vcf.gz" --outfile_base "snp_indel.raw"
         # filter out refcall variants
         bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
@@ -461,6 +489,8 @@ process deepvariant_post_processing {
         """
         touch snp_indel.vcf.gz
         touch snp_indel.vcf.gz.tbi
+	touch snp_indel.g.vcf.gz
+        touch snp_indel.g.vcf.gz.tbi
         """
 
 }
@@ -1868,13 +1898,13 @@ workflow {
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
-            snp_indel_vcf_bam = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
+            (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         else if ( snp_indel_caller == 'deepvariant' | snp_indel_caller == 'deeptrio' ) {
             deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
             deepvariant_make_examples(deepvariant_dry_run.out.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index)
             deepvariant_call_variants(deepvariant_make_examples.out)
-            snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)
+            (snp_indel_vcf_bam, gvcf) = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // split multiallelic variants
         snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)

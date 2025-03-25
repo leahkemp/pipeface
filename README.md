@@ -365,6 +365,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
+- Clair3 or DeepVariant SNP/indel gVCF file
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
@@ -374,6 +375,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 - Aligned, sorted and haplotagged bam
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
+- Clair3 or DeepVariant SNP/indel gVCF file
 - Joint phased DeepTrio SNP/indel VCF file
 - Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 only)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
