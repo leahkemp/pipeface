@@ -1090,7 +1090,7 @@ process sniffles {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position), val(regions_of_interest)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position)
         val ref
         val ref_index
         val tandem_repeat
@@ -1104,8 +1104,6 @@ process sniffles {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.phased.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
-    // define an optional string to pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
     // define a string to optionally pass tandem repeat bed file
     def tandem_repeat_optional = file(tandem_repeat).name != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
         """
@@ -1118,7 +1116,7 @@ process sniffles {
         --vcf sv.phased.vcf.gz \
         --output-rnames \
         --minsvlen 50 \
-        --phase $tandem_repeat_optional $regions_of_interest_optional
+        --phase $tandem_repeat_optional
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
@@ -1139,7 +1137,7 @@ process cutesv {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position), val(regions_of_interest)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
         val ref
         val ref_index
         val tandem_repeat
@@ -1153,8 +1151,6 @@ process cutesv {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
-    // define an optional string to pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-include_bed $regions_of_interest" : ''
     // define platform specific settings
     if( data_type == 'ont' ) {
         settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
@@ -1174,7 +1170,7 @@ process cutesv {
         --genotype \
         --report_readid \
         --min_size 50 \
-        $settings $regions_of_interest_optional
+        $settings
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -1933,10 +1929,10 @@ workflow {
         }
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]), ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
