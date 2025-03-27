@@ -1052,7 +1052,7 @@ process pbcpgtools {
         --bam $haplotagged_bam \
         --ref $ref \
         --pileup-mode model \
-        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite \
         --modsites-mode denovo \
         --hap-tag HP \
         --threads ${task.cpus}
