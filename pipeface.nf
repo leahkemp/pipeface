@@ -23,6 +23,7 @@ process scrape_settings {
         val ref
         val ref_index
         val tandem_repeat
+        val par_bed
         val snp_indel_caller
         val sv_caller
         val annotate
@@ -75,6 +76,7 @@ process scrape_settings {
         echo "Reference genome: $ref" >> pipeface_settings.txt
         echo "Reference genome index: $ref_index" >> pipeface_settings.txt
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
+        echo "PAR regions BED file: $par_bed" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
@@ -346,6 +348,7 @@ process deepvariant_dry_run {
         tuple val(sample_id), val(family_id), path(bam), val(data_type)
         val ref
         val ref_index
+        val par_bed
 
     output:
         tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
@@ -358,6 +361,8 @@ process deepvariant_dry_run {
     else if ( data_type == 'pacbio' ) {
         model = 'PACBIO'
     }
+    // define an optional string to pass PAR regions bed file
+    def par_regions_optional = file(par_bed).name != 'NONE' ? "--par_regions_bed $par_bed" : ''
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -372,6 +377,7 @@ process deepvariant_dry_run {
         --sample_name=$sample_id \
         --output_vcf=snp_indel.raw.vcf.gz \
         --model_type=$model \
+        $par_regions_optional \
         --dry_run=true > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g')
@@ -1494,6 +1500,7 @@ workflow {
     ref = "$params.ref"
     ref_index = "$params.ref_index"
     tandem_repeat = "$params.tandem_repeat"
+    par_bed = "$params.par_bed"
     snp_indel_caller = "$params.snp_indel_caller"
     sv_caller = "$params.sv_caller"
     annotate = "$params.annotate"
@@ -1535,6 +1542,15 @@ workflow {
     if ( in_data_format == 'sv_vcf' && tandem_repeat != 'NONE' ) {
         exit 1, "In data format is SV VCF, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
     }
+    if ( in_data_format == 'snv_vcf' && par_bed != 'NONE' ) {
+        exit 1, "In data format is SNP/indel VCF, but you haven't set the PAR regions BED file to 'NONE'. Either set par_bed to 'NONE' in parameter file or pass '--par_bed NONE' on the command line"
+    }
+    if ( in_data_format == 'sv_vcf' && par_bed != 'NONE' ) {
+        exit 1, "In data format is SV VCF, but you haven't set the PAR regions file to 'NONE'. Either set par_bed to 'NONE' in parameter file or pass '--par_bed NONE' on the command line"
+    }
+    if ( snp_indel_caller != 'deepvariant' && snp_indel_caller != 'deeptrio' && par_bed != 'NONE' ) {
+        exit 1, "You've chosen '${snp_indel_caller}' as your SNP/indel caller, but set 'par_bed' to '${par_bed}'. The PAR regions BED file is only used when DeepVariant or DeepTrio is selected as the SNP/indel caller. Either set par_bed to 'NONE' in parameter file or pass '--par_bed NONE' on the command line"
+    }
     if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
         exit 1, "In data format is SNP/indel VCF, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
     }
@@ -1570,6 +1586,12 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+    }
+    if ( !par_bed ) {
+        exit 1, "No PAR regions bed file provided. Either include in parameter file or pass to --par_bed on the command line. Set to 'NONE' if you do not wish to use a PAR regions bed file or you haven't chosen DeepVariant or DeepTrio as the SNP/indel caller."
+    }
+    if ( !file(par_bed).exists() ) {
+        exit 1, "PAR regions bed file path does not exist, '${par_bed}' provided."
     }
     if ( !snp_indel_caller ) {
         exit 1, "No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
@@ -1851,7 +1873,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, par_bed, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
@@ -1871,7 +1893,7 @@ workflow {
             snp_indel_vcf_bam = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
         }
         else if ( snp_indel_caller == 'deepvariant' | snp_indel_caller == 'deeptrio' ) {
-            deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
+            deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, par_bed)
             deepvariant_make_examples(deepvariant_dry_run.out.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index)
             deepvariant_call_variants(deepvariant_make_examples.out)
             snp_indel_vcf_bam = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index)

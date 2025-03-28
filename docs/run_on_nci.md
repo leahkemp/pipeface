@@ -6,6 +6,8 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
+    - [PAR bed file (optional - if running DeepVariant or DeepTrio)](#par-bed-file-optional---if-running-deepvariant-or-deeptrio)
+      - [hg38](#hg38-1)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
@@ -88,6 +90,16 @@ gunzip and build index
 gunzip hs1.fa.gz
 module load samtools/1.19
 samtools faidx hs1.fa
+```
+
+### PAR bed file (optional - if running DeepVariant or DeepTrio)
+
+#### hg38
+
+Get a copy of the hg38 PAR bed file
+
+```bash
+curl -O https://storage.googleapis.com/deepvariant/case-study-testdata/GRCh38_PAR.bed
 ```
 
 ### Clair3 models (if running clair3)
@@ -244,6 +256,22 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not 
 ```json
     "tandem_repeat": "NONE"
 ```
+
+Optionally specify the path to the PAR bed file. Set to 'NONE' if not required. Eg:
+
+```json
+    "par_bed": "./GRCh38_PAR.bed",
+```
+
+*OR*
+
+```json
+    "par_bed": "NONE"
+```
+
+> **_Note:_** This PAR bed file is only used when DeepVariant/DeepTrio, so set it to 'NONE' if you've no selected on of these SNP/indel variant callers
+
+> **_Note:_** Ensure you're using the appropriate PAR bed file for the reference genome you've chosen
 
 Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 

@@ -6,6 +6,7 @@
     "ref": "",
     "ref_index": "",
     "tandem_repeat": "",
+    "par_bed": "",
     "snp_indel_caller": "",
     "sv_caller": "",
     "annotate": "",
