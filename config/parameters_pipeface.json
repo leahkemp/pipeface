@@ -6,11 +6,13 @@
     "ref": "",
     "ref_index": "",
     "tandem_repeat": "",
+    "sites": "",
     "snp_indel_caller": "",
     "sv_caller": "",
     "annotate": "",
     "calculate_depth": "",
     "analyse_base_mods": "",
+    "qc_checks": "",
     "outdir": "",
     "mosdepth_binary": "",
     "pbcpgtools_binary": ""

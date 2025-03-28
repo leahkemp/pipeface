@@ -11,6 +11,7 @@ pb-CpG-tools: 2.3.2
 Sniffles2: 2.6.0
 cuteSV: 2.1.1
 jasmine: 1.1.5-r1
+somalier: 0.2.19
 ensembl-vep: 112
 GNU coreutils: 8.30
 kentUtils: 0.0

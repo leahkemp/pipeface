@@ -23,11 +23,13 @@ process scrape_settings {
         val ref
         val ref_index
         val tandem_repeat
+        val sites
         val snp_indel_caller
         val sv_caller
         val annotate
         val calculate_depth
         val analyse_base_mods
+        val qc_checks
         val outdir
         val outdir2
 
@@ -75,11 +77,13 @@ process scrape_settings {
         echo "Reference genome: $ref" >> pipeface_settings.txt
         echo "Reference genome index: $ref_index" >> pipeface_settings.txt
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
+        echo "Somalier sites file: $sites" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
         echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
+        echo "Run QC checks: $qc_checks" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
@@ -752,6 +756,40 @@ process deeptrio_postprocessing {
         touch ${family_position}_snp_indel.g.vcf
         """
           
+}
+
+process somalier {
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
+
+    input:
+	tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(proband_data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(father_data_type)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(mother_data_type)
+        val ref
+        val ref_index
+        val sites
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+       tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.groups.tsv'), path('somalier.html')
+
+    script:
+        """
+        # run somalier extract
+        SOMALIER_SAMPLE_NAME=$proband_sample_id somalier extract -d extracted --sites $sites -f $ref $proband_haplotagged_bam
+        SOMALIER_SAMPLE_NAME=$mother_sample_id somalier extract -d extracted --sites $sites -f $ref $mother_haplotagged_bam
+        SOMALIER_SAMPLE_NAME=$father_sample_id somalier extract -d extracted --sites $sites -f $ref $father_haplotagged_bam
+        # create pedigree file
+        printf '$proband_family_id\t$proband_sample_id\t$father_sample_id\t$mother_sample_id\t1\t0\n' > pedigree.ped
+        printf '$proband_family_id\t$father_sample_id\t0\t0\t1\t0\n' >> pedigree.ped
+        printf '$proband_family_id\t$mother_sample_id\t0\t0\t1\t0\n' >> pedigree.ped
+        # run somalier relate
+        somalier relate --ped pedigree.ped extracted/*.somalier
+        """
+
 }
 
 process glnexus {
@@ -1494,12 +1532,14 @@ workflow {
     ref = "$params.ref"
     ref_index = "$params.ref_index"
     tandem_repeat = "$params.tandem_repeat"
+    sites = "$params.sites"
     snp_indel_caller = "$params.snp_indel_caller"
     sv_caller = "$params.sv_caller"
     annotate = "$params.annotate"
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
     analyse_base_mods = "$params.analyse_base_mods"
+    qc_checks = "$params.qc_checks"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     mosdepth_binary = "$params.mosdepth_binary"
@@ -1534,6 +1574,12 @@ workflow {
     }
     if ( in_data_format == 'sv_vcf' && tandem_repeat != 'NONE' ) {
         exit 1, "In data format is SV VCF, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
+    }
+    if ( in_data_format == 'snv_vcf' && sites != 'NONE' ) {
+        exit 1, "In data format is SNP/indel VCF, but you haven't set the sites file to 'NONE'. Either set sites to 'NONE' in parameter file or pass '--sites NONE' on the command line"
+    }
+    if ( in_data_format == 'sv_vcf' && sites != 'NONE' ) {
+        exit 1, "In data format is SV VCF, but you haven't set the sites file to 'NONE'. Either set sites to 'NONE' in parameter file or pass '--sites NONE' on the command line"
     }
     if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
         exit 1, "In data format is SNP/indel VCF, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
@@ -1570,6 +1616,12 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+    }
+    if ( !sites ) {
+        exit 1, "No sites file provided. Either include in parameter file or pass to --sites on the command line. Set to 'NONE' if you not required."
+    }
+    if ( !file(sites).exists() ) {
+        exit 1, "Sites file path does not exist, '${sites}' provided."
     }
     if ( !snp_indel_caller ) {
         exit 1, "No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
@@ -1651,6 +1703,18 @@ workflow {
     }
     if ( analyse_base_mods != 'yes' && analyse_base_mods != 'no' ) {
         exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', '${analyse_base_mods}' selected."
+    }
+    if ( !qc_checks ) {
+        exit 1, "Choice to run QC checks not made. Either include in parameter file or pass to --qc_checks on the command line. Should be either 'yes' or 'no'."
+    }
+    if ( qc_checks != 'yes' && qc_checks != 'no' ) {
+        exit 1, "Choice to run QC checks should be either 'yes', or 'no', '${qc_checks}' selected."
+    }
+    if ( snp_indel_caller != 'deeptrio' && qc_checks == 'yes' ) {
+        exit 1, "You've chosen to run QC checks, but these are only available when the SNP/indel caller is set to 'deeptrio', '${snp_indel_caller}' selected. Either set 'qc_checks' to 'no' in the parameter file or pass '--qc_checks no' on the command line."
+    }
+    if ( qc_checks == 'yes' && sites == 'NONE' ) {
+        exit 1, "You've chosen to run QC checks but you set 'sites' to 'NONE'. Please pass an appropriate sites file in the parameter file or pass to --sites on the command line."
     }
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -1851,7 +1915,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, sites, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, qc_checks, outdir, outdir2)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
@@ -1919,6 +1983,9 @@ workflow {
             }
             gvcfs_bams = proband_out.join(father_out).join(mother_out).map { tuple ->
                 [tuple[0], tuple[2], tuple[7], tuple[12], tuple[3], tuple[4], tuple[8], tuple[9], tuple[13], tuple[14], tuple[5], tuple[10], tuple[15]]
+            }
+            if ( qc_checks == 'yes' ) {
+                somalier(proband_tuple.join(data_type_tuple, by: [0,1]), father_tuple.join(data_type_tuple, by: [0,1]), mother_tuple.join(data_type_tuple, by: [0,1]), ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
             joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)
