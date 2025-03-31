@@ -1932,7 +1932,7 @@ workflow {
             (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]), ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
