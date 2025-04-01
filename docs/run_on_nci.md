@@ -380,7 +380,7 @@ Or with `clair3`:
 Only use `"yes"` when `sex = "XY"`. It won’t work for `"XX"`.
 
 
-## No haploid-aware mode (default for most users)
+No haploid-aware mode 
 
 ```json
 {
