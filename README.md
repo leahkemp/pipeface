@@ -391,7 +391,6 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 - Enables correct handling of the haploid nature of chrX and chrY for XY samples when using DeepVariant and Clair3.
 - Specifically for DeepVariant, it also allows proper treatment of Pseudoautosomal Regions (PARs) via a provided BED file.
-- Has no effect on XX samples, results will be the same as if haploid-aware mode was not enabled.
 - Only supported for singletons at the moment. 
 
 ## Assumptions

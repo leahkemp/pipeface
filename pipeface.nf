@@ -35,6 +35,9 @@ process scrape_settings {
         val analyse_base_mods
         val outdir
         val outdir2
+        val haploidaware
+        val sex
+        val parbed
 
     output:
         tuple val(sample_id), val(family_id), path('pipeface_settings.txt')
@@ -86,6 +89,10 @@ process scrape_settings {
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
+        echo "Haploid-aware: $haploidaware" >> pipeface_settings.txt
+        echo "Sex : $sex" >> pipeface_settings.txt
+        echo "PAR regions : $parbed" >> pipeface_settings.txt
+
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
@@ -432,6 +439,11 @@ process deepvariant_dry_run {
         tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
 
     script:
+       def haploidaware = "$params.haploidaware"
+       def sex = "$params.sex"
+       def parbed = "$params.parbed"
+       def haploidparameter = ""
+       def parbedparameter = ""
     // conditionally define model type
         if( data_type == 'ont' ) {
             model = 'ONT_R104'
@@ -442,12 +454,12 @@ process deepvariant_dry_run {
         
         if (haploidaware == 'yes') {
 
-            def haploidparameter = (sex == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
-            def parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
+            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
         }
         else {
-            def haploidparameter = ""
-            def parbedparameter = ""
+            haploidparameter = ""
+            parbedparameter = ""
         }
         
         """
@@ -1604,7 +1616,7 @@ workflow {
     // grab parameters
     in_data = "$params.in_data"
     sex = "${params.sex}".trim()
-    parbed = "$params.parbed"
+     parbed = "${params.parbed}"
     in_data_format = "$params.in_data_format"
     in_data_format_override = "$params.in_data_format_override"
     ref = "$params.ref"
@@ -1613,7 +1625,7 @@ workflow {
     snp_indel_caller = "$params.snp_indel_caller"
     sv_caller = "$params.sv_caller"
     annotate = "$params.annotate"
-    haploidaware = "$params.haploidaware"
+    haploidaware = "${params.haploidaware}".trim()
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
     analyse_base_mods = "$params.analyse_base_mods"
@@ -1806,31 +1818,36 @@ workflow {
         exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
-    if (haploidaware == "yes") {
-        if (!(sex in ["XX", "XY"])) {
-            exit 1, "When haploidaware mode is selected, you need to set the sex to either 'XX' or 'XY'."
-        }
-        if (sex == "XX") {
-            log.warn "haploidaware mode is enabled with sex='XX'. This will have no effect — results will be identical to setting haploidaware='no'."
-          }      
-        if (sex == "XY") {
-            if (snp_indel_caller == "deepvariant" && !parbed) {
-                exit 1, "When haploid aware mode is used for XY samples, you need to supply the par regions bed for XY chromosomes"
-            }
-            if (snp_indel_caller == "deepvariant" && !file(parbed).exists()) {
-                exit 1, "PAR BED file does not exist: '${parbed}'"
-            }
-        }
-    } else if (haploidaware == "no") {
-        if (sex) {
-            exit 1, "You need to set haploidaware = 'yes' when you set the sex"
-        }
-    }
-
-    if (!(haploidaware in ["yes", "no"])) {
+    if (!(haploidaware in ['yes', 'no'])) {
+        println("haploidaware = '${haploidaware}'")
         exit 1, "haploidaware must be either 'yes' or 'no'"
     }
 
+    if (haploidaware == "yes") {
+        if (sex != "XY") {
+            exit 1, "Haploid-aware mode is only supported when sex='XY'. You provided sex='${sex}'."
+        }
+
+        if (snp_indel_caller == "deepvariant") {
+            if (!parbed || parbed == "NONE") {
+                exit 1, "In haploid-aware mode with deepvariant, you must provide a valid PAR BED file (not 'NONE')."
+            }
+            if (!file(parbed).exists()) {
+                exit 1, "PAR BED file does not exist: '${parbed}'"
+            }
+        }
+
+        if (snp_indel_caller == "clair3" && parbed != "NONE") {
+            exit 1, "In haploid-aware mode with clair3, you must set parbed='NONE'. You provided: '${parbed}'."
+        }
+    }
+
+    else if (haploidaware == "no") {
+        // sex can be anything, including unset
+        if (parbed != "NONE") {
+            exit 1, "When haploidaware='no', you must set parbed='NONE'. You provided: '${parbed}'."
+        }
+    }
 
     // build variable
     ref_name = file(ref).getSimpleName()
@@ -1994,7 +2011,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }

@@ -355,32 +355,39 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
 ```json
     "pbcpgtools_binary": "NONE"
 ```
-
-Set the haploid aware mode for XY samples. Eg: 
+ Haploid-aware mode (for XY samples only)
 
 ```json
-    "haploidaware": "yes",
+{
+  "haploidaware": "yes",
+  "sex": "XY",
+  "parbed": "/path/to/par.bed",
+  "snp_indel_caller": "deepvariant"
+}
 ```
 
-When set to "yes", sex needs to be set as well. For XY samples using deepvariant, an additional PAR regions bed will be required. Eg:
+Or with `clair3`:
 
 ```json
-    "haploidaware": "yes",
-    "sex": "XY",
-    "parbed": "/path/to/par.bed",
+{
+  "haploidaware": "yes",
+  "sex": "XY",
+  "parbed": "NONE",
+  "snp_indel_caller": "clair3"
+}
 ```
 
-*OR*
+Only use `"yes"` when `sex = "XY"`. It won’t work for `"XX"`.
+
+
+## No haploid-aware mode (default for most users)
 
 ```json
-    "haploidaware": "yes",
-    "sex": "XX"
-```
-
-*OR*
-
-```json
-    "haploidaware": "no",
+{
+  "haploidaware": "no",
+  "sex": "NONE",
+  "parbed": "NONE"
+}
 ```
 
 ## 6. Start persistent session (optional)
