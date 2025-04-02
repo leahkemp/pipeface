@@ -404,11 +404,11 @@ process clair3 {
        
         #merging sexchr and autosome vcf & gvcf files
 
-        bcftools concat sexchr/merge_output.vcf.gz autosome/merge_output.vcf.gz > \${PWD}/merge_output.vcf.gz
+        bcftools concat -Oz -o merge_output.vcf.gz sexchr/merge_output.vcf.gz autosome/merge_output.vcf.gz
         tabix -p vcf merge_output.vcf.gz
-        bcftools concat sexchr/merge_output.g.vcf.gz autosome/merge_output.g.vcf.gz > \${PWD}/merge_output.g.vcf.gz
-        tabix -p vcf merge_output.g.vcf.gz
 
+        bcftools concat -Oz -o merge_output.g.vcf.gz sexchr/merge_output.g.vcf.gz autosome/merge_output.g.vcf.gz
+        tabix -p vcf merge_output.g.vcf.gz
 
  
        fi
