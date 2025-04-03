@@ -723,11 +723,9 @@ process whatshap_haplotag {
 
     script:
 
-        def haploidparameter = ("$params.haploidaware" == "yes") ? (("$params.sex" == "XY") ? "yes" : "") : ""
-
         """
         # run whatshap haplotag
-        
+
         whatshap haplotag \
         --reference $ref \
         --output sorted.haplotagged.bam \
