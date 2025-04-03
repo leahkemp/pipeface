@@ -322,6 +322,8 @@ process clair3 {
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
     def haploidaware = "$params.haploidaware"
     def sex = "$params.sex"
+    def parbed = "$params.parbed"
+
     // conditionally define platform
     if( data_type == 'ont' ) {
         platform = 'ont'
@@ -366,51 +368,65 @@ process clair3 {
 
         genomebed="genome.bed"
         
-        mkdir -p autosome
-        mkdir -p sexchr
+        mkdir -p haploid
+        mkdir -p diploid
 
-        #separate out genome bed into an automsome and sexchr bed each
-        cat "\${genomebed}" | grep -v ${params.chrYseq} | grep -v ${params.chrXseq}  > autosome.bed
-        grep -E "${params.chrXseq}|${params.chrYseq}" "\${genomebed}" > sexchr.bed
+        #separate out genome bed into a haploid and diploid bed each
+        grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
 
-        if [[ ! -s sexchr.bed ]]; then
-            echo "Error: No sex chromosomes (chrX,chrY) found in regions BED or genome reference."
-            exit 1
-        fi
+        grep "^chrX" ${parbed} > xpar.bed
+        grep "^chrY" ${parbed} > ypar.bed
+        grep "^chrX" \${genomebed} > chrX_full.bed
+        grep "^chrY" \${genomebed} > chrY_full.bed
+
+        bedtools subtract -a chrX_full.bed -b xpar.bed > xnonpar.bed
+        bedtools subtract -a chrY_full.bed -b ypar.bed > ynonpar.bed
+
+        cat autosomes.bed xpar.bed ypar.bed | sort -k1,1V -k2,2n > diploid.bed
+        cat xnonpar.bed ynonpar.bed | sort -k1,1 -k2,2n > haploid.bed
         
-        #sexchr run
+        #haploid run
         run_clair3.sh \
         --bam_fn="${bam}" \
         --ref_fn="${ref}" \
-        --output="sexchr" \
+        --output="haploid" \
         --threads=${task.cpus} \
         --platform=${platform} \
         --model_path="${clair3_model}" \
         --sample_name="${sample_id}" \
         --gvcf \
-        --bed_fn="sexchr.bed" --haploid_precise
+        --bed_fn="haploid.bed" --haploid_precise
         
-        #autosome run
+        #diploid run
         run_clair3.sh \
         --bam_fn="${bam}" \
         --ref_fn="${ref}" \
-        --output="autosome" \
+        --output="diploid" \
         --threads=${task.cpus} \
         --platform=${platform} \
         --model_path="${clair3_model}" \
         --sample_name="${sample_id}" \
         --gvcf \
-        --bed_fn="autosome.bed" 
+        --bed_fn="diploid.bed" 
        
-        #merging sexchr and autosome vcf & gvcf files
+        #merging diploid and haploid vcf & gvcf files
 
-        bcftools concat -Oz -o merge_output.vcf.gz sexchr/merge_output.vcf.gz autosome/merge_output.vcf.gz
+        bcftools +fixploidy haploid/merge_output.vcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.vcf
+        bcftools +fixploidy haploid/merge_output.gvcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.gvcf
+
+        bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.vcf
+        bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.gvcf
+
+        tabix -p vcf haploid/merge_output_ploidyfixed.vcf.gz
+        tabix -p vcf haploid/merge_output_ploidyfixed.gvcf.gz
+
+        bcftools concat -Oz -o merge_output.vcf.gz diploid/merge_output.vcf.gz haploid/merge_output_ploidyfixed.vcf.gz
         tabix -p vcf merge_output.vcf.gz
 
-        bcftools concat -Oz -o merge_output.g.vcf.gz sexchr/merge_output.g.vcf.gz autosome/merge_output.g.vcf.gz
-        tabix -p vcf merge_output.g.vcf.gz
+        bcftools concat -a -Oz -o merge_output.gvcf.gz diploid/merge_output.gvcf.gz haploid/merge_output_ploidyfixed.gvcf.gz
+        tabix -p vcf merge_output.gvcf.gz
 
- 
+
        fi
 
         # rename files
@@ -418,6 +434,7 @@ process clair3 {
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
         ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
+
         """
 
     stub:
@@ -653,23 +670,26 @@ process whatshap_phase {
         tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
-        """
+   """
         # rename file for publishing purposes
         ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
+        ln -sf $snp_indel_split_vcf_index snp_indel.vcf.gz.tbi
         # run whatshap phase
+
         whatshap phase \
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
         --sample $sample_id \
-        --ignore-read-groups snp_indel.vcf.gz $bam
+        --ignore-read-groups snp_indel.vcf.gz $bam 
+    
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
         snp_indel.phased.vcf.gz \
         --gtf snp_indel.phased.stats.gtf \
-        --sample $sample_id
+        --sample $sample_id 
         """
 
     stub:
@@ -702,8 +722,12 @@ process whatshap_haplotag {
         tuple val(sample_id), val(family_id), path('sorted.haplotagged.tsv')
 
     script:
+
+        def haploidparameter = ("$params.haploidaware" == "yes") ? (("$params.sex" == "XY") ? "yes" : "") : ""
+
         """
         # run whatshap haplotag
+        
         whatshap haplotag \
         --reference $ref \
         --output sorted.haplotagged.bam \
@@ -713,6 +737,7 @@ process whatshap_haplotag {
         --output-threads ${task.cpus} \
         --output-haplotag-list sorted.haplotagged.tsv \
         $snp_indel_split_vcf $bam
+
         # index bam
         samtools index \
         -@ ${task.cpus} \
@@ -1828,18 +1853,15 @@ workflow {
             exit 1, "Haploid-aware mode is only supported when sex='XY'. You provided sex='${sex}'."
         }
 
-        if (snp_indel_caller == "deepvariant") {
-            if (!parbed || parbed == "NONE") {
-                exit 1, "In haploid-aware mode with deepvariant, you must provide a valid PAR BED file (not 'NONE')."
-            }
-            if (!file(parbed).exists()) {
-                exit 1, "PAR BED file does not exist: '${parbed}'"
-            }
+        if (parbed == "NONE") {
+            exit 1, "In haploid-aware mode, you must provide a valid PAR BED file (not 'NONE')."
         }
 
-        if (snp_indel_caller == "clair3" && parbed != "NONE") {
-            exit 1, "In haploid-aware mode with clair3, you must set parbed='NONE'. You provided: '${parbed}'."
+        if (!file(parbed).exists()) {
+            exit 1, "PAR BED file does not exist: '${parbed}'"
         }
+
+
     }
 
     else if (haploidaware == "no") {

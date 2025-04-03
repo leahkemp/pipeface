@@ -355,6 +355,7 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
 ```json
     "pbcpgtools_binary": "NONE"
 ```
+
  Haploid-aware mode (for XY samples only)
 
 ```json
@@ -362,23 +363,10 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
   "haploidaware": "yes",
   "sex": "XY",
   "parbed": "/path/to/par.bed",
-  "snp_indel_caller": "deepvariant"
 }
 ```
 
-Or with `clair3`:
-
-```json
-{
-  "haploidaware": "yes",
-  "sex": "XY",
-  "parbed": "NONE",
-  "snp_indel_caller": "clair3"
-}
-```
-
-Only use `"yes"` when `sex = "XY"`. It won’t work for `"XX"`.
-
+or 
 
 No haploid-aware mode 
 
