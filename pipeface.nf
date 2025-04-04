@@ -12,6 +12,11 @@ params.tandem_repeat = "NONE"
 params.annotate_override = ""
 params.in_data_format_override = ""
 
+//default values for chrX and chrY contig names. Used when sex = 'XY' and 
+//haploidaware = 'yes'. Don't change unless your reference genome has different names. 
+params.chrXseq = "chrX"
+params.chrYseq = "chrY"
+
 process scrape_settings {
 
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
@@ -308,6 +313,8 @@ process clair3 {
     script:
     // define a string to optionally pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
+    def haploidaware = "$params.haploidaware"
+    def sex = "$params.sex"
     // conditionally define platform
     if( data_type == 'ont' ) {
         platform = 'ont'
@@ -323,17 +330,82 @@ process clair3 {
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
+
+       if [[ "${haploidaware}" == "no" || "${sex}" == "XX" ]]; then 
+
+           run_clair3.sh \
+            --bam_fn=$bam \
+            --ref_fn=$ref \
+            --output=./ \
+            --threads=${task.cpus} \
+            --platform=$platform \
+            --model_path=$clair3_model \
+            --sample_name=$sample_id \
+            --gvcf \
+            --include_all_ctgs \
+            $regions_of_interest_optional
+       
+
+       elif [[ "${haploidaware}" == "yes" && ${sex} == "XY" ]]; then 
+         
+        #if regions were given, we use them to subset the genome index to construct the genome.bed file
+        if [[ -f "${regions_of_interest}" ]]; then
+            awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
+                "${ref}.fai" "${regions_of_interest}" > genome.bed
+        else
+        # fallback: use full genome .fai
+            awk '{ print \$1 "\\t0\\t" \$2 }' "${ref}.fai" > genome.bed
+        fi
+
+        genomebed="genome.bed"
+        
+        mkdir -p autosome
+        mkdir -p sexchr
+
+        #separate out genome bed into an automsome and sexchr bed each
+        cat "\${genomebed}" | grep -v ${params.chrYseq} | grep -v ${params.chrXseq}  > autosome.bed
+        grep -E "${params.chrXseq}|${params.chrYseq}" "\${genomebed}" > sexchr.bed
+
+        if [[ ! -s sexchr.bed ]]; then
+            echo "Error: No sex chromosomes (chrX,chrY) found in regions BED or genome reference."
+            exit 1
+        fi
+        
+        #sexchr run
         run_clair3.sh \
-        --bam_fn=$bam \
-        --ref_fn=$ref \
-        --output=./ \
+        --bam_fn="${bam}" \
+        --ref_fn="${ref}" \
+        --output="sexchr" \
         --threads=${task.cpus} \
-        --platform=$platform \
-        --model_path=$clair3_model \
-        --sample_name=$sample_id \
+        --platform=${platform} \
+        --model_path="${clair3_model}" \
+        --sample_name="${sample_id}" \
         --gvcf \
-        --include_all_ctgs \
-        $regions_of_interest_optional
+        --bed_fn="sexchr.bed" --haploid_precise
+        
+        #autosome run
+        run_clair3.sh \
+        --bam_fn="${bam}" \
+        --ref_fn="${ref}" \
+        --output="autosome" \
+        --threads=${task.cpus} \
+        --platform=${platform} \
+        --model_path="${clair3_model}" \
+        --sample_name="${sample_id}" \
+        --gvcf \
+        --bed_fn="autosome.bed" 
+       
+        #merging sexchr and autosome vcf & gvcf files
+
+        bcftools concat sexchr/merge_output.vcf.gz autosome/merge_output.vcf.gz > \${PWD}/merge_output.vcf.gz
+        tabix -p vcf merge_output.vcf.gz
+        bcftools concat sexchr/merge_output.g.vcf.gz autosome/merge_output.g.vcf.gz > \${PWD}/merge_output.g.vcf.gz
+        tabix -p vcf merge_output.g.vcf.gz
+
+
+ 
+       fi
+
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
@@ -361,12 +433,23 @@ process deepvariant_dry_run {
 
     script:
     // conditionally define model type
-    if( data_type == 'ont' ) {
-        model = 'ONT_R104'
-    }
-    else if ( data_type == 'pacbio' ) {
-        model = 'PACBIO'
-    }
+        if( data_type == 'ont' ) {
+            model = 'ONT_R104'
+        }
+        else if ( data_type == 'pacbio' ) {
+            model = 'PACBIO'
+        }
+        
+        if (haploidaware == 'yes') {
+
+            def haploidparameter = (sex == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
+            def parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
+        }
+        else {
+            def haploidparameter = ""
+            def parbedparameter = ""
+        }
+        
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -382,7 +465,8 @@ process deepvariant_dry_run {
         --output_vcf=snp_indel.raw.vcf.gz \
         --output_gvcf=snp_indel.raw.g.vcf.gz \
         --model_type=$model \
-        --dry_run=true > commands.txt
+        --dry_run=true \
+        ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g'| sed 's/--gvcf "[^"]*"//g')
         call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
@@ -1519,6 +1603,8 @@ workflow {
 
     // grab parameters
     in_data = "$params.in_data"
+    sex = "${params.sex}".trim()
+    parbed = "$params.parbed"
     in_data_format = "$params.in_data_format"
     in_data_format_override = "$params.in_data_format_override"
     ref = "$params.ref"
@@ -1527,6 +1613,7 @@ workflow {
     snp_indel_caller = "$params.snp_indel_caller"
     sv_caller = "$params.sv_caller"
     annotate = "$params.annotate"
+    haploidaware = "$params.haploidaware"
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
     analyse_base_mods = "$params.analyse_base_mods"
@@ -1718,6 +1805,32 @@ workflow {
     if ( !file(mosdepth_binary).exists() ) {
         exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
+
+    if (haploidaware == "yes") {
+        if (!(sex in ["XX", "XY"])) {
+            exit 1, "When haploidaware mode is selected, you need to set the sex to either 'XX' or 'XY'."
+        }
+        if (sex == "XX") {
+            log.warn "haploidaware mode is enabled with sex='XX'. This will have no effect — results will be identical to setting haploidaware='no'."
+          }      
+        if (sex == "XY") {
+            if (snp_indel_caller == "deepvariant" && !parbed) {
+                exit 1, "When haploid aware mode is used for XY samples, you need to supply the par regions bed for XY chromosomes"
+            }
+            if (snp_indel_caller == "deepvariant" && !file(parbed).exists()) {
+                exit 1, "PAR BED file does not exist: '${parbed}'"
+            }
+        }
+    } else if (haploidaware == "no") {
+        if (sex) {
+            exit 1, "You need to set haploidaware = 'yes' when you set the sex"
+        }
+    }
+
+    if (!(haploidaware in ["yes", "no"])) {
+        exit 1, "haploidaware must be either 'yes' or 'no'"
+    }
+
 
     // build variable
     ref_name = file(ref).getSimpleName()

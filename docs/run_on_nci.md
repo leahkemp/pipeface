@@ -356,6 +356,33 @@ Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
     "pbcpgtools_binary": "NONE"
 ```
 
+Set the haploid aware mode for XY samples. Eg: 
+
+```json
+    "haploidaware": "yes",
+```
+
+When set to "yes", sex needs to be set as well. For XY samples using deepvariant, an additional PAR regions bed will be required. Eg:
+
+```json
+    "haploidaware": "yes",
+    "sex": "XY",
+    "parbed": "/path/to/par.bed",
+```
+
+*OR*
+
+```json
+    "haploidaware": "yes",
+    "sex": "XX"
+```
+
+*OR*
+
+```json
+    "haploidaware": "no",
+```
+
 ## 6. Start persistent session (optional)
 
 Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces/Help/pages/241927941/Persistent+Sessions...)

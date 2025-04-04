@@ -4,6 +4,8 @@
     "in_data": "",
     "in_data_format": "",
     "ref": "",
+    "haploidaware" : "",
+    "sex": "",
     "ref_index": "",
     "tandem_repeat": "",
     "snp_indel_caller": "",
