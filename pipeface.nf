@@ -69,6 +69,21 @@ process scrape_settings {
         else if ( in_data_format == 'sv_vcf' ) {
             reported_in_data_format = 'SV VCF'
         }
+
+            // perform haploid-aware check for chrX and chrY in Groovy
+        if (haploidaware == 'yes') {
+            def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) ? regions_of_interest : ref_index
+
+            def fileContent = file(check_file).text
+            def chrX_found = fileContent.find(params.chrXseq)
+            def chrY_found = fileContent.find(params.chrYseq)
+
+            if (!chrX_found || !chrY_found) {
+                throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
+            }
+        }
+
+
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
@@ -1639,7 +1654,7 @@ workflow {
     // grab parameters
     in_data = "$params.in_data"
     sex = "${params.sex}".trim()
-     parbed = "${params.parbed}"
+    parbed = "$params.parbed"
     in_data_format = "$params.in_data_format"
     in_data_format_override = "$params.in_data_format_override"
     ref = "$params.ref"
