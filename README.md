@@ -387,6 +387,11 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 > **_Note:_** Running base modification analyses assume the input data is un uBAM format and base modifications are present in these data
 
+## Haploid Aware Mode 
+
+- Enables correct handling of the haploid nature of chrX and chrY for XY samples, along with PAR regions
+- Only supported for singletons at the moment. 
+
 ## Assumptions
 
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
@@ -401,5 +406,5 @@ See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
 
 ## Credit
 
-This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. Optimisations involving DeepVariant and DeepTrio have been contributed by Dr Kisaru Liyanage and Dr Matthew Downton from the [National Computational Infrastructure](https://nci.org.au), with support from Australian BioCommons as part of the Workflow Commons project. The installation and hosting of software used in this pipeline has and continues to be supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
+This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. Optimisations involving DeepVariant and DeepTrio have been contributed by Dr Kisaru Liyanage and Dr Matthew Downton from the [National Computational Infrastructure](https://nci.org.au), with support from Australian BioCommons as part of the Workflow Commons project. Haploid-aware mode has been contributed by Dr Hardip Patel & Kirat Alreja from the [National Centre for Indigenous Genomics](https://ncig.anu.edu.au). The installation and hosting of software used in this pipeline has and continues to be supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
 
