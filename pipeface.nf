@@ -1208,6 +1208,16 @@ process jasmine_sniffles {
         tuple val(proband_family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
 
     script:
+    // conditionally define iris arguments
+    // as default, iris will pass minimap -x map-ont
+    // the --pacbio flag passed to iris will pass minimap -x map-pb
+    // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+    if( data_type == 'ont' ) {
+        iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+    }
+    else if( data_type == 'pacbio' ) {
+        iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+    }
         """
         # unzip vcfs
         gunzip -c $proband_sv_phased_vcf > proband.sv.phased.vcf
@@ -1237,7 +1247,7 @@ process jasmine_sniffles {
         --normalize_type \
         --require_first_sample \
         --default_zero_genotype	\
-        --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
+        $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
         grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
@@ -1278,6 +1288,16 @@ process jasmine_cutesv {
         tuple val(proband_family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
+    // conditionally define iris arguments
+    // as default, iris will pass minimap -x map-ont
+    // the --pacbio flag passed    to iris will pass minimap -x map-pb
+    // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+    if( data_type == 'ont' ) {
+        iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+    }
+    else if( data_type == 'pacbio' ) {
+        iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
+    }
 	"""
         # unzip vcfs
         gunzip -c $proband_sv_vcf > proband.sv.vcf
@@ -1307,7 +1327,7 @@ process jasmine_cutesv {
         --normalize_type \
         --require_first_sample \
         --default_zero_genotype \
-        --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
+        $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.tmp.vcf > sv.vcf
         grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
