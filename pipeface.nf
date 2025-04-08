@@ -1290,7 +1290,7 @@ process jasmine_cutesv {
     script:
     // conditionally define iris arguments
     // as default, iris will pass minimap -x map-ont
-    // the --pacbio flag passed    to iris will pass minimap -x map-pb
+    // the --pacbio flag passed to iris will pass minimap -x map-pb
     // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
     if( data_type == 'ont' ) {
         iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
