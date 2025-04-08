@@ -1352,8 +1352,6 @@ process vep_sniffles_sv {
         val ref_index
         val vep_db
         val gnomad_db
-        val gnomad_sv_db
-        val clinvar_db
         val cadd_sv_db
         val outdir
         val outdir2
@@ -1427,8 +1425,6 @@ process vep_cutesv_sv {
         val ref_index
         val vep_db
         val gnomad_db
-        val gnomad_sv_db
-        val clinvar_db
         val cadd_sv_db
         val outdir
         val outdir2
@@ -1497,7 +1493,6 @@ workflow {
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
-    gnomad_sv_db = "$params.gnomad_sv_db"
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
@@ -1605,9 +1600,6 @@ workflow {
     }
     if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
         exit 1, "gnomAD database file path does not exist, '${gnomad_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(gnomad_sv_db).exists() ) {
-        exit 1, "nomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
     }
     if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
         exit 1, "ClinVar database file path does not exist, '${clinvar_db}' provided."
@@ -1959,10 +1951,10 @@ workflow {
         // joint sv annotation
         if ( annotate == 'yes' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
@@ -1973,10 +1965,10 @@ workflow {
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'sv_vcf' ) {
         if ( annotate == 'yes' && snp_indel_caller != 'deeptrio' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
