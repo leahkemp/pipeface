@@ -1236,6 +1236,7 @@ process jasmine_sniffles {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
+        --default_zero_genotype	\
         --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
@@ -1305,6 +1306,7 @@ process jasmine_cutesv {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
+        --default_zero_genotype \
         --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.tmp.vcf > sv.vcf
