@@ -435,10 +435,12 @@ process clair3 {
         tabix -p vcf haploid/merge_output_ploidyfixed.vcf.gz
         tabix -p vcf haploid/merge_output_ploidyfixed.gvcf.gz
 
-        bcftools concat -Oz -o merge_output.vcf.gz diploid/merge_output.vcf.gz haploid/merge_output_ploidyfixed.vcf.gz
+        bcftools concat -a -Oz -o merge_output.unsorted.vcf.gz diploid/merge_output.vcf.gz haploid/merge_output_ploidyfixed.vcf.gz
+        bcftools sort -Oz -o merge_output.vcf.gz merge_output.unsorted.vcf.gz
         tabix -p vcf merge_output.vcf.gz
 
-        bcftools concat -a -Oz -o merge_output.gvcf.gz diploid/merge_output.gvcf.gz haploid/merge_output_ploidyfixed.gvcf.gz
+        bcftools concat -a -Oz -o merge_output.unsorted.gvcf.gz diploid/merge_output.gvcf.gz haploid/merge_output_ploidyfixed.gvcf.gz
+        bcftools sort -Oz -o merge_output.gvcf.gz merge_output.unsorted.gvcf.gz
         tabix -p vcf merge_output.gvcf.gz
 
 
