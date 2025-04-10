@@ -70,7 +70,6 @@ process scrape_settings {
             reported_in_data_format = 'SV VCF'
         }
 
-            // perform haploid-aware check for chrX and chrY in Groovy
         if (haploidaware == 'yes') {
             def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) ? regions_of_interest : ref_index
 
@@ -335,9 +334,6 @@ process clair3 {
     script:
     // define a string to optionally pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
-    def haploidaware = "$params.haploidaware"
-    def sex = "$params.sex"
-    def parbed = "$params.parbed"
 
     // conditionally define platform
     if( data_type == 'ont' ) {
@@ -355,7 +351,7 @@ process clair3 {
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
 
-       if [[ "${haploidaware}" == "no" || "${sex}" == "XX" ]]; then 
+       if [[ "${params.haploidaware}" == "no" || "${params.sex}" == "XX" ]]; then 
 
            run_clair3.sh \
             --bam_fn=$bam \
@@ -370,7 +366,7 @@ process clair3 {
             $regions_of_interest_optional
        
 
-       elif [[ "${haploidaware}" == "yes" && ${sex} == "XY" ]]; then 
+       elif [[ "${params.haploidaware}" == "yes" && ${params.sex} == "XY" ]]; then 
          
         #if regions were given, we use them to subset the genome index to construct the genome.bed file
         if [[ -f "${regions_of_interest}" ]]; then
@@ -389,8 +385,8 @@ process clair3 {
         #separate out genome bed into a haploid and diploid bed each
         grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
 
-        grep "^chrX" ${parbed} > xpar.bed
-        grep "^chrY" ${parbed} > ypar.bed
+        grep "^chrX" ${params.parbed} > xpar.bed
+        grep "^chrY" ${params.parbed} > ypar.bed
         grep "^chrX" \${genomebed} > chrX_full.bed
         grep "^chrY" \${genomebed} > chrY_full.bed
 
@@ -473,9 +469,6 @@ process deepvariant_dry_run {
         tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
 
     script:
-       def haploidaware = "$params.haploidaware"
-       def sex = "$params.sex"
-       def parbed = "$params.parbed"
        def haploidparameter = ""
        def parbedparameter = ""
     // conditionally define model type
@@ -486,10 +479,10 @@ process deepvariant_dry_run {
             model = 'PACBIO'
         }
         
-        if (haploidaware == 'yes') {
+        if ("${params.haploidaware}" == "yes") {
 
-            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
+            haploidparameter = ("${params.sex}" == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
+            parbedparameter = ("${params.sex}" == "XX") ? "" : "--par_regions_bed ${params.parbed}"
         }
         else {
             haploidparameter = ""
@@ -1889,13 +1882,36 @@ workflow {
     // build variable
     ref_name = file(ref).getSimpleName()
 
-    // build channel from in_data.csv file for main workflow
-    // groupTuple will collapse by sample_id (as defined in the in_data.csv file), creating a list of files per sample_id
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension(), row.file, row.data_type, row.regions_of_interest, row.clair3_model ) }
-        .groupTuple(by: [0,1,2,4,5,6] )
+        .map { row ->
+            def sample_id = row.sample_id
+            def family_id = row.family_id
+            def extension = file(row.file).getExtension()
+            def files = row.file
+            def data_type = row.data_type
+            def regions_of_interest = row.regions_of_interest
+            def clair3_model = row.clair3_model
+
+            // Only apply the haploidaware check here if it's on
+            if (params.haploidaware == 'yes') {
+                def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) 
+                                    ? file(regions_of_interest) 
+                                    : file(params.ref_index)
+
+                def fileContent = check_file.text
+                def chrX_found = fileContent.contains(params.chrXseq)
+                def chrY_found = fileContent.contains(params.chrYseq)
+
+                if (!chrX_found || !chrY_found) {
+                    throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
+                }
+            }
+
+            return tuple(sample_id, family_id, extension, files, data_type, regions_of_interest, clair3_model)
+        }
+        .groupTuple(by: [0,1,2,4,5,6])
         .set { in_data_tuple }
 
     // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
