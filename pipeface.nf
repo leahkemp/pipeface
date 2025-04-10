@@ -636,7 +636,10 @@ process split_multiallele {
         -m \
         -any \
         -f $ref \
-        snp_indel.vcf.gz > snp_indel.split.vcf
+        snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
+
+        bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
+        
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
