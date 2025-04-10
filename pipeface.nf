@@ -12,6 +12,11 @@ params.tandem_repeat = "NONE"
 params.annotate_override = ""
 params.in_data_format_override = ""
 
+//default values for chrX and chrY contig names. Used when sex = 'XY' and 
+//haploidaware = 'yes'. Don't change unless your reference genome has different names. 
+params.chrXseq = "chrX"
+params.chrYseq = "chrY"
+
 process scrape_settings {
 
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
@@ -30,6 +35,9 @@ process scrape_settings {
         val analyse_base_mods
         val outdir
         val outdir2
+        val haploidaware
+        val sex
+        val parbed
 
     output:
         tuple val(sample_id), val(family_id), path('pipeface_settings.txt')
@@ -61,6 +69,20 @@ process scrape_settings {
         else if ( in_data_format == 'sv_vcf' ) {
             reported_in_data_format = 'SV VCF'
         }
+
+        if (haploidaware == 'yes') {
+            def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) ? regions_of_interest : ref_index
+
+            def fileContent = file(check_file).text
+            def chrX_found = fileContent.find(params.chrXseq)
+            def chrY_found = fileContent.find(params.chrYseq)
+
+            if (!chrX_found || !chrY_found) {
+                throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
+            }
+        }
+
+
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
@@ -81,6 +103,10 @@ process scrape_settings {
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
+        echo "Haploid-aware: $haploidaware" >> pipeface_settings.txt
+        echo "Sex : $sex" >> pipeface_settings.txt
+        echo "PAR regions : $parbed" >> pipeface_settings.txt
+
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
@@ -308,6 +334,7 @@ process clair3 {
     script:
     // define a string to optionally pass regions of interest bed file
     def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
+
     // conditionally define platform
     if( data_type == 'ont' ) {
         platform = 'ont'
@@ -323,22 +350,104 @@ process clair3 {
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
+
+       if [[ "${params.haploidaware}" == "no" || "${params.sex}" == "XX" ]]; then 
+
+           run_clair3.sh \
+            --bam_fn=$bam \
+            --ref_fn=$ref \
+            --output=./ \
+            --threads=${task.cpus} \
+            --platform=$platform \
+            --model_path=$clair3_model \
+            --sample_name=$sample_id \
+            --gvcf \
+            --include_all_ctgs \
+            $regions_of_interest_optional
+       
+
+       elif [[ "${params.haploidaware}" == "yes" && ${params.sex} == "XY" ]]; then 
+         
+        #if regions were given, we use them to subset the genome index to construct the genome.bed file
+        if [[ -f "${regions_of_interest}" ]]; then
+            awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
+                "${ref}.fai" "${regions_of_interest}" > genome.bed
+        else
+        # fallback: use full genome .fai
+            awk '{ print \$1 "\\t0\\t" \$2 }' "${ref}.fai" > genome.bed
+        fi
+
+        genomebed="genome.bed"
+        
+        mkdir -p haploid
+        mkdir -p diploid
+
+        #separate out genome bed into a haploid and diploid bed each
+        grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
+
+        grep "^chrX" ${params.parbed} > xpar.bed
+        grep "^chrY" ${params.parbed} > ypar.bed
+        grep "^chrX" \${genomebed} > chrX_full.bed
+        grep "^chrY" \${genomebed} > chrY_full.bed
+
+        bedtools subtract -a chrX_full.bed -b xpar.bed > xnonpar.bed
+        bedtools subtract -a chrY_full.bed -b ypar.bed > ynonpar.bed
+
+        cat autosomes.bed xpar.bed ypar.bed | sort -k1,1V -k2,2n > diploid.bed
+        cat xnonpar.bed ynonpar.bed | sort -k1,1 -k2,2n > haploid.bed
+        
+        #haploid run
         run_clair3.sh \
-        --bam_fn=$bam \
-        --ref_fn=$ref \
-        --output=./ \
+        --bam_fn="${bam}" \
+        --ref_fn="${ref}" \
+        --output="haploid" \
         --threads=${task.cpus} \
-        --platform=$platform \
-        --model_path=$clair3_model \
-        --sample_name=$sample_id \
+        --platform=${platform} \
+        --model_path="${clair3_model}" \
+        --sample_name="${sample_id}" \
         --gvcf \
-        --include_all_ctgs \
-        $regions_of_interest_optional
+        --bed_fn="haploid.bed" --haploid_precise
+        
+        #diploid run
+        run_clair3.sh \
+        --bam_fn="${bam}" \
+        --ref_fn="${ref}" \
+        --output="diploid" \
+        --threads=${task.cpus} \
+        --platform=${platform} \
+        --model_path="${clair3_model}" \
+        --sample_name="${sample_id}" \
+        --gvcf \
+        --bed_fn="diploid.bed" 
+       
+        #merging diploid and haploid vcf & gvcf files
+
+        bcftools +fixploidy haploid/merge_output.vcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.vcf
+        bcftools +fixploidy haploid/merge_output.gvcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.gvcf
+
+        bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.vcf
+        bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.gvcf
+
+        tabix -p vcf haploid/merge_output_ploidyfixed.vcf.gz
+        tabix -p vcf haploid/merge_output_ploidyfixed.gvcf.gz
+
+        bcftools concat -a -Oz -o merge_output.unsorted.vcf.gz diploid/merge_output.vcf.gz haploid/merge_output_ploidyfixed.vcf.gz
+        bcftools sort -Oz -o merge_output.vcf.gz merge_output.unsorted.vcf.gz
+        tabix -p vcf merge_output.vcf.gz
+
+        bcftools concat -a -Oz -o merge_output.unsorted.gvcf.gz diploid/merge_output.gvcf.gz haploid/merge_output_ploidyfixed.gvcf.gz
+        bcftools sort -Oz -o merge_output.gvcf.gz merge_output.unsorted.gvcf.gz
+        tabix -p vcf merge_output.gvcf.gz
+
+
+       fi
+
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
         ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
+
         """
 
     stub:
@@ -360,13 +469,26 @@ process deepvariant_dry_run {
         tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
 
     script:
+       def haploidparameter = ""
+       def parbedparameter = ""
     // conditionally define model type
-    if( data_type == 'ont' ) {
-        model = 'ONT_R104'
-    }
-    else if ( data_type == 'pacbio' ) {
-        model = 'PACBIO'
-    }
+        if( data_type == 'ont' ) {
+            model = 'ONT_R104'
+        }
+        else if ( data_type == 'pacbio' ) {
+            model = 'PACBIO'
+        }
+        
+        if ("${params.haploidaware}" == "yes") {
+
+            haploidparameter = ("${params.sex}" == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
+            parbedparameter = ("${params.sex}" == "XX") ? "" : "--par_regions_bed ${params.parbed}"
+        }
+        else {
+            haploidparameter = ""
+            parbedparameter = ""
+        }
+        
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -382,7 +504,8 @@ process deepvariant_dry_run {
         --output_vcf=snp_indel.raw.vcf.gz \
         --output_gvcf=snp_indel.raw.g.vcf.gz \
         --model_type=$model \
-        --dry_run=true > commands.txt
+        --dry_run=true \
+        ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g'| sed 's/--gvcf "[^"]*"//g')
         call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
@@ -513,7 +636,10 @@ process split_multiallele {
         -m \
         -any \
         -f $ref \
-        snp_indel.vcf.gz > snp_indel.split.vcf
+        snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
+
+        bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
+        
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -557,23 +683,26 @@ process whatshap_phase {
         tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
-        """
+   """
         # rename file for publishing purposes
         ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
+        ln -sf $snp_indel_split_vcf_index snp_indel.vcf.gz.tbi
         # run whatshap phase
+
         whatshap phase \
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
         --sample $sample_id \
-        --ignore-read-groups snp_indel.vcf.gz $bam
+        --ignore-read-groups snp_indel.vcf.gz $bam 
+    
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
         snp_indel.phased.vcf.gz \
         --gtf snp_indel.phased.stats.gtf \
-        --sample $sample_id
+        --sample $sample_id 
         """
 
     stub:
@@ -606,8 +735,10 @@ process whatshap_haplotag {
         tuple val(sample_id), val(family_id), path('sorted.haplotagged.tsv')
 
     script:
+
         """
         # run whatshap haplotag
+
         whatshap haplotag \
         --reference $ref \
         --output sorted.haplotagged.bam \
@@ -617,6 +748,7 @@ process whatshap_haplotag {
         --output-threads ${task.cpus} \
         --output-haplotag-list sorted.haplotagged.tsv \
         $snp_indel_split_vcf $bam
+
         # index bam
         samtools index \
         -@ ${task.cpus} \
@@ -1519,6 +1651,8 @@ workflow {
 
     // grab parameters
     in_data = "$params.in_data"
+    sex = "${params.sex}".trim()
+    parbed = "$params.parbed"
     in_data_format = "$params.in_data_format"
     in_data_format_override = "$params.in_data_format_override"
     ref = "$params.ref"
@@ -1527,6 +1661,7 @@ workflow {
     snp_indel_caller = "$params.snp_indel_caller"
     sv_caller = "$params.sv_caller"
     annotate = "$params.annotate"
+    haploidaware = "${params.haploidaware}".trim()
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
     analyse_base_mods = "$params.analyse_base_mods"
@@ -1719,16 +1854,67 @@ workflow {
         exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
+    if (!(haploidaware in ['yes', 'no'])) {
+        println("haploidaware = '${haploidaware}'")
+        exit 1, "haploidaware must be either 'yes' or 'no'"
+    }
+
+    if (haploidaware == "yes") {
+        if (sex != "XY") {
+            exit 1, "Haploid-aware mode is only supported when sex='XY'. You provided sex='${sex}'."
+        }
+
+        if (parbed == "NONE") {
+            exit 1, "In haploid-aware mode, you must provide a valid PAR BED file (not 'NONE')."
+        }
+
+        if (!file(parbed).exists()) {
+            exit 1, "PAR BED file does not exist: '${parbed}'"
+        }
+
+
+    }
+
+    else if (haploidaware == "no") {
+        // sex can be anything, including unset
+        if (parbed != "NONE") {
+            exit 1, "When haploidaware='no', you must set parbed='NONE'. You provided: '${parbed}'."
+        }
+    }
+
     // build variable
     ref_name = file(ref).getSimpleName()
 
-    // build channel from in_data.csv file for main workflow
-    // groupTuple will collapse by sample_id (as defined in the in_data.csv file), creating a list of files per sample_id
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension(), row.file, row.data_type, row.regions_of_interest, row.clair3_model ) }
-        .groupTuple(by: [0,1,2,4,5,6] )
+        .map { row ->
+            def sample_id = row.sample_id
+            def family_id = row.family_id
+            def extension = file(row.file).getExtension()
+            def files = row.file
+            def data_type = row.data_type
+            def regions_of_interest = row.regions_of_interest
+            def clair3_model = row.clair3_model
+
+            // Only apply the haploidaware check here if it's on
+            if (params.haploidaware == 'yes') {
+                def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) 
+                                    ? file(regions_of_interest) 
+                                    : file(params.ref_index)
+
+                def fileContent = check_file.text
+                def chrX_found = fileContent.contains(params.chrXseq)
+                def chrY_found = fileContent.contains(params.chrYseq)
+
+                if (!chrX_found || !chrY_found) {
+                    throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
+                }
+            }
+
+            return tuple(sample_id, family_id, extension, files, data_type, regions_of_interest, clair3_model)
+        }
+        .groupTuple(by: [0,1,2,4,5,6])
         .set { in_data_tuple }
 
     // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
@@ -1881,7 +2067,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
