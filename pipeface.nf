@@ -253,6 +253,7 @@ process mosdepth {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest)
+        val mosdepth_binary
         val outdir
         val outdir2
         val ref_name
@@ -271,7 +272,7 @@ process mosdepth {
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run mosdepth
-        mosdepth \
+        $mosdepth_binary \
         depth \
         $bam \
         $regions_of_interest_optional \
@@ -1035,6 +1036,7 @@ process pbcpgtools {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        val pbcpgtools_binary
         val ref
         val ref_index
         val outdir
@@ -1048,11 +1050,11 @@ process pbcpgtools {
     if( data_type == 'pacbio' )
         """
         # run pb-cpg-tools
-        aligned_bam_to_cpg_scores \
+        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
         --bam $haplotagged_bam \
         --ref $ref \
         --pileup-mode model \
-        --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite \
+        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
         --modsites-mode denovo \
         --hap-tag HP \
         --threads ${task.cpus}
@@ -1236,7 +1238,6 @@ process jasmine_sniffles {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
-        --default_zero_genotype	\
         --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
@@ -1306,7 +1307,6 @@ process jasmine_cutesv {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
-        --default_zero_genotype \
         --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.tmp.vcf > sv.vcf
@@ -1352,6 +1352,8 @@ process vep_sniffles_sv {
         val ref_index
         val vep_db
         val gnomad_db
+        val gnomad_sv_db
+        val clinvar_db
         val cadd_sv_db
         val outdir
         val outdir2
@@ -1379,6 +1381,8 @@ process vep_sniffles_sv {
         --symbol \
         --hgvs \
         --hgvsg \
+        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=80,same_type=1,num_records=50,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=50,same_type=1,num_records=50,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
         --check_existing \
@@ -1425,6 +1429,8 @@ process vep_cutesv_sv {
         val ref_index
         val vep_db
         val gnomad_db
+        val gnomad_sv_db
+        val clinvar_db
         val cadd_sv_db
         val outdir
         val outdir2
@@ -1452,6 +1458,8 @@ process vep_cutesv_sv {
         --symbol \
         --hgvs \
         --hgvsg \
+        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=80,same_type=1,num_records=50,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=50,same_type=1,num_records=50,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
         --check_existing \
@@ -1490,9 +1498,12 @@ workflow {
     analyse_base_mods = "$params.analyse_base_mods"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
+    mosdepth_binary = "$params.mosdepth_binary"
+    pbcpgtools_binary = "$params.pbcpgtools_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
+    gnomad_sv_db = "$params.gnomad_sv_db"
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
@@ -1601,6 +1612,9 @@ workflow {
     if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
         exit 1, "gnomAD database file path does not exist, '${gnomad_db}' provided."
     }
+    if ( annotate == 'yes' && !file(gnomad_sv_db).exists() ) {
+        exit 1, "nomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
+    }
     if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
         exit 1, "ClinVar database file path does not exist, '${clinvar_db}' provided."
     }
@@ -1637,6 +1651,24 @@ workflow {
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
+    if ( !mosdepth_binary ) {
+        exit 1, "No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
+    }
+    if ( mosdepth_binary != 'NONE' && calculate_depth == 'no') {
+        exit 1, "Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
+    }
+    if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
+        exit 1, "Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
+    }
+    if ( !pbcpgtools_binary ) {
+        exit 1, "No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
+    }
+    if ( in_data_format == 'snv_vcf' && pbcpgtools_binary != 'NONE' ) {
+        exit 1, "When the input data format is 'snv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
+    }
+    if ( in_data_format == 'sv_vcf' && pbcpgtools_binary != 'NONE' ) {
+        exit 1, "When the input data format is 'sv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
+    }
     if ( !file(in_data).exists() ) {
         exit 1, "In data csv file path does not exist, '${in_data}' provided."
     }
@@ -1648,6 +1680,9 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+    }
+    if ( !file(mosdepth_binary).exists() ) {
+        exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
     // build variable
@@ -1807,6 +1842,9 @@ workflow {
                 if ( ! family_positions.every { it in ['proband', 'father', 'mother'] } ) {
                     exit 1, "Entries in the 'family_position' column of '$in_data' should contain 'proband', 'father' and 'mother' for every 'family_id' in cohort mode, '$family_positions' provided for family '$family_ids'."
                 }
+                if ( sample_ids.unique().size() != 3 ) {
+                    exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 3 unique values for every 'family_id' in cohort mode, '$sample_ids' provided for family '$family_ids'."
+                }
         }
     }
 
@@ -1825,7 +1863,7 @@ workflow {
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
-            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
+            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), mosdepth_binary, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
@@ -1846,7 +1884,7 @@ workflow {
         // methylation analysis
         if ( analyse_base_mods == 'yes' ) {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint snp/indel calling
         if ( snp_indel_caller == 'deeptrio' ) {
@@ -1951,10 +1989,10 @@ workflow {
         // joint sv annotation
         if ( annotate == 'yes' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
@@ -1965,10 +2003,10 @@ workflow {
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'sv_vcf' ) {
         if ( annotate == 'yes' && snp_indel_caller != 'deeptrio' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
