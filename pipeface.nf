@@ -253,7 +253,6 @@ process mosdepth {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest)
-        val mosdepth_binary
         val outdir
         val outdir2
         val ref_name
@@ -272,8 +271,7 @@ process mosdepth {
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run mosdepth
-        $mosdepth_binary \
-        depth \
+        mosdepth depth \
         $bam \
         $regions_of_interest_optional \
         -t ${task.cpus}
@@ -1036,7 +1034,6 @@ process pbcpgtools {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
-        val pbcpgtools_binary
         val ref
         val ref_index
         val outdir
@@ -1050,11 +1047,11 @@ process pbcpgtools {
     if( data_type == 'pacbio' )
         """
         # run pb-cpg-tools
-        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
+        aligned_bam_to_cpg_scores \
         --bam $haplotagged_bam \
         --ref $ref \
         --pileup-mode model \
-        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite \
         --modsites-mode denovo \
         --hap-tag HP \
         --threads ${task.cpus}
@@ -1512,8 +1509,6 @@ workflow {
     analyse_base_mods = "$params.analyse_base_mods"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
-    mosdepth_binary = "$params.mosdepth_binary"
-    pbcpgtools_binary = "$params.pbcpgtools_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
@@ -1661,24 +1656,6 @@ workflow {
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
-    if ( !mosdepth_binary ) {
-        exit 1, "No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
-    }
-    if ( mosdepth_binary != 'NONE' && calculate_depth == 'no') {
-        exit 1, "Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
-    }
-    if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
-        exit 1, "Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
-    }
-    if ( !pbcpgtools_binary ) {
-        exit 1, "No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
-    }
-    if ( in_data_format == 'snv_vcf' && pbcpgtools_binary != 'NONE' ) {
-        exit 1, "When the input data format is 'snv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
-    }
-    if ( in_data_format == 'sv_vcf' && pbcpgtools_binary != 'NONE' ) {
-        exit 1, "When the input data format is 'sv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
-    }
     if ( !file(in_data).exists() ) {
         exit 1, "In data csv file path does not exist, '${in_data}' provided."
     }
@@ -1690,9 +1667,6 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
-    }
-    if ( !file(mosdepth_binary).exists() ) {
-        exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
 
     // build variable
@@ -1873,7 +1847,7 @@ workflow {
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
-            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), mosdepth_binary, outdir, outdir2, ref_name)
+            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
@@ -1894,7 +1868,7 @@ workflow {
         // methylation analysis
         if ( analyse_base_mods == 'yes' ) {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint snp/indel calling
         if ( snp_indel_caller == 'deeptrio' ) {
