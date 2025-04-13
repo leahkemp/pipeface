@@ -1193,7 +1193,7 @@ process jasmine_sniffles {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_sv_phased_vcf), path(father_haplotagged_bam)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_sv_phased_vcf), path(mother_haplotagged_bam)
         val ref
@@ -1211,10 +1211,10 @@ process jasmine_sniffles {
     // as default, iris will pass minimap -x map-ont
     // the --pacbio flag passed to iris will pass minimap -x map-pb
     // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
-    if( data_type == 'ont' ) {
+    if( proband_data_type == 'ont' ) {
         iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
     }
-    else if( data_type == 'pacbio' ) {
+    else if( proband_data_type == 'pacbio' ) {
         iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
     }
         """
@@ -1273,7 +1273,7 @@ process jasmine_cutesv {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam), val(proband_data_type)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_sv_vcf), path(father_haplotagged_bam)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_sv_vcf), path(mother_haplotagged_bam)
         val ref
@@ -1291,10 +1291,10 @@ process jasmine_cutesv {
     // as default, iris will pass minimap -x map-ont
     // the --pacbio flag passed to iris will pass minimap -x map-pb
     // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
-    if( data_type == 'ont' ) {
+    if( proband_data_type == 'ont' ) {
         iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
     }
-    else if( data_type == 'pacbio' ) {
+    else if( proband_data_type == 'pacbio' ) {
         iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
     }
 	"""
@@ -1950,7 +1950,7 @@ workflow {
                 .filter { tuple ->
                     tuple[2].contains("mother")
                 }
-            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple, sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
             cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv
@@ -1968,7 +1968,7 @@ workflow {
                 .filter { tuple ->
                     tuple[2].contains("mother")
                 }
-            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple, cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint sv annotation
         if ( annotate == 'yes' ) {
