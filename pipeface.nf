@@ -206,6 +206,7 @@ process minimap2 {
         -@ ${task.cpus} \
         -T '*' \
         $merged | minimap2 \
+        -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' \
         -y \
         -Y \
         --secondary=no \
@@ -223,6 +224,7 @@ process minimap2 {
         """
         # run minimap
         minimap2 \
+        -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' \
         -Y \
         --secondary=no \
         --MD \
@@ -836,44 +838,18 @@ process whatshap_joint_phase {
         ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
         # create pedigree file
         printf "$proband_family_id\t$proband_sample_id\t$father_sample_id\t$mother_sample_id\t0\t1\n" > pedigree.ped
-        # label bams with sample ID (required for joint whatshap phase)
-        samtools addreplacerg \
-        -@ ${task.cpus} \
-        -r ID:$proband_sample_id \
-        -r SM:$proband_sample_id \
-        -o proband.sorted.haplotagged.mod.bam proband.sorted.haplotagged.bam
-        samtools addreplacerg \
-        -@ ${task.cpus}	\
-        -r ID:$father_sample_id \
-        -r SM:$father_sample_id \
-        -o father.sorted.haplotagged.mod.bam father.sorted.haplotagged.bam
-        samtools addreplacerg \
-        -@ ${task.cpus}	\
-        -r ID:$mother_sample_id \
-        -r SM:$mother_sample_id \
-        -o mother.sorted.haplotagged.mod.bam mother.sorted.haplotagged.bam
-        # index bams
-        samtools index \
-        -@ ${task.cpus} \
-        proband.sorted.haplotagged.mod.bam
-        samtools index \
-        -@ ${task.cpus} \
-        father.sorted.haplotagged.mod.bam
-        samtools index \
-        -@ ${task.cpus} \
-        mother.sorted.haplotagged.mod.bam
         # run whatshap phase
         whatshap phase \
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
-        --ped pedigree.ped snp_indel.vcf.gz proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
+        --ped pedigree.ped snp_indel.vcf.gz $proband_haplotagged_bam $father_haplotagged_bam $mother_haplotagged_bam
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
         snp_indel.phased.vcf.gz \
-        --gtf snp_indel.phased.stats.gtf \
+        --gtf snp_indel.phased.stats.gtf
         """
 
     stub:
