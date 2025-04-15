@@ -365,6 +365,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
+- Clair3 or DeepVariant SNP/indel gVCF file
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
@@ -374,6 +375,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 - Aligned, sorted and haplotagged bam
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
+- Clair3 or DeepVariant SNP/indel gVCF file
 - Joint phased DeepTrio SNP/indel VCF file
 - Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 only)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
@@ -384,6 +386,11 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
 > **_Note:_** Running base modification analyses assume the input data is un uBAM format and base modifications are present in these data
+
+## Haploid Aware Mode 
+
+- Enables correct handling of the haploid nature of chrX and chrY for XY samples, along with PAR regions
+- Only supported for singletons at the moment
 
 ## Assumptions
 
@@ -399,7 +406,7 @@ See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
 
 ## Credit
 
-This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. Optimisations involving DeepVariant and DeepTrio have been contributed by Dr Kisaru Liyanage and Dr Matthew Downton from the [National Computational Infrastructure](https://nci.org.au), with support from Australian BioCommons as part of the Workflow Commons project. The installation and hosting of software used in this pipeline has and continues to be supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
+This is a highly collaborative project, with many contributions from the [Genomic Technologies Lab](https://www.garvan.org.au/research/labs-groups/genomic-technologies-lab). Notably, Dr Andre Reis and Dr Ira Deveson are closely involved in the development of this pipeline. Optimisations involving DeepVariant and DeepTrio have been contributed by Dr Kisaru Liyanage and Dr Matthew Downton from the [National Computational Infrastructure](https://nci.org.au), with support from Australian BioCommons as part of the Workflow Commons project. Haploid-aware mode has been contributed by Dr Hardip Patel & Kirat Alreja from the [National Centre for Indigenous Genomics](https://ncig.anu.edu.au). The installation and hosting of software used in this pipeline has and continues to be supported by the [Australian BioCommons Tools and Workflows project (if89)](https://australianbiocommons.github.io/ables/if89/).
 
 ## Collaborative coding
 
