@@ -9,8 +9,6 @@
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-    - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
-    - [pb-CpG-tools binary (if processing pacbio data)](#pb-cpg-tools-binary-if-processing-pacbio-data)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
     - [Singleton mode](#singleton-mode)
     - [Cohort mode](#cohort-mode)
@@ -118,24 +116,6 @@ Untar
 
 ```bash
 tar -xvf hifi_revio.tar.gz
-```
-
-### mosdepth binary (if running depth calculation)
-
-Get a local copy of the mosdepth v0.3.9 binary
-
-```bash
-wget https://github.com/brentp/mosdepth/releases/download/v0.3.9/mosdepth -O mosdepth_0.3.9
-chmod +x mosdepth_0.3.9
-```
-
-### pb-CpG-tools binary (if processing pacbio data)
-
-Get a local copy of the pb-CpG-tools v2.3.2 binary
-
-```bash
-wget https://github.com/PacificBiosciences/pb-CpG-tools/releases/download/v2.3.2/pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
-tar -xzf pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
 ```
 
 ## 3. Modify in_data.csv
@@ -346,30 +326,6 @@ Specify the directory in which to write the pipeline outputs (please provide a f
 
 ```json
     "outdir": "/path/to/results"
-```
-
-Specify the path to the mosdepth binary (if running depth calculation). Eg:
-
-```json
-    "mosdepth_binary": "./mosdepth_0.3.9"
-```
-
-*OR*
-
-```json
-    "mosdepth_binary": "NONE"
-```
-
-Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
-
-```json
-    "pbcpgtools_binary": "./pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu/"
-```
-
-*OR*
-
-```json
-    "pbcpgtools_binary": "NONE"
 ```
 
 ## 6. Start persistent session (optional)

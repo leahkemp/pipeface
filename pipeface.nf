@@ -69,7 +69,6 @@ process scrape_settings {
         else if ( in_data_format == 'sv_vcf' ) {
             reported_in_data_format = 'SV VCF'
         }
-
         if (haploidaware == 'yes') {
             def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) ? regions_of_interest : ref_index
 
@@ -81,7 +80,6 @@ process scrape_settings {
                 throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
             }
         }
-
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
@@ -230,6 +228,7 @@ process minimap2 {
         -@ ${task.cpus} \
         -T '*' \
         $merged | minimap2 \
+        -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' \
         -y \
         -Y \
         --secondary=no \
@@ -247,6 +246,7 @@ process minimap2 {
         """
         # run minimap
         minimap2 \
+        -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' \
         -Y \
         --secondary=no \
         --MD \
@@ -277,7 +277,6 @@ process mosdepth {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest)
-        val mosdepth_binary
         val outdir
         val outdir2
         val ref_name
@@ -296,8 +295,7 @@ process mosdepth {
         ln -sf \${bam_loc}.bai .
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run mosdepth
-        $mosdepth_binary \
-        depth \
+        mosdepth depth \
         $bam \
         $regions_of_interest_optional \
         -t ${task.cpus}
@@ -778,7 +776,7 @@ process deeptrio_dry_run {
         else if ( proband_data_type == 'pacbio' ) {
             model = 'PACBIO'
         }
-	    """
+	      """
         run_deeptrio \
         --model_type=$model \
         --ref=$ref \
@@ -988,44 +986,18 @@ process whatshap_joint_phase {
         ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
         # create pedigree file
         printf "$proband_family_id\t$proband_sample_id\t$father_sample_id\t$mother_sample_id\t0\t1\n" > pedigree.ped
-        # label bams with sample ID (required for joint whatshap phase)
-        samtools addreplacerg \
-        -@ ${task.cpus} \
-        -r ID:$proband_sample_id \
-        -r SM:$proband_sample_id \
-        -o proband.sorted.haplotagged.mod.bam proband.sorted.haplotagged.bam
-        samtools addreplacerg \
-        -@ ${task.cpus}	\
-        -r ID:$father_sample_id \
-        -r SM:$father_sample_id \
-        -o father.sorted.haplotagged.mod.bam father.sorted.haplotagged.bam
-        samtools addreplacerg \
-        -@ ${task.cpus}	\
-        -r ID:$mother_sample_id \
-        -r SM:$mother_sample_id \
-        -o mother.sorted.haplotagged.mod.bam mother.sorted.haplotagged.bam
-        # index bams
-        samtools index \
-        -@ ${task.cpus} \
-        proband.sorted.haplotagged.mod.bam
-        samtools index \
-        -@ ${task.cpus} \
-        father.sorted.haplotagged.mod.bam
-        samtools index \
-        -@ ${task.cpus} \
-        mother.sorted.haplotagged.mod.bam
         # run whatshap phase
         whatshap phase \
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
-        --ped pedigree.ped snp_indel.vcf.gz proband.sorted.haplotagged.mod.bam father.sorted.haplotagged.mod.bam mother.sorted.haplotagged.mod.bam
+        --ped pedigree.ped snp_indel.vcf.gz $proband_haplotagged_bam $father_haplotagged_bam $mother_haplotagged_bam
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
         whatshap stats \
         snp_indel.phased.vcf.gz \
-        --gtf snp_indel.phased.stats.gtf \
+        --gtf snp_indel.phased.stats.gtf
         """
 
     stub:
@@ -1186,7 +1158,6 @@ process pbcpgtools {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
-        val pbcpgtools_binary
         val ref
         val ref_index
         val outdir
@@ -1200,11 +1171,11 @@ process pbcpgtools {
         if( data_type == 'pacbio' )
         """
         # run pb-cpg-tools
-        $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
+        aligned_bam_to_cpg_scores \
         --bam $haplotagged_bam \
         --ref $ref \
         --pileup-mode model \
-        --model $pbcpgtools_binary/models/pileup_calling_model.v1.tflite \
+        --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite \
         --modsites-mode denovo \
         --hap-tag HP \
         --threads ${task.cpus}
@@ -1240,7 +1211,7 @@ process sniffles {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position), val(regions_of_interest)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position)
         val ref
         val ref_index
         val tandem_repeat
@@ -1268,7 +1239,7 @@ process sniffles {
         --vcf sv.phased.vcf.gz \
         --output-rnames \
         --minsvlen 50 \
-        --phase $tandem_repeat_optional $regions_of_interest_optional
+        --phase $tandem_repeat_optional
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
@@ -1289,7 +1260,7 @@ process cutesv {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position), val(regions_of_interest)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
         val ref
         val ref_index
         val tandem_repeat
@@ -1303,8 +1274,6 @@ process cutesv {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
-        // define an optional string to pass regions of interest bed file
-        def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-include_bed $regions_of_interest" : ''
         // define platform specific settings
         if( data_type == 'ont' ) {
             settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
@@ -1324,7 +1293,7 @@ process cutesv {
         --genotype \
         --report_readid \
         --min_size 50 \
-        $settings $regions_of_interest_optional
+        $settings
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -1350,7 +1319,7 @@ process jasmine_sniffles {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_sv_phased_vcf), path(father_haplotagged_bam)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_sv_phased_vcf), path(mother_haplotagged_bam)
         val ref
@@ -1364,6 +1333,16 @@ process jasmine_sniffles {
         tuple val(proband_family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
 
     script:
+        // conditionally define iris arguments
+        // as default, iris will pass minimap -x map-ont
+        // the --pacbio flag passed to iris will pass minimap -x map-pb
+        // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+        if( proband_data_type == 'ont' ) {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+        }
+        else if( proband_data_type == 'pacbio' ) {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+        }
         """
         # unzip vcfs
         gunzip -c $proband_sv_phased_vcf > proband.sv.phased.vcf
@@ -1392,7 +1371,8 @@ process jasmine_sniffles {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
-        --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
+        --default_zero_genotype	\
+        $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
         grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
@@ -1419,7 +1399,7 @@ process jasmine_cutesv {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam), val(proband_data_type)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_sv_vcf), path(father_haplotagged_bam)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_sv_vcf), path(mother_haplotagged_bam)
         val ref
@@ -1433,7 +1413,17 @@ process jasmine_cutesv {
         tuple val(proband_family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
-        """
+        // conditionally define iris arguments
+        // as default, iris will pass minimap -x map-ont
+        // the --pacbio flag passed to iris will pass minimap -x map-pb
+        // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+        if( proband_data_type == 'ont' ) {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+        }
+        else if( proband_data_type == 'pacbio' ) {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
+        }
+  	    """
         # unzip vcfs
         gunzip -c $proband_sv_vcf > proband.sv.vcf
         gunzip -c $father_sv_vcf > father.sv.vcf
@@ -1461,7 +1451,8 @@ process jasmine_cutesv {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
-        --run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants
+        --default_zero_genotype \
+        $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.tmp.vcf > sv.vcf
         grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
@@ -1506,8 +1497,6 @@ process vep_sniffles_sv {
         val ref_index
         val vep_db
         val gnomad_db
-        val gnomad_sv_db
-        val clinvar_db
         val cadd_sv_db
         val outdir
         val outdir2
@@ -1535,8 +1524,6 @@ process vep_sniffles_sv {
         --symbol \
         --hgvs \
         --hgvsg \
-        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=80,same_type=1,num_records=50,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
-        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=50,same_type=1,num_records=50,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
         --check_existing \
@@ -1583,8 +1570,6 @@ process vep_cutesv_sv {
         val ref_index
         val vep_db
         val gnomad_db
-        val gnomad_sv_db
-        val clinvar_db
         val cadd_sv_db
         val outdir
         val outdir2
@@ -1612,8 +1597,6 @@ process vep_cutesv_sv {
         --symbol \
         --hgvs \
         --hgvsg \
-        --custom file=$gnomad_sv_db,short_name=gnomAD_sv,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=80,same_type=1,num_records=50,fields=ALGORITHMS%BOTHSIDES_SUPPORT%CHR2%CPX_INTERVALS%CPX_TYPE%END%END2%EVIDENCE%LOW_CONFIDENCE_REPETITIVE_LARGE_DUP%MEMBERS%MULTIALLELIC%NCR%OUTLIER_SAMPLE_ENRICHED_LENIENT%PAR%PCRMINUS_NCR%PCRPLUS_NCR%PESR_GT_OVERDISPERSION%POS2%PREDICTED_BREAKEND_EXONIC%PREDICTED_COPY_GAIN%PREDICTED_DUP_PARTIAL%PREDICTED_INTERGENIC%PREDICTED_INTRAGENIC_EXON_DUP%PREDICTED_INTRONIC%PREDICTED_INV_SPAN%PREDICTED_LOF%PREDICTED_MSV_EXON_OVERLAP%PREDICTED_NEAREST_TSS%PREDICTED_NONCODING_BREAKPOINT%PREDICTED_NONCODING_SPAN%PREDICTED_PARTIAL_DISPERSED_DUP%PREDICTED_PARTIAL_EXON_DUP%PREDICTED_PROMOTER%PREDICTED_TSS_DUP%PREDICTED_UTR%RESOLVED_POSTHOC%SOURCE%SVLEN%SVTYPE%UNRESOLVED_TYPE%AN%AC%AF%N_BI_GENOS%N_HOMREF%N_HET%N_HOMALT%FREQ_HOMREF%FREQ_HET%FREQ_HOMALT%CN_NUMBER%CN_COUNT%CN_STATUS%CN_FREQ%CN_NONREF_COUNT%CN_NONREF_FREQ \
-        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=overlap,reciprocal=1,overlap_cutoff=50,same_type=1,num_records=50,fields=CLNSIG \
         --plugin CADD,sv=$cadd_sv_db \
         --uploaded_allele \
         --check_existing \
@@ -1655,12 +1638,9 @@ workflow {
     analyse_base_mods = "$params.analyse_base_mods"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
-    mosdepth_binary = "$params.mosdepth_binary"
-    pbcpgtools_binary = "$params.pbcpgtools_binary"
     vep_db = "$params.vep_db"
     revel_db = "$params.revel_db"
     gnomad_db = "$params.gnomad_db"
-    gnomad_sv_db = "$params.gnomad_sv_db"
     clinvar_db = "$params.clinvar_db"
     cadd_snv_db = "$params.cadd_snv_db"
     cadd_indel_db = "$params.cadd_indel_db"
@@ -1769,9 +1749,6 @@ workflow {
     if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
         exit 1, "gnomAD database file path does not exist, '${gnomad_db}' provided."
     }
-    if ( annotate == 'yes' && !file(gnomad_sv_db).exists() ) {
-        exit 1, "nomAD SV database file path does not exist, '${gnomad_sv_db}' provided."
-    }
     if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
         exit 1, "ClinVar database file path does not exist, '${clinvar_db}' provided."
     }
@@ -1808,24 +1785,6 @@ workflow {
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
     }
-    if ( !mosdepth_binary ) {
-        exit 1, "No mosdepth binary provided. Either include in parameter file or pass to --mosdepth_binary on the command line. Set to 'NONE' if not running depth calculation."
-    }
-    if ( mosdepth_binary != 'NONE' && calculate_depth == 'no') {
-        exit 1, "Pass 'NONE' to 'mosdepth_binary' when choosing to NOT calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
-    }
-    if ( mosdepth_binary == 'NONE' && calculate_depth == 'yes') {
-        exit 1, "Pass an appropriate path to 'mosdepth_binary' when choosing to calculate depth, '${mosdepth_binary}' and '${calculate_depth}' respectively provided'."
-    }
-    if ( !pbcpgtools_binary ) {
-        exit 1, "No pb-CpG-tools binary provided. Either include in parameter file or pass to --pbcpgtools_binary on the command line. Set to 'NONE' if not analysing any pacbio data."
-    }
-    if ( in_data_format == 'snv_vcf' && pbcpgtools_binary != 'NONE' ) {
-        exit 1, "When the input data format is 'snv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
-    }
-    if ( in_data_format == 'sv_vcf' && pbcpgtools_binary != 'NONE' ) {
-        exit 1, "When the input data format is 'sv_vcf', please set the pb-CpG-tools binary (pbcpgtools_binary) to 'NONE'."
-    }
     if ( !file(in_data).exists() ) {
         exit 1, "In data csv file path does not exist, '${in_data}' provided."
     }
@@ -1837,9 +1796,6 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
-    }
-    if ( !file(mosdepth_binary).exists() ) {
-        exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
     if (!(haploidaware in ['yes', 'no'])) {
         println("haploidaware = '${haploidaware}'")
@@ -2040,6 +1996,9 @@ workflow {
                 if ( ! family_positions.every { it in ['proband', 'father', 'mother'] } ) {
                     exit 1, "Entries in the 'family_position' column of '$in_data' should contain 'proband', 'father' and 'mother' for every 'family_id' in cohort mode, '$family_positions' provided for family '$family_ids'."
                 }
+                if ( sample_ids.unique().size() != 3 ) {
+                    exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 3 unique values for every 'family_id' in cohort mode, '$sample_ids' provided for family '$family_ids'."
+                }
         }
     }
 
@@ -2058,7 +2017,7 @@ workflow {
     }
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         if ( calculate_depth == 'yes' ) {
-            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), mosdepth_binary, outdir, outdir2, ref_name)
+            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if ( snp_indel_caller == 'clair3' ) {
@@ -2079,7 +2038,7 @@ workflow {
         // methylation analysis
         if ( analyse_base_mods == 'yes' ) {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), pbcpgtools_binary, ref, ref_index, outdir, outdir2, ref_name)
+            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint snp/indel calling
         if ( snp_indel_caller == 'deeptrio' ) {
@@ -2127,10 +2086,10 @@ workflow {
         }
         // sv calling
         if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
     if ( in_data_format == 'snv_vcf' ) {
@@ -2161,7 +2120,7 @@ workflow {
                 .filter { tuple ->
                     tuple[2].contains("mother")
                 }
-            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple, sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
             cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv
@@ -2179,15 +2138,15 @@ workflow {
                 .filter { tuple ->
                     tuple[2].contains("mother")
                 }
-            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple, cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint sv annotation
         if ( annotate == 'yes' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
@@ -2198,10 +2157,10 @@ workflow {
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'sv_vcf' ) {
         if ( annotate == 'yes' && snp_indel_caller != 'deeptrio' ) {
             if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
             if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, gnomad_sv_db, clinvar_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
