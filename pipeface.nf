@@ -723,7 +723,6 @@ process whatshap_haplotag {
         tuple val(sample_id), val(family_id), path('sorted.haplotagged.tsv')
 
     script:
-
         """
         # run whatshap haplotag
         whatshap haplotag \
@@ -776,7 +775,7 @@ process deeptrio_dry_run {
         else if ( proband_data_type == 'pacbio' ) {
             model = 'PACBIO'
         }
-	      """
+        """
         run_deeptrio \
         --model_type=$model \
         --ref=$ref \
