@@ -12,8 +12,8 @@ params.tandem_repeat = "NONE"
 params.annotate_override = ""
 params.in_data_format_override = ""
 
-//default values for chrX and chrY contig names. Used when sex = 'XY' and 
-//haploidaware = 'yes'. Don't change unless your reference genome has different names. 
+// default values for chrX and chrY contig names. Used when sex = 'XY' and 
+// haploidaware = 'yes'. Don't change unless your reference genome has different names. 
 params.chrXseq = "chrX"
 params.chrYseq = "chrY"
 
@@ -82,7 +82,6 @@ process scrape_settings {
             }
         }
 
-
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
@@ -96,6 +95,9 @@ process scrape_settings {
         echo "In data csv path: $in_data" >> pipeface_settings.txt
         echo "Reference genome: $ref" >> pipeface_settings.txt
         echo "Reference genome index: $ref_index" >> pipeface_settings.txt
+        echo "Haploid-aware: $haploidaware" >> pipeface_settings.txt
+        echo "Sex: $sex" >> pipeface_settings.txt
+        echo "PAR regions: $parbed" >> pipeface_settings.txt
         echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
         echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
         echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
@@ -103,10 +105,6 @@ process scrape_settings {
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
-        echo "Haploid-aware: $haploidaware" >> pipeface_settings.txt
-        echo "Sex : $sex" >> pipeface_settings.txt
-        echo "PAR regions : $parbed" >> pipeface_settings.txt
-
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
@@ -140,15 +138,15 @@ process scrape_bam_header {
         tuple val(sample_id), val(family_id), val(file_short), path('header')
 
     script:
-    if( extension == 'gz' )
+        if( extension == 'gz' )
         """
         echo "none" > header
         """
-    else if ( extension == 'fastq' )
+        else if ( extension == 'fastq' )
         """
         echo "none" > header
         """
-    else if( extension == 'bam' )
+        else if( extension == 'bam' )
         """
         samtools head $file > header
         """
@@ -169,7 +167,7 @@ process merge_runs {
         tuple val(sample_id), val(family_id), path('merged')
 
     script:
-    if( extension == 'gz' )
+        if( extension == 'gz' )
         """
         ${
             if (files instanceof List && files.size() > 1) {
@@ -179,7 +177,7 @@ process merge_runs {
             }
         }
         """
-    else if ( extension == 'fastq' )
+        else if ( extension == 'fastq' )
         """
         ${
             if (files instanceof List && files.size() > 1) {
@@ -189,7 +187,7 @@ process merge_runs {
             }
         }
         """
-    else if( extension == 'bam' )
+        else if( extension == 'bam' )
         """
         ${
             if (files instanceof List && files.size() > 1) {
@@ -218,14 +216,14 @@ process minimap2 {
         tuple val(sample_id), val(family_id), path('sorted.bam')
 
     script:
-    // conditionally define preset
-    if( data_type == 'ont' ) {
-        preset = 'lr:hq'
-    }
-    else if( data_type == 'pacbio' ) {
-        preset = 'map-hifi'
-    }
-    if( extension == 'bam' )
+        // conditionally define preset
+        if( data_type == 'ont' ) {
+            preset = 'lr:hq'
+        }
+        else if( data_type == 'pacbio' ) {
+            preset = 'map-hifi'
+        }
+        if( extension == 'bam' )
         """
         # run minimap
         samtools fastq \
@@ -245,14 +243,14 @@ process minimap2 {
         -@ ${task.cpus} \
         sorted.bam
         """
-    else if( extension == 'gz' | extension == 'fastq' )
+        else if( extension == 'gz' | extension == 'fastq' )
         """
         # run minimap
         minimap2 \
         -Y \
         --secondary=no \
         --MD \
-	-a \
+        -a \
         -x $preset \
         -t ${task.cpus} \
         $ref \
@@ -288,8 +286,8 @@ process mosdepth {
         tuple val(sample_id), val(family_id), path('depth.txt')
 
     script:
-    // define a string to optionally pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
+        // define a string to optionally pass regions of interest bed file
+        def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -332,16 +330,15 @@ process clair3 {
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
-    // define a string to optionally pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
-
-    // conditionally define platform
-    if( data_type == 'ont' ) {
-        platform = 'ont'
-    }
-    else if( data_type == 'pacbio' ) {
-        platform = 'hifi'
-    }
+        // define a string to optionally pass regions of interest bed file
+        def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
+        // conditionally define platform
+        if( data_type == 'ont' ) {
+            platform = 'ont'
+        }
+        else if( data_type == 'pacbio' ) {
+            platform = 'hifi'
+        }
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -351,9 +348,9 @@ process clair3 {
         ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
 
-       if [[ "${params.haploidaware}" == "no" || "${params.sex}" == "XX" ]]; then 
+        if [[ "${params.haploidaware}" == "no" || "${params.sex}" == "XX" ]]; then 
 
-           run_clair3.sh \
+            run_clair3.sh \
             --bam_fn=$bam \
             --ref_fn=$ref \
             --output=./ \
@@ -366,9 +363,9 @@ process clair3 {
             $regions_of_interest_optional
        
 
-       elif [[ "${params.haploidaware}" == "yes" && ${params.sex} == "XY" ]]; then 
+        elif [[ "${params.haploidaware}" == "yes" && ${params.sex} == "XY" ]]; then 
          
-        #if regions were given, we use them to subset the genome index to construct the genome.bed file
+        # if regions were given, we use them to subset the genome index to construct the genome.bed file
         if [[ -f "${regions_of_interest}" ]]; then
             awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
                 "${ref}.fai" "${regions_of_interest}" > genome.bed
@@ -382,7 +379,7 @@ process clair3 {
         mkdir -p haploid
         mkdir -p diploid
 
-        #separate out genome bed into a haploid and diploid bed each
+        # separate out genome bed into a haploid and diploid bed each
         grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
 
         grep "^chrX" ${params.parbed} > xpar.bed
@@ -396,7 +393,7 @@ process clair3 {
         cat autosomes.bed xpar.bed ypar.bed | sort -k1,1V -k2,2n > diploid.bed
         cat xnonpar.bed ynonpar.bed | sort -k1,1 -k2,2n > haploid.bed
         
-        #haploid run
+        # haploid run
         run_clair3.sh \
         --bam_fn="${bam}" \
         --ref_fn="${ref}" \
@@ -408,7 +405,7 @@ process clair3 {
         --gvcf \
         --bed_fn="haploid.bed" --haploid_precise
         
-        #diploid run
+        # diploid run
         run_clair3.sh \
         --bam_fn="${bam}" \
         --ref_fn="${ref}" \
@@ -420,7 +417,7 @@ process clair3 {
         --gvcf \
         --bed_fn="diploid.bed" 
        
-        #merging diploid and haploid vcf & gvcf files
+        # merging diploid and haploid vcf & gvcf files
 
         bcftools +fixploidy haploid/merge_output.vcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.vcf
         bcftools +fixploidy haploid/merge_output.gvcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.gvcf
@@ -439,15 +436,13 @@ process clair3 {
         bcftools sort -Oz -o merge_output.gvcf.gz merge_output.unsorted.gvcf.gz
         tabix -p vcf merge_output.gvcf.gz
 
-
-       fi
+        fi
 
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
         ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
-
         """
 
     stub:
@@ -469,18 +464,17 @@ process deepvariant_dry_run {
         tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
 
     script:
-       def haploidparameter = ""
-       def parbedparameter = ""
-    // conditionally define model type
+        def haploidparameter = ""
+        def parbedparameter = ""
+        // conditionally define model type
         if( data_type == 'ont' ) {
             model = 'ONT_R104'
         }
         else if ( data_type == 'pacbio' ) {
             model = 'PACBIO'
         }
-        
+        // conditionally define haploid contigs and par regions
         if ("${params.haploidaware}" == "yes") {
-
             haploidparameter = ("${params.sex}" == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
             parbedparameter = ("${params.sex}" == "XX") ? "" : "--par_regions_bed ${params.parbed}"
         }
@@ -488,7 +482,6 @@ process deepvariant_dry_run {
             haploidparameter = ""
             parbedparameter = ""
         }
-        
         """
         # stage bam and bam index
         # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
@@ -510,7 +503,7 @@ process deepvariant_dry_run {
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g'| sed 's/--gvcf "[^"]*"//g')
         call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
         """
-    
+
     stub:
         """
         make_examples_args=""
@@ -532,8 +525,8 @@ process deepvariant_make_examples {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('*.gz{,.example_info.json}')
 
     script:
-    // define an optional string to pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
+        // define an optional string to pass regions of interest bed file
+        def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
         """
         seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
             --mode calling --ref "${ref}" --reads "${bam}" --sample_name "${sample_id}" ${regions_of_interest_optional} --examples "make_examples.tfrecord@${task.cpus}.gz" --gvcf "gvcf.tfrecord@${task.cpus}.gz" ${make_examples_args}
@@ -556,8 +549,8 @@ process deepvariant_call_variants {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path('*.gz')
 
     script:
-    def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
-    def num_shards = matcher[0][2] as int
+        def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def num_shards = matcher[0][2] as int
         """
         call_variants --outfile "call_variants_output.tfrecord.gz" --examples "make_examples.tfrecord@${num_shards}.gz" ${call_variants_args}
         """
@@ -596,8 +589,8 @@ process deepvariant_post_processing {
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
-    def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
-    def num_shards = matcher[0][2] as int
+        def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def num_shards = matcher[0][2] as int
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
         postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
@@ -612,7 +605,7 @@ process deepvariant_post_processing {
         """
         touch snp_indel.vcf.gz
         touch snp_indel.vcf.gz.tbi
-	touch snp_indel.g.vcf.gz
+        touch snp_indel.g.vcf.gz
         touch snp_indel.g.vcf.gz.tbi
         """
 
@@ -637,9 +630,8 @@ process split_multiallele {
         -any \
         -f $ref \
         snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
-
+        # sort
         bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
-        
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -683,19 +675,17 @@ process whatshap_phase {
         tuple val(sample_id), val(family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
-   """
+        """
         # rename file for publishing purposes
         ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
         ln -sf $snp_indel_split_vcf_index snp_indel.vcf.gz.tbi
         # run whatshap phase
-
         whatshap phase \
         --reference $ref \
         --output snp_indel.phased.vcf.gz \
         --output-read-list snp_indel.phased.read_list.txt \
         --sample $sample_id \
         --ignore-read-groups snp_indel.vcf.gz $bam 
-    
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
@@ -738,7 +728,6 @@ process whatshap_haplotag {
 
         """
         # run whatshap haplotag
-
         whatshap haplotag \
         --reference $ref \
         --output sorted.haplotagged.bam \
@@ -748,7 +737,6 @@ process whatshap_haplotag {
         --output-threads ${task.cpus} \
         --output-haplotag-list sorted.haplotagged.tsv \
         $snp_indel_split_vcf $bam
-
         # index bam
         samtools index \
         -@ ${task.cpus} \
@@ -783,13 +771,13 @@ process deeptrio_dry_run {
         tuple env(make_examples_cs_args), env(make_examples_calling_args), env(call_variants_proband_args), env(call_variants_father_args), env(call_variants_mother_args)
         
     script:
-    // conditionally define model type
-    if( proband_data_type == 'ont' ) {
-        model = 'ONT'
-    }
-    else if ( proband_data_type == 'pacbio' ) {
-        model = 'PACBIO'
-    }
+        // conditionally define model type
+        if( proband_data_type == 'ont' ) {
+            model = 'ONT'
+        }
+        else if ( proband_data_type == 'pacbio' ) {
+            model = 'PACBIO'
+        }
 	    """
         run_deeptrio \
         --model_type=$model \
@@ -840,7 +828,7 @@ process deeptrio_make_examples {
         tuple val(proband_family_id), val(proband_family_position), val(proband_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path('make_examples_child.*.gz'), path('gvcf_child.*.gz'), path('*.example_info.json'), val(call_variants_proband_args)  , emit: proband
         tuple val(proband_family_id), val(father_family_position), val(father_sample_id), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path('make_examples_parent1.*.gz'), path('gvcf_parent1.*.gz'), path('*.example_info.json'), val(call_variants_father_args) , emit: father
         tuple val(proband_family_id), val(mother_family_position), val(mother_sample_id), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('make_examples_parent2.*.gz'), path('gvcf_parent2.*.gz'), path('*.example_info.json'), val(call_variants_mother_args) , emit: mother
-        
+
     script:
         """
         seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
@@ -874,9 +862,9 @@ process deeptrio_call_variants {
         tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path('*.gz'), val(gvcf)
 
     script:
-    def matcher = make_examples[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
-    def make_examples_name = matcher[0][1]
-    def make_examples_num_shards = matcher[0][2] as int
+        def matcher = make_examples[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def make_examples_name = matcher[0][1]
+        def make_examples_num_shards = matcher[0][2] as int
         """
         call_variants --outfile "call_variants_output.tfrecord.gz" --examples "${make_examples_name}@${make_examples_num_shards}.gz" ${call_variants_args}
         """
@@ -899,9 +887,9 @@ process deeptrio_postprocessing {
         tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path("${family_position}_snp_indel.g.vcf.gz")
 
     script:
-    def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
-    def gvcf_name = matcher[0][1]
-    def gvcf_num_shards = matcher[0][2] as int
+        def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def gvcf_name = matcher[0][1]
+        def gvcf_num_shards = matcher[0][2] as int
         """
         postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${gvcf_num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
         vcf_stats_report --input_vcf "${family_position}_snp_indel.vcf.gz" --outfile_base "${family_position}_snp_indel"
@@ -913,7 +901,7 @@ process deeptrio_postprocessing {
         touch ${family_position}_snp_indel.vcf.gz.tbi
         touch ${family_position}_snp_indel.g.vcf
         """
-          
+
 }
 
 process glnexus {
@@ -954,13 +942,13 @@ process joint_split_multiallele {
         tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
 
     script:
-	"""
+        """
         # run bcftools norm
         bcftools norm \
         --threads ${task.cpus} \
         -m \
-	-any \
-	-f $ref \
+        -any \
+        -f $ref \
         snp_indel.vcf.gz > snp_indel.split.vcf
         # compress and index vcf
         bgzip \
@@ -970,8 +958,8 @@ process joint_split_multiallele {
         """
 
     stub:
-	"""
-	touch snp_indel.split.vcf.gz
+        """
+        touch snp_indel.split.vcf.gz
         touch snp_indel.split.vcf.gz.tbi
         """
 
@@ -1150,7 +1138,7 @@ process minimod {
         tuple val(sample_id), val(family_id), path('modfreqs_hap1.bw'), path('modfreqs_hap1.bed'), path('modfreqs_hap2.bw'), path('modfreqs_hap2.bed'), path('modfreqs_combined.bw'), path('modfreqs_combined.bed'), optional: true
 
     script:
-    if( data_type == 'ont' )
+        if( data_type == 'ont' )
         """
         # run minimod
         minimod \
@@ -1173,7 +1161,7 @@ process minimod {
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}.formatted.bed chrom.sizes \${FILE}.bw; done
         fi
         """
-    else if( data_type == 'pacbio' )
+        else if( data_type == 'pacbio' )
         """
         echo "Data type is pacbio, not running minimod on this data."
         """
@@ -1209,7 +1197,7 @@ process pbcpgtools {
         tuple val(sample_id), val(family_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
 
     script:
-    if( data_type == 'pacbio' )
+        if( data_type == 'pacbio' )
         """
         # run pb-cpg-tools
         $pbcpgtools_binary/bin/aligned_bam_to_cpg_scores \
@@ -1228,7 +1216,7 @@ process pbcpgtools {
         ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores_combined.bw
         ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores_combined.bed
         """
-    else if( data_type == 'ont' )
+        else if( data_type == 'ont' )
         """
         echo "Data type is ONT, not running pb-CpG-tools on this data."
         """
@@ -1266,10 +1254,10 @@ process sniffles {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.phased.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
-    // define an optional string to pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
-    // define a string to optionally pass tandem repeat bed file
-    def tandem_repeat_optional = file(tandem_repeat).name != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
+        // define an optional string to pass regions of interest bed file
+        def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--regions $regions_of_interest" : ''
+        // define a string to optionally pass tandem repeat bed file
+        def tandem_repeat_optional = file(tandem_repeat).name != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
         """
         # run sniffles
         sniffles \
@@ -1315,15 +1303,15 @@ process cutesv {
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
-    // define an optional string to pass regions of interest bed file
-    def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-include_bed $regions_of_interest" : ''
-    // define platform specific settings
-    if( data_type == 'ont' ) {
-        settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
-    }
-    else if( data_type == 'pacbio' ) {
-        settings = '--max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5'
-    }
+        // define an optional string to pass regions of interest bed file
+        def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-include_bed $regions_of_interest" : ''
+        // define platform specific settings
+        if( data_type == 'ont' ) {
+            settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
+        }
+        else if( data_type == 'pacbio' ) {
+            settings = '--max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5'
+        }
         """
         # run cuteSV
         cuteSV \
@@ -1445,7 +1433,7 @@ process jasmine_cutesv {
         tuple val(proband_family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
 
     script:
-	"""
+        """
         # unzip vcfs
         gunzip -c $proband_sv_vcf > proband.sv.vcf
         gunzip -c $father_sv_vcf > father.sv.vcf
@@ -1486,7 +1474,7 @@ process jasmine_cutesv {
         """
 
     stub:
-	"""
+        """
         touch sv.vcf.gz
         touch sv.vcf.gz.tbi
         """
@@ -1853,28 +1841,21 @@ workflow {
     if ( !file(mosdepth_binary).exists() ) {
         exit 1, "mosdepth binary file path does not exist, '${mosdepth_binary}' provided."
     }
-
     if (!(haploidaware in ['yes', 'no'])) {
         println("haploidaware = '${haploidaware}'")
         exit 1, "haploidaware must be either 'yes' or 'no'"
     }
-
     if (haploidaware == "yes") {
         if (sex != "XY") {
             exit 1, "Haploid-aware mode is only supported when sex='XY'. You provided sex='${sex}'."
         }
-
         if (parbed == "NONE") {
             exit 1, "In haploid-aware mode, you must provide a valid PAR BED file (not 'NONE')."
         }
-
         if (!file(parbed).exists()) {
             exit 1, "PAR BED file does not exist: '${parbed}'"
         }
-
-
     }
-
     else if (haploidaware == "no") {
         // sex can be anything, including unset
         if (parbed != "NONE") {
@@ -1897,21 +1878,18 @@ workflow {
             def regions_of_interest = row.regions_of_interest
             def clair3_model = row.clair3_model
 
-            // Only apply the haploidaware check here if it's on
+            // only apply the haploidaware check here if it's on
             if (params.haploidaware == 'yes') {
                 def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) 
                                     ? file(regions_of_interest) 
                                     : file(params.ref_index)
-
                 def fileContent = check_file.text
                 def chrX_found = fileContent.contains(params.chrXseq)
                 def chrY_found = fileContent.contains(params.chrYseq)
-
                 if (!chrX_found || !chrY_found) {
                     throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
                 }
             }
-
             return tuple(sample_id, family_id, extension, files, data_type, regions_of_interest, clair3_model)
         }
         .groupTuple(by: [0,1,2,4,5,6])
@@ -2228,4 +2206,3 @@ workflow {
         }
     }
 }
-
