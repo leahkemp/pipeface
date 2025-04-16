@@ -126,12 +126,12 @@ Specify the sample ID, family ID (optional), file path to the data, data type, f
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,,,/path/to/PGXXXX240090_minimal.fastq.gz,ont,/path/to/ReadFish_v9_gene_targets.collapsed.hg38.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_01,,,/path/to/PGXXXX240091_minimal.fastq.gz,ont,/path/to/ReadFish_v9_gene_targets.collapsed.hg38.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_02,,,/path/to/PGXXXX240092_minimal.fastq,ont,/path/to/ReadFish_v9_gene_targets.collapsed.hg38.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_03,,,/path/to/PGXXOX240065_minimal.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_04,,,/path/to/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.fastq,pacbio,NONE,/path/to/clair3_models/hifi_revio/
-sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/path/to/clair3_models/hifi_revio/
+sample_01,,,/path/to/PGXXXX240090.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_01,,,/path/to/PGXXXX240091.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_02,,,/path/to/PGXXXX240092.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_03,,,/path/to/PGXXOX240065.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_04,,,/path/to/m84088_240403_023825_s1.hifi_reads.bc2034.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
+sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
 ```
 
 > **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
