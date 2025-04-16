@@ -107,7 +107,7 @@ process scrape_settings {
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
-        echo "Family ID: $family_id" >>	pipeface_settings.txt
+        echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
         echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
         echo "Input data file/files: $files" >> pipeface_settings.txt
@@ -1368,7 +1368,7 @@ process jasmine_sniffles {
         --dup_to_ins \
         --normalize_type \
         --require_first_sample \
-        --default_zero_genotype	\
+        --default_zero_genotype \
         $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
@@ -1420,7 +1420,7 @@ process jasmine_cutesv {
         else if( proband_data_type == 'pacbio' ) {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
         }
-  	    """
+        """
         # unzip vcfs
         gunzip -c $proband_sv_vcf > proband.sv.vcf
         gunzip -c $father_sv_vcf > father.sv.vcf
@@ -1456,7 +1456,7 @@ process jasmine_cutesv {
         grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n >> sv.vcf
         # compress and index vcf
         bgzip \
-        -@ ${task.cpus}	\
+        -@ ${task.cpus} \
         sv.vcf
         tabix sv.vcf.gz
         """
@@ -1850,7 +1850,7 @@ workflow {
 
     // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
     Channel
-	.fromPath( in_data )
+        .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension(), row.file,file(row.file).getName() ) }
         .set { in_data_list }
@@ -1858,7 +1858,7 @@ workflow {
     // build channels from in_data.csv file for describing each metadata associated with samples/families
     // I can use these downstream to join to input tuples throughout the pipeline as needed to avoid needing to have all sample metadata in all process input/output tuples
     Channel
-	.fromPath( in_data )
+        .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row-> tuple( row.sample_id, row.family_id ) }
         .groupTuple(by: [0,1] )
@@ -1879,21 +1879,21 @@ workflow {
         .set { extension_tuple }
 
     Channel
-	.fromPath( in_data )
+        .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row-> tuple( row.sample_id, row.family_id, row.file ) }
         .groupTuple(by: [0,1] )
         .set { files_tuple }
 
     Channel
-	.fromPath( in_data )
+        .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row-> tuple( row.sample_id, row.family_id, row.data_type ) }
         .groupTuple(by: [0,1,2] )
         .set { data_type_tuple }
 
     Channel
-	.fromPath( in_data )
+        .fromPath( in_data )
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row-> tuple( row.sample_id, row.family_id, row.regions_of_interest ) }
         .groupTuple(by: [0,1,2] )
@@ -1904,7 +1904,7 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .map { row-> tuple( row.sample_id, row.family_id, row.clair3_model ) }
         .groupTuple(by: [0,1,2] )
-	.set { clair3_model_tuple }
+        .set { clair3_model_tuple }
 
     // build channel from in_data.csv file for user input checks
     Channel
@@ -2130,7 +2130,7 @@ workflow {
             cutesv_father_tuple = cutesv_tmp
                 .filter { tuple ->
                     tuple[2].contains("father")
-	        }
+                }
             cutesv_mother_tuple = cutesv_tmp
                 .filter { tuple ->
                     tuple[2].contains("mother")
