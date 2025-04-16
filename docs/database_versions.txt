@@ -1,7 +1,6 @@
 vep-cache: homo_sapiens/112/GRCh38
 REVEL database: 1.3
 gnomAD database: 4.1.0
-gnomAD SV database: 4.1.0
 ClinVar database: 2024-08-25
 CADD SNV database: 1.7/GRCh38
 CADD indel database: 1.7/GRCh38

@@ -9,8 +9,6 @@
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-    - [mosdepth binary (if running depth calculation)](#mosdepth-binary-if-running-depth-calculation)
-    - [pb-CpG-tools binary (if processing pacbio data)](#pb-cpg-tools-binary-if-processing-pacbio-data)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
     - [Singleton mode](#singleton-mode)
     - [Cohort mode](#cohort-mode)
@@ -120,24 +118,6 @@ Untar
 tar -xvf hifi_revio.tar.gz
 ```
 
-### mosdepth binary (if running depth calculation)
-
-Get a local copy of the mosdepth v0.3.9 binary
-
-```bash
-wget https://github.com/brentp/mosdepth/releases/download/v0.3.9/mosdepth -O mosdepth_0.3.9
-chmod +x mosdepth_0.3.9
-```
-
-### pb-CpG-tools binary (if processing pacbio data)
-
-Get a local copy of the pb-CpG-tools v2.3.2 binary
-
-```bash
-wget https://github.com/PacificBiosciences/pb-CpG-tools/releases/download/v2.3.2/pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
-tar -xzf pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu.tar.gz
-```
-
 ## 3. Modify in_data.csv
 
 ### Singleton mode
@@ -146,12 +126,12 @@ Specify the sample ID, family ID (optional), file path to the data, data type, f
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,,,/g/data/kr68/test_data/PGXXXX240090_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_01,,,/g/data/kr68/test_data/PGXXXX240091_minimal.fastq.gz,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_02,,,/g/data/kr68/test_data/PGXXXX240092_minimal.fastq,ont,/g/data/kr68/genome/ReadFish_v9_gene_targets.collapsed.hg38.bed,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_03,,,/g/data/kr68/test_data/PGXXOX240065_minimal.bam,ont,NONE,/g/data/kr68/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_04,,,/g/data/kr68/test_data/m84088_240403_023825_s1.hifi_reads.bc2034_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
-sample_04,,,/g/data/kr68/test_data/m84088_240403_043745_s2.hifi_reads.bc2035_minimal.fastq,pacbio,NONE,/g/data/kr68/clair3_models/hifi_revio/
+sample_01,,,/path/to/PGXXXX240090.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_01,,,/path/to/PGXXXX240091.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_02,,,/path/to/PGXXXX240092.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_03,,,/path/to/PGXXOX240065.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_04,,,/path/to/m84088_240403_023825_s1.hifi_reads.bc2034.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
+sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
 ```
 
 > **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
@@ -162,13 +142,13 @@ Specify the sample ID, family ID, family position, file path to the data, data t
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,family01,proband,/g/data/kr68/PGXXOX240065.bam,ont,NONE,NONE
-sample_01,family01,proband,/g/data/kr68/PGXXOX240066.bam,ont,NONE,NONE
-sample_02,family01,father,/g/data/kr68/PGXXOX240067.bam,ont,NONE,NONE
-sample_03,family01,mother,/g/data/kr68/PGXXOX240068.bam,ont,NONE,NONE
-sample_04,family02,proband,/g/data/kr68/PGXXOX240069.bam,ont,NONE,NONE
-sample_05,family02,father,/g/data/kr68/PGXXOX240070.bam,ont,NONE,NONE
-sample_04,family02,mother,/g/data/kr68/PGXXOX240071.bam,ont,NONE,NONE
+sample_01,family01,proband,/path/to/PGXXOX240065.bam,ont,NONE,NONE
+sample_01,family01,proband,/path/to/PGXXOX240066.bam,ont,NONE,NONE
+sample_02,family01,father,/path/to/PGXXOX240067.bam,ont,NONE,NONE
+sample_03,family01,mother,/path/to/PGXXOX240068.bam,ont,NONE,NONE
+sample_04,family02,proband,/path/to/PGXXOX240069.bam,ont,NONE,NONE
+sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
+sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
 > **_Note:_** In cohort mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
@@ -210,7 +190,7 @@ Modify access to project specific directories. Eg:
 Specify the path to `in_data.csv`. Eg:
 
 ```json
-    "in_data": "./config/in_data.csv",
+    "in_data": "/path/to/in_data.csv",
 ```
 
 Specify the input data format ('ubam_fastq'). Eg:
@@ -222,21 +202,37 @@ Specify the input data format ('ubam_fastq'). Eg:
 Specify the path to the reference genome and it's index. Eg:
 
 ```json
-    "ref": "./hg38.fa",
-    "ref_index": "./hg38.fa.fai",
+    "ref": "/path/to/hg38.fa",
+    "ref_index": "/path/to/hg38.fa.fai",
 ```
 
 *OR*
 
 ```json
-    "ref": "./hs1.fa",
-    "ref_index": "./hs1.fa.fai",
+    "ref": "/path/to/hs1.fa",
+    "ref_index": "/path/to/hs1.fa.fai",
+```
+
+Optionally turn on haploid-aware mode (for XY samples only). Eg:
+
+```json
+    "haploidaware": "yes",
+    "sex": "XY",
+    "parbed": "/path/to/par.bed",
+```
+
+*OR no haploid-aware mode:*
+
+```json
+    "haploidaware": "no",
+    "sex": "NONE",
+    "parbed": "NONE"
 ```
 
 Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
 
 ```json
-    "tandem_repeat": "./hg38.analysisSet.trf.bed",
+    "tandem_repeat": "/path/to/tandem_repeat.bed",
 ```
 
 *OR*
@@ -329,31 +325,7 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
-    "outdir": "/g/data/ox63/results"
-```
-
-Specify the path to the mosdepth binary (if running depth calculation). Eg:
-
-```json
-    "mosdepth_binary": "./mosdepth_0.3.9"
-```
-
-*OR*
-
-```json
-    "mosdepth_binary": "NONE"
-```
-
-Specify the path to the pb-CpG-tools binary (if processing pacbio data). Eg:
-
-```json
-    "pbcpgtools_binary": "./pb-CpG-tools-v2.3.2-x86_64-unknown-linux-gnu/"
-```
-
-*OR*
-
-```json
-    "pbcpgtools_binary": "NONE"
+    "outdir": "/path/to/results/"
 ```
 
 ## 6. Start persistent session (optional)
@@ -381,4 +353,3 @@ The resources requested and the queue each process is submitted to may be modifi
 Similarly, with some coding skills, the software installs used by each process in the pipeline may be modified. This means you're able to substitute in different software installs or different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
 This also means this pipeline is portable to other HPC's if appropriate environmental modules are included in [nextflow_pipeface.config](https://github.com/leahkemp/pipeface/blob/main/config/nextflow_pipeface.config) (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed. If you wish to use the variant annotation component of the pipeline, you'll additionally need to create local copies of the variant annotation databases used by the pipeline.
-
