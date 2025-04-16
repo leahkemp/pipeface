@@ -322,7 +322,6 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 ```
 
-
 ## Main analyses
 
 - ONT and/or pacbio HiFi data
@@ -356,6 +355,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 
 - Regions of interest BED file
 - Tandem repeat BED file
+- PAR regions BED file (if running in haploid aware mode)
 
 ## Main output files
 
