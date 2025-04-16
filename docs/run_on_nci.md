@@ -232,7 +232,7 @@ Optionally turn on haploid-aware mode (for XY samples only). Eg:
 Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
 
 ```json
-    "tandem_repeat": "/path/to/hg38.analysisSet.trf.bed",
+    "tandem_repeat": "/path/to/tandem_repeat.bed",
 ```
 
 *OR*
@@ -325,7 +325,7 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
 ```json
-    "outdir": "/path/to/results"
+    "outdir": "/path/to/results/"
 ```
 
 ## 6. Start persistent session (optional)
