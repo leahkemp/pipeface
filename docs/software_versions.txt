@@ -1,6 +1,6 @@
-Samtools: 1.19
+Samtools: 1.21
 Minimap2: 2.28-r1209
-minimod: 0.2.0
+minimod: 0.3.0
 mosdepth: 0.3.9
 Clair3: 1.0.9
 DeepVariant: 1.8.0
@@ -14,8 +14,9 @@ jasmine: 1.1.5-r1
 ensembl-vep: 112
 GNU coreutils: 8.30
 kentUtils: 0.0
-HTSlib: 1.16
-bcftools: 1.12
+HTSlib: 1.20
+bcftools: 1.21
+bedtools: 2.31.0
 GNU Awk: 4.2.1
 GNU parallel: 20191022
 singularity-ce: 3.11.3
