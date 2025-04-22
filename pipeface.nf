@@ -1,6 +1,9 @@
 
 nextflow.enable.dsl=2
 
+// tag pipeface version
+def pipeface_version = "0.7.1"
+
 // create dummy NONE file for optional pipeface inputs
 def filePath = "NONE"
 new File(filePath).text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
@@ -23,6 +26,7 @@ process scrape_settings {
 
     input:
         tuple val(sample_id), val(family_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
+        val pipeface_version
         val in_data
         val in_data_format
         val ref
@@ -82,6 +86,7 @@ process scrape_settings {
         }
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
+        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
@@ -106,6 +111,7 @@ process scrape_settings {
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
+        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
@@ -498,8 +504,8 @@ process deepvariant_dry_run {
         --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
-        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g'| sed 's/--gvcf "[^"]*"//g')
-        call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
+        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
+        call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
         """
 
     stub:
@@ -520,7 +526,7 @@ process deepvariant_make_examples {
         val ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('*.gz{,.example_info.json}')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('make_examples.*.gz{,.example_info.json}'), path('make_examples_call_variant_outputs.*.gz'), path('gvcf.*.gz')
 
     script:
         // define an optional string to pass regions of interest bed file
@@ -534,6 +540,8 @@ process deepvariant_make_examples {
         """
         touch make_examples.tfrecord-00000-of-00104.gz
         touch make_examples.tfrecord-00000-of-00104.gz.example_info.json
+        touch make_examples_call_variant_outputs.tfrecord-00000-of-00104.gz
+        touch gvcf.tfrecord-00000-of-00104.gz
         """
 
 }
@@ -541,10 +549,10 @@ process deepvariant_make_examples {
 process deepvariant_call_variants {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), val(make_examples_call_variant_out), val(gvcf)
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path('*.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_call_variant_out), val(gvcf), path('call_variants_output*.gz')
 
     script:
         def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -574,7 +582,7 @@ process deepvariant_post_processing {
     }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path(call_variants_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out)
         val ref
         val ref_index
         val outdir
@@ -587,11 +595,11 @@ process deepvariant_post_processing {
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
-        def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
         def num_shards = matcher[0][2] as int
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
-        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}"
         vcf_stats_report --input_vcf "snp_indel.raw.vcf.gz" --outfile_base "snp_indel.raw"
         # filter out refcall variants
         bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
@@ -2001,7 +2009,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
