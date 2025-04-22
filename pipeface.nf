@@ -1,6 +1,9 @@
 
 nextflow.enable.dsl=2
 
+// tag pipeface version
+def pipeface_version = "0.7.1"
+
 // create dummy NONE file for optional pipeface inputs
 def filePath = "NONE"
 new File(filePath).text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
@@ -23,6 +26,7 @@ process scrape_settings {
 
     input:
         tuple val(sample_id), val(family_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
+        val pipeface_version
         val in_data
         val in_data_format
         val ref
@@ -82,6 +86,7 @@ process scrape_settings {
         }
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
+        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
@@ -106,6 +111,7 @@ process scrape_settings {
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
+        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
@@ -2003,7 +2009,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
