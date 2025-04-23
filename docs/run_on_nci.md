@@ -240,7 +240,7 @@ Optionally turn on haploid-aware mode (for XY samples only). Eg:
     "parbed": "/path/to/par.bed",
 ```
 
-*OR no haploid-aware mode:*
+*OR*
 
 ```json
     "haploidaware": "no",
