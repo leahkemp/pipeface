@@ -2,7 +2,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.7.1"
+def pipeface_version = "0.8.0"
 
 // create dummy NONE file for optional pipeface inputs
 def filePath = "NONE"
