@@ -59,7 +59,7 @@ snp_indel_calling{{"SNP/indel variant calling"}}
 split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
-joint_somalier{{"Joint somalier relatedness and quality control checks"}}
+joint_somalier{{"Joint somalier relatedness check"}}
 gvcf_merging{{"gVCF merging"}}
 joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
@@ -248,8 +248,8 @@ calculate_base_mod_freqs_s6{{"Description: calculate base modificiation frequenc
 joint_snp_indel_calling_f1{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
 joint_snp_indel_calling_f2{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
 
-joint_somalier_f1{{"Description: Joint somalier relatedness and quality control checks <br><br> Main tools: somalier <br><br> Commands: somalier extract and somalier relate"}}
-joint_somalier_f2{{"Description: Joint somalier relatedness and quality control checks <br><br> Main tools: somalier <br><br> Commands: somalier extract and somalier relate"}}
+joint_somalier_f1{{"Description: Joint somalier relatedness check <br><br> Main tools: somalier <br><br> Commands: somalier extract and somalier relate"}}
+joint_somalier_f2{{"Description: Joint somalier relatedness check <br><br> Main tools: somalier <br><br> Commands: somalier extract and somalier relate"}}
 
 gvcf_merging_f1{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
 gvcf_merging_f2{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
