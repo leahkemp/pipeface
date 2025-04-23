@@ -6,7 +6,7 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
-   - [Somalier sites file (if running QC checks)](#somalier-sites-file-if-running-qc-checks)
+   - [Somalier sites file (if running QC checks)](#somalier-sites-file-if-running-relatedness-check)
       - [hg38](#hg38-1)
       - [hs1](#hs1-1)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
@@ -91,7 +91,7 @@ module load samtools/1.19
 samtools faidx hs1.fa
 ```
 
-### Somalier sites file (if running QC checks)
+### Somalier sites file (if running relatedness check)
 
 #### hg38
 
