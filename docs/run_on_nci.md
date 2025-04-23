@@ -93,6 +93,8 @@ samtools faidx hs1.fa
 
 ### Somalier sites file (if running relatedness check)
 
+> **_Note:_** checking relatedness is only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
+
 #### hg38
 
 ```bash
@@ -360,7 +362,7 @@ Optionally run relatedness checks. Specify the path to an appropriate somalier s
     "sites": "NONE"
 ```
 
-> **_Note:_** this is currently only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
+> **_Note:_** checking relatedness is only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
