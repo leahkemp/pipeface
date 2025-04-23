@@ -6,6 +6,9 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
+   - [Somalier sites file (if running QC checks)](#somalier-sites-file-if-running-qc-checks)
+      - [hg38](#hg38-1)
+      - [hs1](#hs1-1)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
@@ -86,6 +89,20 @@ gunzip and build index
 gunzip hs1.fa.gz
 module load samtools/1.19
 samtools faidx hs1.fa
+```
+
+### Somalier sites file (if running QC checks)
+
+#### hg38
+
+```bash
+wget -O sites.hg38.v0.2.19.vcf.gz https://github.com/brentp/somalier/files/3412456/sites.hg38.vcf.gz
+```
+
+#### hs1
+
+```bash
+wget -O sites.chm13v2.T2T.v0.2.19.vcf.gz https://github.com/brentp/somalier/files/9954286/sites.chm13v2.T2T.vcf.gz
 ```
 
 ### Clair3 models (if running clair3)
@@ -321,6 +338,22 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 ```
 
 > **_Note:_** these analyses assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+
+Optionally run relatedness checks. Specify the path to the somalier sites file. Set to 'NONE' if not required. Eg:
+
+```json
+    "check_relatedness": "yes",
+    "sites": "/path/to/sites.hg38.vcf.gz",
+```
+
+*OR*
+
+```json
+    "check_relatedness": "no",
+    "sites": "NONE"
+```
+
+> **_Note:_** this is currently only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
