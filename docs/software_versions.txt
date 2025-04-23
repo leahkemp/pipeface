@@ -1,3 +1,4 @@
+Pipeface: 0.8.0
 Samtools: 1.21
 Minimap2: 2.28-r1209
 minimod: 0.3.0
