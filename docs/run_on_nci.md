@@ -339,11 +339,18 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 
 > **_Note:_** these analyses assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
-Optionally run relatedness checks. Specify the path to the somalier sites file. Set to 'NONE' if not required. Eg:
+Optionally run relatedness checks. Specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
 ```json
     "check_relatedness": "yes",
     "sites": "/path/to/sites.hg38.vcf.gz",
+```
+
+*OR*
+
+```json
+    "check_relatedness": "yes",
+    "sites": "/path/to/sites.chm13v2.T2T.v0.2.19.vcf.gz",
 ```
 
 *OR*
