@@ -64,7 +64,7 @@ process scrape_settings {
         }
         // conditionally define reported in data format
         if ( in_data_format == 'ubam_fastq' ) {
-            reported_in_data_format = 'unaligned BAM and/or FASTQ'
+            reported_in_data_format = 'unaligned BAM or FASTQ'
         }
         else if ( in_data_format == 'aligned_bam' ) {
             reported_in_data_format = 'aligned BAM'
