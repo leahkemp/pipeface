@@ -1,6 +1,9 @@
 
 nextflow.enable.dsl=2
 
+// tag pipeface version
+def pipeface_version = "0.8.0"
+
 // create dummy NONE file for optional pipeface inputs
 def filePath = "NONE"
 new File(filePath).text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
@@ -23,6 +26,7 @@ process scrape_settings {
 
     input:
         tuple val(sample_id), val(family_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
+        val pipeface_version
         val in_data
         val in_data_format
         val ref
@@ -33,6 +37,8 @@ process scrape_settings {
         val annotate
         val calculate_depth
         val analyse_base_mods
+        val check_relatedness
+        val sites
         val outdir
         val outdir2
         val haploidaware
@@ -58,7 +64,7 @@ process scrape_settings {
         }
         // conditionally define reported in data format
         if ( in_data_format == 'ubam_fastq' ) {
-            reported_in_data_format = 'unaligned BAM and/or FASTQ'
+            reported_in_data_format = 'unaligned BAM or FASTQ'
         }
         else if ( in_data_format == 'aligned_bam' ) {
             reported_in_data_format = 'aligned BAM'
@@ -82,6 +88,7 @@ process scrape_settings {
         }
         if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
         """
+        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
@@ -102,10 +109,13 @@ process scrape_settings {
         echo "Annotate: $annotate" >> pipeface_settings.txt
         echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
         echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
+        echo "Check relatedness: $check_relatedness" >> pipeface_settings.txt
+        echo "Somalier sites file: $sites" >> pipeface_settings.txt
         echo "Outdir: $outdir" >> pipeface_settings.txt
         """
         else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
         """
+        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
         echo "Sample ID: $sample_id" >> pipeface_settings.txt
         echo "Family ID: $family_id" >> pipeface_settings.txt
         echo "Family position: $family_position" >> pipeface_settings.txt
@@ -498,8 +508,8 @@ process deepvariant_dry_run {
         --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
-        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk '{split(\$0, arr, "--add_hp_channel"); print "--add_hp_channel" arr[2]}' | sed 's/--sample_name "[^"]*"//g'| sed 's/--gvcf "[^"]*"//g')
-        call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk '{split(\$0, arr, "--checkpoint"); print "--checkpoint" arr[2]}')
+        make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
+        call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
         """
 
     stub:
@@ -520,7 +530,7 @@ process deepvariant_make_examples {
         val ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('*.gz{,.example_info.json}')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('make_examples.*.gz{,.example_info.json}'), path('make_examples_call_variant_outputs.*.gz'), path('gvcf.*.gz')
 
     script:
         // define an optional string to pass regions of interest bed file
@@ -534,6 +544,8 @@ process deepvariant_make_examples {
         """
         touch make_examples.tfrecord-00000-of-00104.gz
         touch make_examples.tfrecord-00000-of-00104.gz.example_info.json
+        touch make_examples_call_variant_outputs.tfrecord-00000-of-00104.gz
+        touch gvcf.tfrecord-00000-of-00104.gz
         """
 
 }
@@ -541,10 +553,10 @@ process deepvariant_make_examples {
 process deepvariant_call_variants {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), val(make_examples_call_variant_out), val(gvcf)
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path('*.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_call_variant_out), val(gvcf), path('call_variants_output*.gz')
 
     script:
         def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -574,7 +586,7 @@ process deepvariant_post_processing {
     }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path(make_examples_out), path(call_variants_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out)
         val ref
         val ref_index
         val outdir
@@ -587,11 +599,11 @@ process deepvariant_post_processing {
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
-        def matcher = make_examples_out[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
         def num_shards = matcher[0][2] as int
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
-        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --sample_name "${sample_id}"
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}"
         vcf_stats_report --input_vcf "snp_indel.raw.vcf.gz" --outfile_base "snp_indel.raw"
         # filter out refcall variants
         bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
@@ -897,6 +909,36 @@ process deeptrio_postprocessing {
         touch ${family_position}_snp_indel.vcf.gz
         touch ${family_position}_snp_indel.vcf.gz.tbi
         touch ${family_position}_snp_indel.g.vcf
+        """
+
+}
+
+process somalier {
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index)
+        val ref
+        val ref_index
+        val sites
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+       tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.groups.tsv'), path('somalier.html')
+
+    script:
+        """
+        # run somalier extract
+        SOMALIER_SAMPLE_NAME=$proband_sample_id somalier extract -d extracted --sites $sites -f $ref $proband_haplotagged_bam
+        SOMALIER_SAMPLE_NAME=$mother_sample_id somalier extract -d extracted --sites $sites -f $ref $mother_haplotagged_bam
+        SOMALIER_SAMPLE_NAME=$father_sample_id somalier extract -d extracted --sites $sites -f $ref $father_haplotagged_bam
+        # run somalier relate
+        somalier relate extracted/*.somalier
         """
 
 }
@@ -1633,6 +1675,8 @@ workflow {
     annotate_override = "$params.annotate_override"
     calculate_depth = "$params.calculate_depth"
     analyse_base_mods = "$params.analyse_base_mods"
+    check_relatedness = "$params.check_relatedness"
+    sites = "$params.sites"
     outdir = "$params.outdir"
     outdir2 = "$params.outdir2"
     vep_db = "$params.vep_db"
@@ -1683,6 +1727,12 @@ workflow {
     if ( in_data_format == 'sv_vcf' && calculate_depth == 'yes' ) {
         exit 1, "In data format is SV VCF, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
     }
+    if ( in_data_format == 'snv_vcf' && sites != 'NONE' ) {
+        exit 1, "In data format is SNP/indel VCF, but you haven't set the sites file to 'NONE'. Either set sites to 'NONE' in parameter file or pass '--sites NONE' on the command line"
+    }
+    if ( in_data_format == 'sv_vcf' && sites != 'NONE' ) {
+        exit 1, "In data format is SV VCF, but you haven't set the sites file to 'NONE'. Either set sites to 'NONE' in parameter file or pass '--sites NONE' on the command line"
+    }
     if ( !ref ) {
         exit 1, "No reference genome provided. Either include in parameter file or pass to --ref on the command line."
     }
@@ -1700,6 +1750,12 @@ workflow {
     }
     if ( !file(tandem_repeat).exists() ) {
         exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+    }
+    if ( !sites ) {
+        exit 1, "No sites file provided. Either include in parameter file or pass to --sites on the command line. Set to 'NONE' if you not required."
+    }
+    if ( !file(sites).exists() ) {
+        exit 1, "Sites file path does not exist, '${sites}' provided."
     }
     if ( !snp_indel_caller ) {
         exit 1, "No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
@@ -1778,6 +1834,21 @@ workflow {
     }
     if ( analyse_base_mods != 'yes' && analyse_base_mods != 'no' ) {
         exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', '${analyse_base_mods}' selected."
+    }
+    if ( !check_relatedness ) {
+        exit 1, "Choice to check relatedness not made. Either include in parameter file or pass to --check_relatedness on the command line. Should be either 'yes' or 'no'."
+    }
+    if ( check_relatedness != 'yes' && check_relatedness != 'no' ) {
+        exit 1, "Choice to check relatedness should be either 'yes', or 'no', '${check_relatedness}' selected."
+    }
+    if ( snp_indel_caller != 'deeptrio' && check_relatedness == 'yes' ) {
+        exit 1, "You've chosen to check relatedness, but this is only available when the SNP/indel caller is set to 'deeptrio', '${snp_indel_caller}' selected. Either set 'check_relatedness' to 'no' in the parameter file or pass '--check_relatedness no' on the command line."
+    }
+    if ( check_relatedness == 'yes' && sites == 'NONE' ) {
+        exit 1, "You've chosen to check relatedness but you set 'sites' to 'NONE'. Please pass an appropriate sites file in the parameter file or pass to --sites on the command line."
+    }
+    if ( check_relatedness == 'no' && sites != 'NONE' ) {
+        exit 1, "You've chosen not to check relatedness but you haven't set 'sites' to 'NONE'. Please set sites to 'NONE' in the parameter file or pass to --sites NONE on the command line."
     }
     if ( !outdir ) {
         exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
@@ -2001,7 +2072,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
     if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
         bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
     }
@@ -2069,6 +2140,9 @@ workflow {
             }
             gvcfs_bams = proband_out.join(father_out).join(mother_out).map { tuple ->
                 [tuple[0], tuple[2], tuple[7], tuple[12], tuple[3], tuple[4], tuple[8], tuple[9], tuple[13], tuple[14], tuple[5], tuple[10], tuple[15]]
+            }
+            if ( check_relatedness == 'yes' ) {
+                somalier(proband_tuple, father_tuple, mother_tuple, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
             joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)

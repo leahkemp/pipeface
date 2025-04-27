@@ -59,6 +59,7 @@ snp_indel_calling{{"SNP/indel variant calling"}}
 split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
+joint_somalier{{"Joint somalier relatedness check"}}
 gvcf_merging{{"gVCF merging"}}
 joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
@@ -75,6 +76,7 @@ alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->generate_meth_probs
+haplotagging-.->joint_somalier
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
@@ -246,6 +248,9 @@ calculate_base_mod_freqs_s6{{"Description: calculate base modificiation frequenc
 joint_snp_indel_calling_f1{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
 joint_snp_indel_calling_f2{{"Description: Joint SNP/indel variant calling <br><br> Main tools: DeepTrio <br><br> Commands: run_deeptrio"}}
 
+joint_somalier_f1{{"Description: Joint somalier relatedness check <br><br> Main tools: somalier <br><br> Commands: somalier extract and somalier relate"}}
+joint_somalier_f2{{"Description: Joint somalier relatedness check <br><br> Main tools: somalier <br><br> Commands: somalier extract and somalier relate"}}
+
 gvcf_merging_f1{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
 gvcf_merging_f2{{"Description: gVCF merging <br><br> Main tools: GLnexus <br><br> Commands: glnexus_cli"}}
 
@@ -307,6 +312,13 @@ haplotagging_s4-.->joint_snp_indel_calling_f2
 haplotagging_s5-.->joint_snp_indel_calling_f2
 haplotagging_s6-.->joint_snp_indel_calling_f2
 
+haplotagging_s1-.->joint_somalier_f1
+haplotagging_s2-.->joint_somalier_f1
+haplotagging_s3-.->joint_somalier_f1
+haplotagging_s4-.->joint_somalier_f2
+haplotagging_s5-.->joint_somalier_f2
+haplotagging_s6-.->joint_somalier_f2
+
 joint_snp_indel_calling_f1-.->gvcf_merging_f1-.->joint_split_multiallele_f1-.->joint_snp_indel_phasing_f1-.->joint_snp_indel_annotation_f1
 joint_snp_indel_calling_f2-.->gvcf_merging_f2-.->joint_split_multiallele_f2-.->joint_snp_indel_phasing_f2-.->joint_snp_indel_annotation_f2
 
@@ -337,6 +349,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
+- [somalier](https://github.com/brentp/somalier)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
@@ -382,6 +395,7 @@ sv_vcf_merging_f2-.->joint_sv_annotation_s2
 - Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Joint relatedness and quality control somalier TSV and HTML files
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
