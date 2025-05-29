@@ -1119,6 +1119,7 @@ process vep_snv {
         --no_intergenic \
         --pick \
         --fork ${task.cpus} \
+        --dont_skip \
         --no_stats \
         --compress_output bgzip
         # index vcf
@@ -1570,6 +1571,7 @@ process vep_sniffles_sv {
         --no_intergenic \
         --pick \
         --fork ${task.cpus} \
+        --dont_skip \
         --no_stats \
         --compress_output bgzip
         # index vcf
@@ -1643,6 +1645,7 @@ process vep_cutesv_sv {
         --no_intergenic \
         --pick \
         --fork ${task.cpus} \
+        --dont_skip \
         --no_stats \
         --compress_output bgzip
         # index vcf
