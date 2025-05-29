@@ -308,7 +308,8 @@ process mosdepth {
         mosdepth depth \
         $bam \
         $regions_of_interest_optional \
-        -t ${task.cpus}
+        -t ${task.cpus} \
+        --no-per-base
         # rename file
         ln -s depth.mosdepth.summary.txt depth.txt
         """
