@@ -1413,10 +1413,10 @@ process jasmine_sniffles {
         --require_first_sample \
         --default_zero_genotype \
         $iris_args
-        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort vcf and convert TRA variant tags to standard BND tags (allows them to be annotatd by VEP)
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
         grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
-        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n | sed 's/SVTYPE=TRA/SVTYPE=BND/g' | sed 's/<TRA>/<BND>/g' >> sv.phased.vcf
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -1493,10 +1493,10 @@ process jasmine_cutesv {
         --require_first_sample \
         --default_zero_genotype \
         $iris_args
-        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort vcf and convert TRA variant tags to standard BND tags (allows them to be annotatd by VEP)
         grep '##' sv.tmp.vcf > sv.vcf
         grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
-        grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n >> sv.vcf
+        grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n | sed 's/SVTYPE=TRA/SVTYPE=BND/g' | sed 's/<TRA>/<BND>/g' >> sv.vcf
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
