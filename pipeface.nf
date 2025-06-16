@@ -1034,9 +1034,9 @@ process sniffles {
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path('sv.vcf.gz')
-        tuple val(sample_id), val(family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), val(family_position), val('sniffles'), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
+        tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz')
+        tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.phased.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
         // define a string to optionally pass tandem repeat bed file
@@ -1044,16 +1044,16 @@ process sniffles {
         """
         # run sniffles
         sniffles \
-        --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
+        --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
         # tag vcf and bam with family_position for downstream jasmine
-        ln -s sv.vcf.gz ${family_position}.sv.vcf.gz
+        ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
         """
 
     stub:
         """
-        touch sv.vcf.gz
-        touch sv.vcf.gz.tbi
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
         """
 
 }
@@ -1076,7 +1076,7 @@ process cutesv {
     output:
         tuple val(sample_id), val(family_id), path('sv.vcf.gz')
         tuple val(sample_id), val(family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), val(family_position), val('cutesv'), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
+        tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
 
     script:
         // define platform specific settings
@@ -1105,23 +1105,80 @@ process cutesv {
 
 }
 
-process jasmine {
+process jasmine_sniffles {
 
-    def sniffles_sv_caller_merger = "sniffles.jasmine"
-    def cutesv_sv_caller_merger = "cutesv.jasmine"
+    def sv_caller_merger = "sniffles.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (sv_caller == 'sniffles') {
-            return "$proband_family_id.$ref_name.$sniffles_sv_caller_merger.$filename.replaceFirst('sv\\.annotated', 'sv.phased.annotated')"
-        } else if (sv_caller == 'cutesv') {
-            return "$proband_family_id.$ref_name.$cutesv_sv_caller_merger.$filename"
-        }
-    }, pattern: 'sv.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), val(sv_caller), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), val(sv_caller), path(father_sv_phased_vcf), path(father_haplotagged_bam)
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), val(sv_caller), path(mother_sv_phased_vcf), path(mother_haplotagged_bam)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_sv_phased_vcf), path(father_haplotagged_bam)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_sv_phased_vcf), path(mother_haplotagged_bam)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('sv.phased.vcf.gz')
+        tuple val(proband_family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
+
+    script:
+        // conditionally define iris arguments
+        // as default, iris will pass minimap -x map-ont
+        // the --pacbio flag passed to iris will pass minimap -x map-pb
+        // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+        if (proband_data_type == 'ont') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+        }
+        else if (proband_data_type == 'pacbio') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+        }
+        """
+        # unzip vcfs
+        gunzip -c $proband_sv_phased_vcf > proband.sv.phased.vcf
+        gunzip -c $father_sv_phased_vcf > father.sv.phased.vcf
+        gunzip -c $mother_sv_phased_vcf > mother.sv.phased.vcf
+        # create file lists
+        realpath proband.sv.phased.vcf >> vcfs.txt
+        realpath father.sv.phased.vcf >> vcfs.txt
+        realpath mother.sv.phased.vcf >> vcfs.txt
+        realpath $proband_haplotagged_bam >> bams.txt
+        realpath $father_haplotagged_bam >> bams.txt
+        realpath $mother_haplotagged_bam >> bams.txt
+        # run jasmine
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
+        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        grep '##' sv.phased.tmp.vcf > sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n >> sv.phased.vcf
+        # compress and index vcf
+        bgzip \
+        -@ ${task.cpus} \
+        sv.phased.vcf
+        tabix sv.phased.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
+        """
+
+}
+
+process jasmine_cutesv {
+
+    def sv_caller_merger = "cutesv.jasmine"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam), val(proband_data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_sv_vcf), path(father_haplotagged_bam)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_sv_vcf), path(mother_haplotagged_bam)
         val ref
         val ref_index
         val outdir
@@ -1141,13 +1198,13 @@ process jasmine {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
         }
         else if (proband_data_type == 'pacbio') {
-            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
         }
         """
         # unzip vcfs
-        gunzip -c $proband_sv_phased_vcf > proband.sv.vcf
-        gunzip -c $father_sv_phased_vcf > father.sv.vcf
-        gunzip -c $mother_sv_phased_vcf > mother.sv.vcf
+        gunzip -c $proband_sv_vcf > proband.sv.vcf
+        gunzip -c $father_sv_vcf > father.sv.vcf
+        gunzip -c $mother_sv_vcf > mother.sv.vcf
         # create file lists
         realpath proband.sv.vcf >> vcfs.txt
         realpath father.sv.vcf >> vcfs.txt
@@ -1162,9 +1219,7 @@ process jasmine {
         grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
         grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n >> sv.vcf
         # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        sv.vcf
+        bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
         """
 
@@ -1716,14 +1771,14 @@ workflow {
             sniffles_proband_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("proband") }
             sniffles_father_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("father") }
             sniffles_mother_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("mother") }
-            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         if (sv_caller in ['cutesv', 'both']) {
             cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv.groupTuple(by: 1).transpose()
             cutesv_proband_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("proband") }
             cutesv_father_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("father") }
             cutesv_mother_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("mother") }
-            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint sv annotation
         if (annotate == 'yes') {
