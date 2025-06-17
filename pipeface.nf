@@ -1367,142 +1367,142 @@ workflow {
         exit 1, "In data csv file does not exist, 'in_data = ${in_data}' provided."
     }
     if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
-        exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', '${in_data_format}' selected."
+        exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
     }
     if (!file(ref).exists()) {
-        exit 1, "Reference genome file does not exist, 'ref = ${ref}' provided."
+        exit 1, "Reference genome file does not exist, ref = '${ref}' provided."
     }
     if (!file(ref_index).exists()) {
-        exit 1, "Reference genome index file does not exist, 'ref_index = ${ref_index}' provided."
+        exit 1, "Reference genome index file does not exist, ref_index = '${ref_index}' provided."
     }
     if (!(haploidaware in ['yes', 'no'])) {
-        exit 1, "haploidaware must be either 'yes' or 'no', '${haploidaware}' provided."
+        exit 1, "haploidaware must be either 'yes' or 'no', haploidaware = '${haploidaware}' provided."
     }
     if (haploidaware == "yes") {
         if (sex != "XY") {
-            exit 1, "Haploid-aware mode is only supported when sex='XY'. You provided sex='${sex}'."
+            exit 1, "Haploid-aware mode is only supported when sex = 'XY', sex = '${sex}' provided."
         }
         if (parbed == "NONE") {
-            exit 1, "In haploid-aware mode, provide a valid PAR BED file (not 'NONE')."
+            exit 1, "In haploid-aware mode, provide a valid PAR BED file, parbed = 'NONE' provided."
         }
         if (!file(parbed).exists()) {
-            exit 1, "PAR BED file does not exist, 'parbed = ${parbed} provided'."
+            exit 1, "PAR BED file does not exist, parbed = '${parbed}' provided."
         }
     }
     else if (haploidaware == "no") {
         // sex can be anything, including unset
         if (parbed != "NONE") {
-            exit 1, "When haploid-aware mode is on, set the PAR BED file to 'NONE', 'haploidaware = ${haploidaware}' and 'parbed = ${parbed}' provided."
+            exit 1, "In haploid-aware mode, set the PAR BED file to 'NONE', haploidaware = '${haploidaware}' and parbed = '${parbed}' provided."
         }
     }
     if (!file(tandem_repeat).exists()) {
-        exit 1, "Tandem repeat bed file does not exist, 'tandem_repeat = ${tandem_repeat}' provided. Set to 'NONE' if not required."
+        exit 1, "Tandem repeat bed file does not exist, tandem_repeat = '${tandem_repeat}' provided. Set to 'NONE' if not required."
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (!(snp_indel_caller in ['clair3', 'deepvariant', 'deeptrio'])) {
-            exit 1, "SNP/indel calling software should be 'clair3', 'deepvariant' or 'deeptrio', 'snp_indel_caller = ${snp_indel_caller}' provided."
+            exit 1, "SNP/indel calling software should be 'clair3', 'deepvariant' or 'deeptrio', snp_indel_caller = '${snp_indel_caller}' provided."
         }
         if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
-            exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', 'sv_caller = ${sv_caller}' provided."
+            exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
         }
     }
     if (!(annotate in ['yes', 'no'])) {
-        exit 1, "Choice to annotate should be either 'yes' or 'no', 'annotate = ${annotate}' provided."
+        exit 1, "Choice to annotate should be either 'yes' or 'no', annotate = '${annotate}' provided."
     }
     if (annotate == 'yes') {
         if (!file(vep_db).exists()) {
-            exit 1, "VEP cache directory does not exist, 'vep_db = ${vep_db}' provided."
+            exit 1, "VEP cache directory does not exist, vep_db = '${vep_db}' provided."
         }
         if (!file(revel_db).exists()) {
-            exit 1, "REVEL database file does not exist, 'revel_db = ${revel_db}' provided."
+            exit 1, "REVEL database file does not exist, revel_db = '${revel_db}' provided."
         }
         if (!file(gnomad_db).exists()) {
-            exit 1, "gnomAD database file does not exist, 'gnomad_db = ${gnomad_db}' provided."
+            exit 1, "gnomAD database file does not exist, gnomad_db = '${gnomad_db}' provided."
         }
         if (!file(clinvar_db).exists()) {
-            exit 1, "ClinVar database file does not exist, 'clinvar_db = ${clinvar_db}' provided."
+            exit 1, "ClinVar database file does not exist, clinvar_db = '${clinvar_db}' provided."
         }
         if (!file(cadd_snv_db).exists()) {
-            exit 1, "CADD SNV database file does not exist, 'cadd_snv_db = ${cadd_snv_db}' provided."
+            exit 1, "CADD SNV database file does not exist, cadd_snv_db = '${cadd_snv_db}' provided."
         }
         if (!file(cadd_indel_db).exists()) {
-            exit 1, "CADD indel database file does not exist, 'cadd_indel_db = ${cadd_indel_db}' provided."
+            exit 1, "CADD indel database file does not exist, cadd_indel_db = '${cadd_indel_db}' provided."
         }
         if (!file(cadd_sv_db).exists()) {
-            exit 1, "CADD SV database file does not exist, 'cadd_sv_db = ${cadd_sv_db}' provided."
+            exit 1, "CADD SV database file does not exist, cadd_sv_db = '${cadd_sv_db}' provided."
         }
         if (!file(spliceai_snv_db).exists()) {
-            exit 1, "SpliceAI SNV database file does not exist, 'spliceai_snv_db = ${spliceai_snv_db}' provided."
+            exit 1, "SpliceAI SNV database file does not exist, spliceai_snv_db = '${spliceai_snv_db}' provided."
         }
         if (!file(spliceai_indel_db).exists()) {
-            exit 1, "SpliceAI indel database file does not exist, 'spliceai_indel_db = ${spliceai_indel_db}' provided."
+            exit 1, "SpliceAI indel database file does not exist, spliceai_indel_db = '${spliceai_indel_db}' provided."
         }
         if (!file(alphamissense_db).exists()) {
-            exit 1, "AlphaMissense database file does not exist, 'alphamissense_db = ${alphamissense_db}' provided."
+            exit 1, "AlphaMissense database file does not exist, alphamissense_db = '${alphamissense_db}' provided."
         }
         if (!ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes') {
-            exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. 'ref = ${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
+            exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
         }
     }
     if (!(calculate_depth in ['yes', 'no'])) {
-        exit 1, "Choice to calculate depth should be either 'yes', or 'no', 'calculate_depth = ${calculate_depth}' provided."
+        exit 1, "Choice to calculate depth should be either 'yes', or 'no', calculate_depth = '${calculate_depth}' provided."
     }
     if (!(analyse_base_mods in ['yes', 'no'])) {
-        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', 'analyse_base_mods = ${analyse_base_mods}' provided."
+        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', analyse_base_mods = '${analyse_base_mods}' provided."
     }
     if (!(check_relatedness in ['yes', 'no'])) {
-        exit 1, "Choice to check relatedness should be either 'yes', or 'no', 'check_relatedness = ${check_relatedness}' provided."
+        exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
     }
     if (check_relatedness == 'yes') {
-        if (sites == 'NONE') {
-            exit 1, "When checking relatedness, set an appropriate sites file. 'sites = ${sites}' provided."
-        }
         if (snp_indel_caller != 'deeptrio') {
-            exit 1, "Checking relatedness is only available when the SNP/indel caller is 'deeptrio'. 'snp_indel_caller = ${snp_indel_caller}' and 'check_relatedness = ${check_relatedness}' provided"
+            exit 1, "Checking relatedness is only available when the SNP/indel caller is 'deeptrio' (cohort mode), snp_indel_caller = '${snp_indel_caller}' and check_relatedness = '${check_relatedness}' provided."
+        }
+        if (sites == 'NONE') {
+            exit 1, "When checking relatedness, set an appropriate sites file. sites = '${sites}' provided."
+        }
+        if (!file(sites).exists()) {
+            exit 1, "Sites file does not exist, sites = '${sites}' provided."
         }
     }
     else if (check_relatedness == 'no') {
         if (sites != 'NONE') {
-            exit 1, "When not checking relatedness, set sites to 'NONE'. 'sites = ${sites}' provided."
+            exit 1, "When not checking relatedness, set sites to 'NONE', sites = '${sites}' provided."
         }
-    }
-    if (!file(sites).exists()) {
-        exit 1, "Sites file does not exist, 'sites = ${sites}' provided. Set to 'NONE' if not required."
     }
     if (!outdir) {
         exit 1, "No output directory (outdir) provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
         if (tandem_repeat != 'NONE') {
-            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set the tandem repeat file to 'NONE'. '${tandem_repeat}' provided."
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set the tandem repeat file to 'NONE', in_data_format = '${in_data_format}' and tandem_repeat = '${tandem_repeat}' provided."
         }
         if (annotate == 'no') {
-            exit 1, "In data format is SNP/indel VCF or SV VCF, but you've chosen not to annotate. Nothing for pipeface to do."
+            exit 1, "In data format is SNP/indel VCF or SV VCF, but you've chosen not to annotate, in_data_format = '${in_data_format}' and annotate = '${annotate}' provided. Nothing for pipeface to do."
         }
         if (calculate_depth == 'yes') {
-            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set calculate depth to 'no'. '${calculate_depth}' provided."
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set calculate depth to 'no', in_data_format = '${in_data_format}' and calculate_depth = '${calculate_depth}' provided."
         }
-        if (sites != 'NONE') {
-            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set the sites file to 'NONE'. '${sites}' provided."
+        if (check_relatedness != 'no') {
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set checking relatedness to 'no', in_data_format = '${in_data_format}' and check_relatedness = '${check_relatedness}' provided."
         }
     }
     if (in_data_format == 'snp_indel_vcf') {
         if (sv_caller != 'NONE') {
-            exit 1, "When the in data format is SNP/indel VCF, set the SV calling software to 'NONE'. '${sv_caller}' provided."
+            exit 1, "When the in data format is SNP/indel VCF, set the SV calling software to 'NONE', sv_caller = '${sv_caller}' provided."
         }
         if (snp_indel_caller == 'NONE') {
-            exit 1, "When the input data format is 'snp_indel_vcf', pass the SNP/indel calling software which was used to generate the input data (not 'NONE'). 'snp_indel_caller = ${snp_indel_caller}' provided."
+            exit 1, "When the input data format is 'snp_indel_vcf', pass the SNP/indel calling software which was used to generate the input data (not 'NONE'), snp_indel_caller = '${snp_indel_caller}' provided."
         }
         if (ref == 'NONE' || ref_index == 'NONE') {
-            exit 1, "When the input data format is SNP/indel VCF, pass the reference genome and it's index which was used to generate the input data (not 'NONE'). 'ref = ${ref}' and 'ref_index = ${ref_index}' provided."
+            exit 1, "When the input data format is SNP/indel VCF, pass the reference genome and it's index which was used to generate the input data (not 'NONE'), ref = '${ref}' and ref_index = '${ref_index}' provided."
         }
     }
     else if (in_data_format == 'sv_vcf') {
         if (snp_indel_caller != 'NONE') {
-            exit 1, "When the in data format is SV VCF, set the SNP/indel calling software to 'NONE'. '${snp_indel_caller}' provided."
+            exit 1, "When the in data format is SV VCF, set the SNP/indel calling software to 'NONE', snp_indel_caller = '${snp_indel_caller}' provided."
         }
         if (sv_caller == 'NONE') {
-            exit 1, "When the input data format is 'sv_vcf', please pass the SV calling software which was used to generate the input data (not 'NONE'). 'sv_caller = ${sv_caller}' provided."
+            exit 1, "When the input data format is SV VCF, please pass the SV calling software which was used to generate the input data (not 'NONE'), sv_caller = '${sv_caller}' provided."
         }
     }
 
@@ -1617,7 +1617,7 @@ workflow {
                 exit 1, "There is an entry in the 'file' column of '${in_data}' which doesn't exist. Check file '${in_file}'."
             }
             if (!(file(in_file).getExtension() in ['bam', 'gz', 'fastq'])) {
-                exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. '${in_file}' provided."
+                exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. Check file '${in_file}'."
             }
             if (in_data_format == 'ubam') {
                 if (snp_indel_caller == 'clair3' && clair3_model == 'NONE') {
@@ -1629,12 +1629,12 @@ workflow {
                     exit 1, "You've specified that the in data format is aligned BAM, but it looks like '${in_file}' defined in the file column of '${in_data}' isn't indexed (ie. '${in_file}.bai doesn't exist')."
                 }
                 if (!in_file.contains('bam') && in_data_format_override != 'yes') {
-                    exit 1, "You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file names defined in the file column of '${in_data}'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+                    exit 1, "You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file names defined in the file column of '${in_data}'. Check file '${in_file}'. Pass '--in_data_format_override yes' on the command line to override this error."
                 }
             }
             else if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
                 if (data_type != 'NONE') {
-                    exit 1, "When the input data format is 'snp_indel_vcf' or 'sv_vcf, please set the data type (data_type column of '${in_data}') to 'NONE'."
+                    exit 1, "When the input data format is SNP/indel VCF or SV VCF, please set the data type (data_type column of '${in_data}') to 'NONE'."
                 }
                 if (!in_file.contains('vcf') && in_data_format_override != 'yes') {
                     exit 1, "You've specified that the in data format is SNP/indel VCF or SV VCF, but it looks like you may not be passing a VCF file based on the file names defined in the file column of '${in_data}'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
