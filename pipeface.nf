@@ -1198,7 +1198,7 @@ process jasmine_cutesv {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
         }
         else if (proband_data_type == 'pacbio') {
-            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
         }
         """
         # unzip vcfs
