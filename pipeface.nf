@@ -230,7 +230,7 @@ process mosdepth {
         def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
         # run mosdepth
-        mosdepth depth $bam $regions_of_interest_optional -t ${task.cpus}
+        mosdepth depth $bam $regions_of_interest_optional --no-per-base -t ${task.cpus}
         # rename file
         ln -s depth.mosdepth.summary.txt depth.txt
         """
