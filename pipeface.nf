@@ -901,7 +901,7 @@ process vep_snp_indel {
     script:
         """
         # run vep
-        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip \
+        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
         --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
@@ -1150,10 +1150,10 @@ process jasmine_sniffles {
         realpath $mother_haplotagged_bam >> bams.txt
         # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
-        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort vcf and convert TRA variant tags to standard BND tags (allows them to be annotated
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
         grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
-        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n | sed 's/SVTYPE=TRA/SVTYPE=BND/g' | sed 's/<TRA>/<BND>/g' >> sv.phased.vcf
         # compress and index vcf
         bgzip \
         -@ ${task.cpus} \
@@ -1214,10 +1214,10 @@ process jasmine_cutesv {
         realpath $mother_haplotagged_bam >> bams.txt
         # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
-        # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort vcf and convert TRA variant tags to standard BND tags (allows them to be annotated 
         grep '##' sv.tmp.vcf > sv.vcf
         grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
-        grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n >> sv.vcf
+        grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n | sed 's/SVTYPE=TRA/SVTYPE=BND/g' | sed 's/<TRA>/<BND>/g' >> sv.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
@@ -1267,7 +1267,7 @@ process vep_sniffles_sv {
     script:
         """
         # run vep
-        vep -i $sv_phased_vcf -o sv.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg  --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --plugin CADD,sv=$cadd_sv_db
+        vep -i $sv_phased_vcf -o sv.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg  --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
         # index vcf
         tabix sv.phased.annotated.vcf.gz
         """
@@ -1316,7 +1316,7 @@ process vep_cutesv_sv {
     script:
         """
         # run vep
-        vep -i $sv_vcf -o sv.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --plugin CADD,sv=$cadd_sv_db
+        vep -i $sv_vcf -o sv.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
         # index vcf
         tabix sv.annotated.vcf.gz
         """
