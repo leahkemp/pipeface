@@ -1,12 +1,10 @@
-
 nextflow.enable.dsl=2
 
 // tag pipeface version
 def pipeface_version = "0.8.0"
 
 // create dummy NONE file for optional pipeface inputs
-def filePath = "NONE"
-new File(filePath).text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
+new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
 
 // set defaults for optional params (set default optional input files to dummy NONE file)
 // secret sauce second outdir
@@ -50,118 +48,76 @@ process scrape_settings {
 
     script:
         // conditionally define reported SV caller
-        if( sv_caller == 'both' ) {
+        if (sv_caller == 'both') {
             reported_sv_caller = 'cutesv,sniffles'
         }
-        else if ( sv_caller == 'sniffles' ) {
+        else if (sv_caller == 'sniffles') {
             reported_sv_caller = 'sniffles'
         }
-        else if ( sv_caller == 'cutesv' ) {
+        else if (sv_caller == 'cutesv') {
             reported_sv_caller = 'cutesv'
         }
-        else if ( sv_caller == 'NONE' ) {
+        else if (sv_caller == 'NONE') {
             reported_sv_caller = 'NONE'
         }
         // conditionally define reported in data format
-        if ( in_data_format == 'ubam_fastq' ) {
+        if (in_data_format == 'ubam_fastq') {
             reported_in_data_format = 'unaligned BAM or FASTQ'
         }
-        else if ( in_data_format == 'aligned_bam' ) {
+        else if (in_data_format == 'aligned_bam') {
             reported_in_data_format = 'aligned BAM'
         }
-        else if ( in_data_format == 'snv_vcf' ) {
+        else if (in_data_format == 'snp_indel_vcf') {
             reported_in_data_format = 'SNP/indel VCF'
         }
-        else if ( in_data_format == 'sv_vcf' ) {
+        else if (in_data_format == 'sv_vcf') {
             reported_in_data_format = 'SV VCF'
         }
-        if (haploidaware == 'yes') {
-            def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) ? regions_of_interest : ref_index
-
-            def fileContent = file(check_file).text
-            def chrX_found = fileContent.find(params.chrXseq)
-            def chrY_found = fileContent.find(params.chrYseq)
-
-            if (!chrX_found || !chrY_found) {
-                throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
-            }
-        }
-        if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' )
+        if (in_data_format in ['ubam_fastq', 'aligned_bam'])
         """
-        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
-        echo "Sample ID: $sample_id" >> pipeface_settings.txt
-        echo "Family ID: $family_id" >> pipeface_settings.txt
-        echo "Family position: $family_position" >> pipeface_settings.txt
-        echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
-        echo "Input data file/files: $files" >> pipeface_settings.txt
-        echo "Data type: $data_type" >> pipeface_settings.txt
-        echo "Regions of interest file: $regions_of_interest" >> pipeface_settings.txt
-        echo "Clair3 model: $clair3_model" >> pipeface_settings.txt
-        echo "In data csv path: $in_data" >> pipeface_settings.txt
-        echo "Reference genome: $ref" >> pipeface_settings.txt
-        echo "Reference genome index: $ref_index" >> pipeface_settings.txt
-        echo "Haploid-aware: $haploidaware" >> pipeface_settings.txt
-        echo "Sex: $sex" >> pipeface_settings.txt
-        echo "PAR regions: $parbed" >> pipeface_settings.txt
-        echo "Tandem repeat file: $tandem_repeat" >> pipeface_settings.txt
-        echo "SNP/indel caller: $snp_indel_caller" >> pipeface_settings.txt
-        echo "SV caller: $reported_sv_caller" >> pipeface_settings.txt
-        echo "Annotate: $annotate" >> pipeface_settings.txt
-        echo "Calculate depth: $calculate_depth" >> pipeface_settings.txt
-        echo "Analyse base modifications: $analyse_base_mods" >> pipeface_settings.txt
-        echo "Check relatedness: $check_relatedness" >> pipeface_settings.txt
-        echo "Somalier sites file: $sites" >> pipeface_settings.txt
-        echo "Outdir: $outdir" >> pipeface_settings.txt
+        F="pipeface_settings.txt"
+        echo "Pipeface version: $pipeface_version" >> \${F}
+        echo "Sample ID: $sample_id" >> \${F}
+        echo "Family ID: $family_id" >> \${F}
+        echo "Family position: $family_position" >> \${F}
+        echo "In data format: $reported_in_data_format" >> \${F}
+        echo "Input data file/files: $files" >> \${F}
+        echo "Data type: $data_type" >> \${F}
+        echo "Regions of interest F: $regions_of_interest" >> \${F}
+        echo "Clair3 model: $clair3_model" >> \${F}
+        echo "In data csv path: $in_data" >> \${F}
+        echo "Reference genome: $ref" >> \${F}
+        echo "Reference genome index: $ref_index" >> \${F}
+        echo "Haploid-aware: $haploidaware" >> \${F}
+        echo "Sex: $sex" >> \${F}
+        echo "PAR regions: $parbed" >> \${F}
+        echo "Tandem repeat F: $tandem_repeat" >> \${F}
+        echo "SNP/indel caller: $snp_indel_caller" >> \${F}
+        echo "SV caller: $reported_sv_caller" >> \${F}
+        echo "Annotate: $annotate" >> \${F}
+        echo "Calculate depth: $calculate_depth" >> \${F}
+        echo "Analyse base modifications: $analyse_base_mods" >> \${F}
+        echo "Check relatedness: $check_relatedness" >> \${F}
+        echo "Somalier sites F: $sites" >> \${F}
+        echo "Outdir: $outdir" >> \${F}
         """
-        else if( in_data_format == 'snv_vcf' | in_data_format == 'sv_vcf' )
+        else if (in_data_format in ['snp_indel_vcf', 'sv_vcf'])
         """
-        echo "Pipeface version: $pipeface_version" >> pipeface_settings.txt
-        echo "Sample ID: $sample_id" >> pipeface_settings.txt
-        echo "Family ID: $family_id" >> pipeface_settings.txt
-        echo "Family position: $family_position" >> pipeface_settings.txt
-        echo "In data format: $reported_in_data_format" >> pipeface_settings.txt
-        echo "Input data file/files: $files" >> pipeface_settings.txt
-        echo "In data csv path: $in_data" >> pipeface_settings.txt
-        echo "Annotate: $annotate" >> pipeface_settings.txt
-        echo "Outdir: $outdir" >> pipeface_settings.txt
+        F="pipeface_settings.txt"
+        echo "Pipeface version: $pipeface_version" >> \${F}
+        echo "Sample ID: $sample_id" >> \${F}
+        echo "Family ID: $family_id" >> \${F}
+        echo "Family position: $family_position" >> \${F}
+        echo "In data format: $reported_in_data_format" >> \${F}
+        echo "Input data F/Fs: $Fs" >> \${F}
+        echo "In data csv path: $in_data" >> \${F}
+        echo "Annotate: $annotate" >> \${F}
+        echo "Outdir: $outdir" >> \${F}
         """
 
     stub:
         """
         touch pipeface_settings.txt
-        """
-
-}
-
-process scrape_bam_header {
-
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$file_short.$filename" }
-
-    input:
-        tuple val(sample_id), val(family_id), val(extension), val(file), val(file_short)
-        val outdir
-        val outdir2
-
-    output:
-        tuple val(sample_id), val(family_id), val(file_short), path('header')
-
-    script:
-        if( extension == 'gz' )
-        """
-        echo "none" > header
-        """
-        else if ( extension == 'fastq' )
-        """
-        echo "none" > header
-        """
-        else if( extension == 'bam' )
-        """
-        samtools head $file > header
-        """
-
-    stub:
-        """
-        touch header
         """
 
 }
@@ -175,7 +131,7 @@ process merge_runs {
         tuple val(sample_id), val(family_id), path('merged')
 
     script:
-        if( extension == 'gz' )
+        if (extension == 'gz')
         """
         ${
             if (files instanceof List && files.size() > 1) {
@@ -185,7 +141,7 @@ process merge_runs {
             }
         }
         """
-        else if ( extension == 'fastq' )
+        else if (extension == 'fastq')
         """
         ${
             if (files instanceof List && files.size() > 1) {
@@ -195,7 +151,7 @@ process merge_runs {
             }
         }
         """
-        else if( extension == 'bam' )
+        else if (extension == 'bam')
         """
         ${
             if (files instanceof List && files.size() > 1) {
@@ -221,54 +177,29 @@ process minimap2 {
         val ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path('sorted.bam')
+        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai')
 
     script:
         // conditionally define preset
-        if( data_type == 'ont' ) {
+        if (data_type == 'ont') {
             preset = 'lr:hq'
         }
-        else if( data_type == 'pacbio' ) {
+        else if (data_type == 'pacbio') {
             preset = 'map-hifi'
         }
-        if( extension == 'bam' )
+        if (extension == 'bam')
         """
         # run minimap
-        samtools fastq \
-        -@ ${task.cpus} \
-        -T '*' \
-        $merged | minimap2 \
-        -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' \
-        -y \
-        -Y \
-        --secondary=no \
-        --MD \
-        -a \
-        -x $preset \
-        -t ${task.cpus} \
-        $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
+        samtools fastq -@ ${task.cpus} -T '*' $merged | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
-        samtools index \
-        -@ ${task.cpus} \
-        sorted.bam
+        samtools index -@ ${task.cpus} sorted.bam
         """
-        else if( extension == 'gz' | extension == 'fastq' )
+        else if (extension in ['gz', 'fastq'])
         """
         # run minimap
-        minimap2 \
-        -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' \
-        -Y \
-        --secondary=no \
-        --MD \
-        -a \
-        -x $preset \
-        -t ${task.cpus} \
-        $ref \
-        $merged | samtools sort -@ ${task.cpus} -o sorted.bam -
+        minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref $merged | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
-        samtools index \
-        -@ ${task.cpus} \
-        sorted.bam
+        samtools index -@ ${task.cpus} sorted.bam
         """
 
     stub:
@@ -286,7 +217,7 @@ process mosdepth {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), val(regions_of_interest)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(regions_of_interest)
         val outdir
         val outdir2
         val ref_name
@@ -298,17 +229,8 @@ process mosdepth {
         // define a string to optionally pass regions of interest bed file
         def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
-        # stage bam and bam index
-        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
-        bam_loc=\$(realpath ${bam})
-        ln -sf \${bam_loc} sorted.bam
-        ln -sf \${bam_loc}.bai .
-        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run mosdepth
-        mosdepth depth \
-        $bam \
-        $regions_of_interest_optional \
-        -t ${task.cpus}
+        mosdepth depth $bam $regions_of_interest_optional -t ${task.cpus}
         # rename file
         ln -s depth.mosdepth.summary.txt depth.txt
         """
@@ -325,54 +247,42 @@ process clair3 {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), val(data_type), val(regions_of_interest), val(clair3_model)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type), val(regions_of_interest), val(clair3_model)
         val ref
         val ref_index
         val outdir
         val outdir2
         val ref_name
         val snp_indel_caller
+        val haploidaware
+        val sex
 
     output:
-        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
         // define a string to optionally pass regions of interest bed file
         def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
         // conditionally define platform
-        if( data_type == 'ont' ) {
+        if (data_type == 'ont') {
             platform = 'ont'
         }
-        else if( data_type == 'pacbio' ) {
+        else if (data_type == 'pacbio') {
             platform = 'hifi'
         }
+        if ( haploidaware == 'no' | sex == 'XX' )
         """
-        # stage bam and bam index
-        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
-        bam_loc=\$(realpath ${bam})
-        ln -sf \${bam_loc} sorted.bam
-        ln -sf \${bam_loc}.bai .
-        ln -sf \${bam_loc}.bai sorted.bam.bai
         # run clair3
-
-        if [[ "${params.haploidaware}" == "no" || "${params.sex}" == "XX" ]]; then 
-
-            run_clair3.sh \
-            --bam_fn=$bam \
-            --ref_fn=$ref \
-            --output=./ \
-            --threads=${task.cpus} \
-            --platform=$platform \
-            --model_path=$clair3_model \
-            --sample_name=$sample_id \
-            --gvcf \
-            --include_all_ctgs \
-            $regions_of_interest_optional
-       
-
-        elif [[ "${params.haploidaware}" == "yes" && ${params.sex} == "XY" ]]; then 
-         
+        run_clair3.sh --bam_fn=$bam --ref_fn=$ref --output=./ --threads=${task.cpus} --platform=$platform --model_path=$clair3_model --sample_name=$sample_id --gvcf --include_all_ctgs $regions_of_interest_optional
+        # rename files
+        ln -s merge_output.vcf.gz snp_indel.vcf.gz
+        ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
+        ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
+        ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
+        """
+        else if ( haploidaware == 'yes' && sex == 'XY' )
+        """
         # if regions were given, we use them to subset the genome index to construct the genome.bed file
         if [[ -f "${regions_of_interest}" ]]; then
             awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
@@ -381,70 +291,39 @@ process clair3 {
         # fallback: use full genome .fai
             awk '{ print \$1 "\\t0\\t" \$2 }' "${ref}.fai" > genome.bed
         fi
-
         genomebed="genome.bed"
-        
-        mkdir -p haploid
-        mkdir -p diploid
+        mkdir -p {haploid,diploid}
 
         # separate out genome bed into a haploid and diploid bed each
         grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
-
         grep "^chrX" ${params.parbed} > xpar.bed
         grep "^chrY" ${params.parbed} > ypar.bed
         grep "^chrX" \${genomebed} > chrX_full.bed
         grep "^chrY" \${genomebed} > chrY_full.bed
-
         bedtools subtract -a chrX_full.bed -b xpar.bed > xnonpar.bed
         bedtools subtract -a chrY_full.bed -b ypar.bed > ynonpar.bed
-
         cat autosomes.bed xpar.bed ypar.bed | sort -k1,1V -k2,2n > diploid.bed
         cat xnonpar.bed ynonpar.bed | sort -k1,1 -k2,2n > haploid.bed
         
-        # haploid run
-        run_clair3.sh \
-        --bam_fn="${bam}" \
-        --ref_fn="${ref}" \
-        --output="haploid" \
-        --threads=${task.cpus} \
-        --platform=${platform} \
-        --model_path="${clair3_model}" \
-        --sample_name="${sample_id}" \
-        --gvcf \
-        --bed_fn="haploid.bed" --haploid_precise
+        # run clair3 (haploid)
+        run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="haploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="haploid.bed" --haploid_precise
         
-        # diploid run
-        run_clair3.sh \
-        --bam_fn="${bam}" \
-        --ref_fn="${ref}" \
-        --output="diploid" \
-        --threads=${task.cpus} \
-        --platform=${platform} \
-        --model_path="${clair3_model}" \
-        --sample_name="${sample_id}" \
-        --gvcf \
-        --bed_fn="diploid.bed" 
-       
-        # merging diploid and haploid vcf & gvcf files
+        # run clair3 (diploid)
+        run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="diploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="diploid.bed" 
 
+        # merging diploid and haploid vcf & gvcf files
         bcftools +fixploidy haploid/merge_output.vcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.vcf
         bcftools +fixploidy haploid/merge_output.gvcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.gvcf
-
         bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.vcf
         bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.gvcf
-
         tabix -p vcf haploid/merge_output_ploidyfixed.vcf.gz
         tabix -p vcf haploid/merge_output_ploidyfixed.gvcf.gz
-
         bcftools concat -a -Oz -o merge_output.unsorted.vcf.gz diploid/merge_output.vcf.gz haploid/merge_output_ploidyfixed.vcf.gz
         bcftools sort -Oz -o merge_output.vcf.gz merge_output.unsorted.vcf.gz
         tabix -p vcf merge_output.vcf.gz
-
         bcftools concat -a -Oz -o merge_output.unsorted.gvcf.gz diploid/merge_output.gvcf.gz haploid/merge_output_ploidyfixed.gvcf.gz
         bcftools sort -Oz -o merge_output.gvcf.gz merge_output.unsorted.gvcf.gz
         tabix -p vcf merge_output.gvcf.gz
-
-        fi
 
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
@@ -464,21 +343,21 @@ process clair3 {
 process deepvariant_dry_run {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), val(data_type)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type)
         val ref
         val ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), env(make_examples_args), env(call_variants_args)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), env(make_examples_args), env(call_variants_args)
 
     script:
         def haploidparameter = ""
         def parbedparameter = ""
         // conditionally define model type
-        if( data_type == 'ont' ) {
+        if (data_type == 'ont') {
             model = 'ONT_R104'
         }
-        else if ( data_type == 'pacbio' ) {
+        else if (data_type == 'pacbio') {
             model = 'PACBIO'
         }
         // conditionally define haploid contigs and par regions
@@ -491,21 +370,8 @@ process deepvariant_dry_run {
             parbedparameter = ""
         }
         """
-        # stage bam and bam index
-        # do this here instead of input tuple so I can handle processing an aligned bam as an input file without requiring a bam index for ubam input
-        bam_loc=\$(realpath ${bam})
-        ln -sf \${bam_loc} sorted.bam
-        ln -sf \${bam_loc}.bai .
-        ln -sf \${bam_loc}.bai sorted.bam.bai
         # do a dry-run of deepvariant
-        run_deepvariant \
-        --reads=$bam \
-        --ref=$ref \
-        --sample_name=$sample_id \
-        --output_vcf=snp_indel.raw.vcf.gz \
-        --output_gvcf=snp_indel.raw.g.vcf.gz \
-        --model_type=$model \
-        --dry_run=true \
+        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.raw.vcf.gz --output_gvcf=snp_indel.raw.g.vcf.gz --model_type=$model --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
@@ -578,7 +444,7 @@ process deepvariant_post_processing {
     def reported_snp_indel_caller = "deepvariant"
 
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
             return "$sample_id.$ref_name.$reported_snp_indel_caller.$filename"
@@ -629,23 +495,16 @@ process split_multiallele {
         val ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path('sorted.bam'), path('sorted.bam.bai'), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
 
     script:
         """
         # run bcftools norm
-        bcftools norm \
-        --threads ${task.cpus} \
-        -m \
-        -any \
-        -f $ref \
-        snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
         # sort
         bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
         # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        snp_indel.split.vcf
+        bgzip -@ ${task.cpus} snp_indel.split.vcf
         tabix snp_indel.split.vcf.gz
         """
 
@@ -663,7 +522,7 @@ process whatshap_phase {
     def reported_snp_indel_caller = "deepvariant"
 
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
             return "$sample_id.$ref_name.$reported_snp_indel_caller.$filename"
@@ -690,19 +549,11 @@ process whatshap_phase {
         ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
         ln -sf $snp_indel_split_vcf_index snp_indel.vcf.gz.tbi
         # run whatshap phase
-        whatshap phase \
-        --reference $ref \
-        --output snp_indel.phased.vcf.gz \
-        --output-read-list snp_indel.phased.read_list.txt \
-        --sample $sample_id \
-        --ignore-read-groups snp_indel.vcf.gz $bam 
+        whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --sample $sample_id --ignore-read-groups snp_indel.vcf.gz $bam 
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
-        whatshap stats \
-        snp_indel.phased.vcf.gz \
-        --gtf snp_indel.phased.stats.gtf \
-        --sample $sample_id 
+        whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf --sample $sample_id 
         """
 
     stub:
@@ -737,19 +588,9 @@ process whatshap_haplotag {
     script:
         """
         # run whatshap haplotag
-        whatshap haplotag \
-        --reference $ref \
-        --output sorted.haplotagged.bam \
-        --sample $sample_id \
-        --tag-supplementary \
-        --ignore-read-groups \
-        --output-threads ${task.cpus} \
-        --output-haplotag-list sorted.haplotagged.tsv \
-        $snp_indel_split_vcf $bam
+        whatshap haplotag --reference $ref --output sorted.haplotagged.bam --sample $sample_id --tag-supplementary --ignore-read-groups --output-threads ${task.cpus} --output-haplotag-list sorted.haplotagged.tsv $snp_indel_split_vcf $bam
         # index bam
-        samtools index \
-        -@ ${task.cpus} \
-        sorted.haplotagged.bam
+        samtools index -@ ${task.cpus} sorted.haplotagged.bam
         # tag bam with family_position for downstream deeptrio
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
         ln -s sorted.haplotagged.bam.bai ${family_position}.sorted.haplotagged.bam.bai
@@ -781,30 +622,14 @@ process deeptrio_dry_run {
         
     script:
         // conditionally define model type
-        if( proband_data_type == 'ont' ) {
+        if (proband_data_type == 'ont') {
             model = 'ONT'
         }
-        else if ( proband_data_type == 'pacbio' ) {
+        else if (proband_data_type == 'pacbio') {
             model = 'PACBIO'
         }
         """
-        run_deeptrio \
-        --model_type=$model \
-        --ref=$ref \
-        --sample_name_child=$proband_sample_id \
-        --sample_name_parent1=$father_sample_id \
-        --sample_name_parent2=$mother_sample_id \
-        --reads_child=$proband_haplotagged_bam \
-        --reads_parent1=$father_haplotagged_bam \
-        --reads_parent2=$mother_haplotagged_bam \
-        --output_vcf_child=child.vcf.gz \
-        --output_vcf_parent1=parent1.vcf.gz \
-        --output_vcf_parent2=parent2.vcf.gz \
-        --output_gvcf_child=child.g.vcf.gz \
-        --output_gvcf_parent1=parent1.g.vcf.gz \
-        --output_gvcf_parent2=parent2.g.vcf.gz \
-        --dry_run=true > commands.txt
-
+        run_deeptrio --model_type=$model --ref=$ref --sample_name_child=$proband_sample_id --sample_name_parent1=$father_sample_id --sample_name_parent2=$mother_sample_id --reads_child=$proband_haplotagged_bam --reads_parent1=$father_haplotagged_bam --reads_parent2=$mother_haplotagged_bam --output_vcf_child=child.vcf.gz --output_vcf_parent1=parent1.vcf.gz --output_vcf_parent2=parent2.vcf.gz --output_gvcf_child=child.g.vcf.gz --output_gvcf_parent1=parent1.g.vcf.gz --output_gvcf_parent2=parent2.g.vcf.gz --dry_run=true > commands.txt
         make_examples_cs_args=\$(grep "/opt/deepvariant/bin/deeptrio/make_examples --mode candidate_sweep" commands.txt | awk -F'/opt/deepvariant/bin/deeptrio/make_examples' '{print \$2}' | sed 's/--ref "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name_parent1 "[^"]*"//g' | sed 's/--reads_parent1 "[^"]*"//g' | sed 's/--sample_name_parent2 "[^"]*"//g' | sed 's/--reads_parent2 "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--candidate_positions "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
         make_examples_calling_args=\$(grep "/opt/deepvariant/bin/deeptrio/make_examples --mode calling" commands.txt | awk -F'/opt/deepvariant/bin/deeptrio/make_examples' '{print \$2}' | sed 's/--ref "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name_parent1 "[^"]*"//g' | sed 's/--reads_parent1 "[^"]*"//g' | sed 's/--sample_name_parent2 "[^"]*"//g' | sed 's/--reads_parent2 "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--candidate_positions "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
         call_variants_proband_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | grep "child" | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
@@ -929,7 +754,7 @@ process somalier {
         val ref_name
 
     output:
-       tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.groups.tsv'), path('somalier.html')
+        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.groups.tsv'), path('somalier.html')
 
     script:
         """
@@ -954,9 +779,7 @@ process glnexus {
     script:
         """
         # run glnexus
-        glnexus_cli \
-        --config DeepVariant \
-        $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
+        glnexus_cli --config DeepVariant $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
         # compress and index vcf
         bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
@@ -983,16 +806,9 @@ process joint_split_multiallele {
     script:
         """
         # run bcftools norm
-        bcftools norm \
-        --threads ${task.cpus} \
-        -m \
-        -any \
-        -f $ref \
-        snp_indel.vcf.gz > snp_indel.split.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.vcf
         # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        snp_indel.split.vcf
+        bgzip -@ ${task.cpus} snp_indel.split.vcf
         tabix snp_indel.split.vcf.gz
         """
 
@@ -1028,17 +844,11 @@ process whatshap_joint_phase {
         # create pedigree file
         printf "$proband_family_id\t$proband_sample_id\t$father_sample_id\t$mother_sample_id\t0\t1\n" > pedigree.ped
         # run whatshap phase
-        whatshap phase \
-        --reference $ref \
-        --output snp_indel.phased.vcf.gz \
-        --output-read-list snp_indel.phased.read_list.txt \
-        --ped pedigree.ped snp_indel.vcf.gz $proband_haplotagged_bam $father_haplotagged_bam $mother_haplotagged_bam
+        whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --ped pedigree.ped snp_indel.vcf.gz $proband_haplotagged_bam $father_haplotagged_bam $mother_haplotagged_bam
         # index vcf
         tabix snp_indel.phased.vcf.gz
         # run whatshap stats
-        whatshap stats \
-        snp_indel.phased.vcf.gz \
-        --gtf snp_indel.phased.stats.gtf
+        whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf
         """
 
     stub:
@@ -1051,16 +861,16 @@ process whatshap_joint_phase {
 
 }
 
-process vep_snv {
+process vep_snp_indel {
 
     publishDir { task ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
             return "$family_id.$ref_name.$snp_indel_caller.$filename"
@@ -1091,36 +901,12 @@ process vep_snv {
     script:
         """
         # run vep
-        vep -i $snp_indel_split_phased_vcf \
-        -o snp_indel.phased.annotated.vcf.gz \
-        --format vcf \
-        --vcf \
-        --fasta $ref \
-        --dir $vep_db \
-        --assembly GRCh38 \
-        --species homo_sapiens \
-        --cache \
-        --offline \
-        --merged \
-        --sift b \
-        --polyphen b \
-        --symbol \
-        --hgvs \
-        --hgvsg \
-        --plugin REVEL,file=$revel_db \
-        --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip \
+        --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
         --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
-        --plugin AlphaMissense,file=$alphamissense_db \
-        --uploaded_allele \
-        --check_existing \
-        --filter_common \
-        --no_intergenic \
-        --pick \
-        --fork ${task.cpus} \
-        --no_stats \
-        --compress_output bgzip
+        --plugin AlphaMissense,file=$alphamissense_db
         # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
         """
@@ -1151,16 +937,10 @@ process minimod {
         tuple val(sample_id), val(family_id), path('modfreqs_hap1.bw'), path('modfreqs_hap1.bed'), path('modfreqs_hap2.bw'), path('modfreqs_hap2.bed'), path('modfreqs_combined.bw'), path('modfreqs_combined.bed'), optional: true
 
     script:
-        if( data_type == 'ont' )
+        if (data_type == 'ont')
         """
         # run minimod
-        minimod \
-        mod-freq \
-        $ref \
-        $haplotagged_bam \
-        -t ${task.cpus} \
-        --haplotypes \
-        -o modfreqs.tmp.bed
+        minimod mod-freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes -o modfreqs.tmp.bed
         # sort
         awk 'NR > 1 { print }' modfreqs.tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
         if [ -s modfreqs.bed ]; then
@@ -1169,12 +949,12 @@ process minimod {
             awk '\$9==2' modfreqs.bed > modfreqs_hap2.bed
             awk '\$9=="*" || \$9==0' modfreqs.bed > modfreqs_combined.bed
             # generate bigwig
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \${FILE}.bed > \${FILE}.formatted.bed; done
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \\${FILE}.bed > \\${FILE}.formatted.bed; done
             cut -f1,2 $ref_index > chrom.sizes
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}.formatted.bed chrom.sizes \${FILE}.bw; done
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \\${FILE}.formatted.bed chrom.sizes \\${FILE}.bw; done
         fi
         """
-        else if( data_type == 'pacbio' )
+        else if (data_type == 'pacbio')
         """
         echo "Data type is pacbio, not running minimod on this data."
         """
@@ -1209,17 +989,10 @@ process pbcpgtools {
         tuple val(sample_id), val(family_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
 
     script:
-        if( data_type == 'pacbio' )
+        if (data_type == 'pacbio')
         """
         # run pb-cpg-tools
-        aligned_bam_to_cpg_scores \
-        --bam $haplotagged_bam \
-        --ref $ref \
-        --pileup-mode model \
-        --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite \
-        --modsites-mode denovo \
-        --hap-tag HP \
-        --threads ${task.cpus}
+        aligned_bam_to_cpg_scores --bam $haplotagged_bam --ref $ref --pileup-mode model --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite --modsites-mode denovo --hap-tag HP --threads ${task.cpus}
         # rename files
         ln -s aligned_bam_to_cpg_scores.hap1.bw cpg_scores_hap1.bw
         ln -s aligned_bam_to_cpg_scores.hap1.bed cpg_scores_hap1.bed
@@ -1228,7 +1001,7 @@ process pbcpgtools {
         ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores_combined.bw
         ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores_combined.bed
         """
-        else if( data_type == 'ont' )
+        else if (data_type == 'ont')
         """
         echo "Data type is ONT, not running pb-CpG-tools on this data."
         """
@@ -1271,14 +1044,7 @@ process sniffles {
         """
         # run sniffles
         sniffles \
-        --reference $ref \
-        --input $haplotagged_bam \
-        --threads ${task.cpus} \
-        --sample-id $sample_id \
-        --vcf sv.phased.vcf.gz \
-        --output-rnames \
-        --minsvlen 50 \
-        --phase $tandem_repeat_optional
+        --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
@@ -1314,29 +1080,17 @@ process cutesv {
 
     script:
         // define platform specific settings
-        if( data_type == 'ont' ) {
+        if (data_type == 'ont') {
             settings = '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
         }
-        else if( data_type == 'pacbio' ) {
+        else if (data_type == 'pacbio') {
             settings = '--max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5'
         }
         """
         # run cuteSV
-        cuteSV \
-        $haplotagged_bam \
-        $ref \
-        sv.vcf \
-        ./ \
-        --sample ${sample_id} \
-        -t ${task.cpus} \
-        --genotype \
-        --report_readid \
-        --min_size 50 \
-        $settings
+        cuteSV $haplotagged_bam $ref sv.vcf ./ --sample ${sample_id} -t ${task.cpus} --genotype --report_readid --min_size 50 $settings
         # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        sv.vcf
+        bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.vcf.gz ${family_position}.sv.vcf.gz
@@ -1376,10 +1130,10 @@ process jasmine_sniffles {
         // as default, iris will pass minimap -x map-ont
         // the --pacbio flag passed to iris will pass minimap -x map-pb
         // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
-        if( proband_data_type == 'ont' ) {
+        if (proband_data_type == 'ont') {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
         }
-        else if( proband_data_type == 'pacbio' ) {
+        else if (proband_data_type == 'pacbio') {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
         }
         """
@@ -1395,23 +1149,7 @@ process jasmine_sniffles {
         realpath $father_haplotagged_bam >> bams.txt
         realpath $mother_haplotagged_bam >> bams.txt
         # run jasmine
-        jasmine \
-        threads=${task.cpus} \
-        out_dir=./ \
-        genome_file=$ref \
-        file_list=vcfs.txt \
-        bam_list=bams.txt \
-        out_file=sv.phased.tmp.vcf \
-        min_support=1 \
-        --mark_specific spec_reads=7 spec_len=20 \
-        --pre_normalize \
-        --output_genotypes \
-        --clique_merging \
-        --dup_to_ins \
-        --normalize_type \
-        --require_first_sample \
-        --default_zero_genotype \
-        $iris_args
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
         grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
@@ -1456,10 +1194,10 @@ process jasmine_cutesv {
         // as default, iris will pass minimap -x map-ont
         // the --pacbio flag passed to iris will pass minimap -x map-pb
         // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
-        if( proband_data_type == 'ont' ) {
+        if (proband_data_type == 'ont') {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
         }
-        else if( proband_data_type == 'pacbio' ) {
+        else if (proband_data_type == 'pacbio') {
             iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--hifi'
         }
         """
@@ -1475,31 +1213,13 @@ process jasmine_cutesv {
         realpath $father_haplotagged_bam >> bams.txt
         realpath $mother_haplotagged_bam >> bams.txt
         # run jasmine
-        jasmine \
-        threads=${task.cpus} \
-        out_dir=./ \
-        genome_file=$ref \
-        file_list=vcfs.txt \
-        bam_list=bams.txt \
-        out_file=sv.tmp.vcf \
-        min_support=1 \
-        --mark_specific spec_reads=7 spec_len=20 \
-        --pre_normalize \
-        --output_genotypes \
-        --clique_merging \
-        --dup_to_ins \
-        --normalize_type \
-        --require_first_sample \
-        --default_zero_genotype \
-        $iris_args
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds) and sort vcf
         grep '##' sv.tmp.vcf > sv.vcf
         grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
         grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n >> sv.vcf
         # compress and index vcf
-        bgzip \
-        -@ ${task.cpus} \
-        sv.vcf
+        bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
         """
 
@@ -1517,13 +1237,13 @@ process vep_sniffles_sv {
     def sv_caller_merger = "sniffles.jasmine"
 
     publishDir { task ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
             return "$family_id.$ref_name.$sv_caller_merger.$filename"
@@ -1547,31 +1267,7 @@ process vep_sniffles_sv {
     script:
         """
         # run vep
-        vep -i $sv_phased_vcf \
-        -o sv.phased.annotated.vcf.gz \
-        --format vcf \
-        --vcf \
-        --fasta $ref \
-        --dir $vep_db \
-        --assembly GRCh38 \
-        --species homo_sapiens \
-        --cache \
-        --offline \
-        --merged \
-        --sift b \
-        --polyphen b \
-        --symbol \
-        --hgvs \
-        --hgvsg \
-        --plugin CADD,sv=$cadd_sv_db \
-        --uploaded_allele \
-        --check_existing \
-        --filter_common \
-        --no_intergenic \
-        --pick \
-        --fork ${task.cpus} \
-        --no_stats \
-        --compress_output bgzip
+        vep -i $sv_phased_vcf -o sv.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg  --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --plugin CADD,sv=$cadd_sv_db
         # index vcf
         tabix sv.phased.annotated.vcf.gz
         """
@@ -1590,13 +1286,13 @@ process vep_cutesv_sv {
     def sv_caller_merger = "cutesv.jasmine"
 
     publishDir { task ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if ( params.snp_indel_caller != 'deeptrio' ) {
+        if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
             return "$family_id.$ref_name.$sv_caller_merger.$filename"
@@ -1620,31 +1316,7 @@ process vep_cutesv_sv {
     script:
         """
         # run vep
-        vep -i $sv_vcf \
-        -o sv.annotated.vcf.gz \
-        --format vcf \
-        --vcf \
-        --fasta $ref \
-        --dir $vep_db \
-        --assembly GRCh38 \
-        --species homo_sapiens \
-        --cache \
-        --offline \
-        --merged \
-        --sift b \
-        --polyphen b \
-        --symbol \
-        --hgvs \
-        --hgvsg \
-        --plugin CADD,sv=$cadd_sv_db \
-        --uploaded_allele \
-        --check_existing \
-        --filter_common \
-        --no_intergenic \
-        --pick \
-        --fork ${task.cpus} \
-        --no_stats \
-        --compress_output bgzip
+        vep -i $sv_vcf -o sv.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --plugin CADD,sv=$cadd_sv_db
         # index vcf
         tabix sv.annotated.vcf.gz
         """
@@ -1660,236 +1332,184 @@ process vep_cutesv_sv {
 workflow {
 
     // grab parameters
-    in_data = "$params.in_data"
+    in_data = "${params.in_data}".trim()
     sex = "${params.sex}".trim()
-    parbed = "$params.parbed"
-    in_data_format = "$params.in_data_format"
-    in_data_format_override = "$params.in_data_format_override"
-    ref = "$params.ref"
-    ref_index = "$params.ref_index"
-    tandem_repeat = "$params.tandem_repeat"
-    snp_indel_caller = "$params.snp_indel_caller"
-    sv_caller = "$params.sv_caller"
-    annotate = "$params.annotate"
+    parbed = "${params.parbed}".trim()
+    in_data_format = "${params.in_data_format}".trim()
+    in_data_format_override = "${params.in_data_format_override}".trim()
+    ref = "${params.ref}".trim()
+    ref_index = "${params.ref_index}".trim()
+    tandem_repeat = "${params.tandem_repeat}".trim()
+    snp_indel_caller = "${params.snp_indel_caller}".trim()
+    sv_caller = "${params.sv_caller}".trim()
+    annotate = "${params.annotate}".trim()
     haploidaware = "${params.haploidaware}".trim()
-    annotate_override = "$params.annotate_override"
-    calculate_depth = "$params.calculate_depth"
-    analyse_base_mods = "$params.analyse_base_mods"
-    check_relatedness = "$params.check_relatedness"
-    sites = "$params.sites"
-    outdir = "$params.outdir"
-    outdir2 = "$params.outdir2"
-    vep_db = "$params.vep_db"
-    revel_db = "$params.revel_db"
-    gnomad_db = "$params.gnomad_db"
-    clinvar_db = "$params.clinvar_db"
-    cadd_snv_db = "$params.cadd_snv_db"
-    cadd_indel_db = "$params.cadd_indel_db"
-    cadd_sv_db = "$params.cadd_sv_db"
-    spliceai_snv_db = "$params.spliceai_snv_db"
-    spliceai_indel_db = "$params.spliceai_indel_db"
-    alphamissense_db = "$params.alphamissense_db"
+    annotate_override = "${params.annotate_override}".trim()
+    calculate_depth = "${params.calculate_depth}".trim()
+    analyse_base_mods = "${params.analyse_base_mods}".trim()
+    check_relatedness = "${params.check_relatedness}".trim()
+    sites = "${params.sites}".trim()
+    outdir = "${params.outdir}".trim()
+    outdir2 = "${params.outdir2}".trim()
+    vep_db = "${params.vep_db}".trim()
+    revel_db = "${params.revel_db}".trim()
+    gnomad_db = "${params.gnomad_db}".trim()
+    clinvar_db = "${params.clinvar_db}".trim()
+    cadd_snv_db = "${params.cadd_snv_db}".trim()
+    cadd_indel_db = "${params.cadd_indel_db}".trim()
+    cadd_sv_db = "${params.cadd_sv_db}".trim()
+    spliceai_snv_db = "${params.spliceai_snv_db}".trim()
+    spliceai_indel_db = "${params.spliceai_indel_db}".trim()
+    alphamissense_db = "${params.alphamissense_db}".trim()
 
     // check user provided parameters
-    if ( !in_data ) {
-        exit 1, "No in data csv file specified. Either include in parameter file or pass to --in_data on the command line."
+    if (!file(in_data).exists()) {
+        exit 1, "In data csv file does not exist, 'in_data = ${in_data}' provided."
     }
-    if ( !file(in_data).exists() ) {
-        exit 1, "In data csv file path does not exist, '${in_data}' provided."
+    if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
+        exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
     }
-    if ( !in_data_format ) {
-        exit 1, "No in data format selected. Either include in parameter file or pass to --in_data_format on the command line. Should be 'ubam_fastq', 'aligned_bam' or 'snv_vcf'."
+    if (!file(ref).exists()) {
+        exit 1, "Reference genome file does not exist, ref = '${ref}' provided."
     }
-    if ( in_data_format != 'ubam_fastq' && in_data_format != 'aligned_bam' && in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' ) {
-        exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snv_vcf' or 'sv_vcf', '${in_data_format}' selected."
-    }
-    if ( in_data_format == 'snv_vcf' && tandem_repeat != 'NONE' ) {
-        exit 1, "In data format is SNP/indel VCF, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
-    }
-    if ( in_data_format == 'sv_vcf' && tandem_repeat != 'NONE' ) {
-        exit 1, "In data format is SV VCF, but you haven't set the tandem repeat file to 'NONE'. Either set tandem_repeat to 'NONE' in parameter file or pass '--tandem_repeat NONE' on the command line"
-    }
-    if ( in_data_format == 'snv_vcf' && sv_caller != 'NONE' ) {
-        exit 1, "In data format is SNP/indel VCF, but you haven't set the SV calling software to 'NONE'. Either set sv_caller to 'NONE' in parameter file or pass '--sv_caller NONE' on the command line"
-    }
-    if ( in_data_format == 'sv_vcf' && snp_indel_caller != 'NONE' ) {
-        exit 1, "In data format is SV VCF, but you haven't set the SNP/indel calling software to 'NONE'. Either set snp_indel_caller to 'NONE' in parameter file or pass '--snp_indel_caller NONE' on the command line."
-    }
-    if ( in_data_format == 'snv_vcf' && annotate == 'no' ) {
-        exit 1, "In data format is SNP/indel VCF, but you've chosen not to annotate. Nothing for pipeface to do."
-    }
-    if ( in_data_format == 'sv_vcf' && annotate == 'no' ) {
-        exit 1, "In data format is SV VCF, but you've chosen not to annotate. Nothing for pipeface to do."
-    }
-    if ( in_data_format == 'snv_vcf' && calculate_depth == 'yes' ) {
-        exit 1, "In data format is SNP/indel VCF, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
-    }
-    if ( in_data_format == 'sv_vcf' && calculate_depth == 'yes' ) {
-        exit 1, "In data format is SV VCF, but you've chosen to calculate depth (which requires a bam file). Either set calculate_depth to 'no' in parameter file or pass '--calculate_depth no' on the command line"
-    }
-    if ( in_data_format == 'snv_vcf' && sites != 'NONE' ) {
-        exit 1, "In data format is SNP/indel VCF, but you haven't set the sites file to 'NONE'. Either set sites to 'NONE' in parameter file or pass '--sites NONE' on the command line"
-    }
-    if ( in_data_format == 'sv_vcf' && sites != 'NONE' ) {
-        exit 1, "In data format is SV VCF, but you haven't set the sites file to 'NONE'. Either set sites to 'NONE' in parameter file or pass '--sites NONE' on the command line"
-    }
-    if ( !ref ) {
-        exit 1, "No reference genome provided. Either include in parameter file or pass to --ref on the command line."
-    }
-    if ( !file(ref).exists() ) {
-        exit 1, "Reference genome file path does not exist, '${ref}' provided."
-    }
-    if ( !ref_index ) {
-        exit 1, "No reference genome index provided. Either include in parameter file or pass to --ref_index on the command line."
-    }
-    if ( !file(ref_index).exists() ) {
-        exit 1, "Reference genome index file path does not exist, '${ref_index}' provided."
-    }
-    if ( !tandem_repeat ) {
-        exit 1, "No tandem repeat bed file provided. Either include in parameter file or pass to --tandem_repeat on the command line. Set to 'NONE' if you do not wish to use a tandem repeat bed file."
-    }
-    if ( !file(tandem_repeat).exists() ) {
-        exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
-    }
-    if ( !sites ) {
-        exit 1, "No sites file provided. Either include in parameter file or pass to --sites on the command line. Set to 'NONE' if you not required."
-    }
-    if ( !file(sites).exists() ) {
-        exit 1, "Sites file path does not exist, '${sites}' provided."
-    }
-    if ( !snp_indel_caller ) {
-        exit 1, "No SNP/indel calling software selected. Either include in parameter file or pass to --snp_indel_caller on the command line. Should be either 'clair3' or 'deepvariant'."
-    }
-    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && snp_indel_caller != 'clair3' && snp_indel_caller != 'deepvariant' && snp_indel_caller != 'deeptrio') {
-        exit 1, "SNP/indel calling software should be 'clair3', 'deepvariant' or 'deeptrio', '${snp_indel_caller}' selected."
-    }
-    if ( !sv_caller ) {
-        exit 1, "No SV calling software selected. Either include in parameter file or pass to --sv_caller on the command line. Should be 'sniffles', 'cutesv', or 'both'."
-    }
-    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' && sv_caller != 'both' ) {
-        exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', '${sv_caller}' selected."
-    }
-    if ( in_data_format == 'sv_vcf' && sv_caller != 'sniffles' && sv_caller != 'cutesv' ) {
-        exit 1, "When the input data format is 'sv_vcf', SV calling software should be 'sniffles' or 'cutesv', '${sv_caller}' selected."
-    }
-    if ( in_data_format == 'snv_vcf' && ref == 'NONE' ) {
-        exit 1, "When the input data format is 'snv_vcf', please pass the reference genome used to generate the input data to 'ref' instead of setting it to 'NONE'."
-    }
-    if ( in_data_format == 'snv_vcf' && ref_index == 'NONE' ) {
-        exit 1, "When the input data format is 'snv_vcf', please pass the reference genome index used to generate the input data to 'ref_index' instead of setting it to 'NONE'."
-    }
-    if ( in_data_format == 'snv_vcf' && snp_indel_caller == 'NONE' ) {
-        exit 1, "When the input data format is 'snv_vcf', please pass the SNP/indel calling software used to generate the input data to 'snp_indel_caller' instead of setting it to 'NONE'."
-    }
-    if ( in_data_format == 'sv_vcf' && sv_caller == 'NONE' ) {
-        exit 1, "When the input data format is 'sv_vcf', please pass the SV calling software used to generate the input data to 'sv_caller' instead of setting it to 'NONE'."
-    }
-    if ( !annotate ) {
-        exit 1, "Choice to annotate not made. Either include in parameter file or pass to --annotate on the command line. Should be either 'yes' or 'no'."
-    }
-    if ( annotate != 'yes' && annotate != 'no' ) {
-        exit 1, "Choice to annotate should be either 'yes', or 'no', '${annotate}' selected."
-    }
-    if ( annotate == 'yes' && !ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes' ) {
-        exit 1, "Annotation of only hg38/GRCh38 is supported. You've chosen to annotate, but it looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. '${ref}' passed. Pass '--annotate_override yes' on the command line to override this error."
-    }
-    if ( annotate == 'yes' && !file(vep_db).exists() ) {
-        exit 1, "VEP cache directory does not exist, '${vep_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(revel_db).exists() ) {
-        exit 1, "REVEL database file path does not exist, '${revel_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(gnomad_db).exists() ) {
-        exit 1, "gnomAD database file path does not exist, '${gnomad_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(clinvar_db).exists() ) {
-        exit 1, "ClinVar database file path does not exist, '${clinvar_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(cadd_snv_db).exists() ) {
-        exit 1, "CADD SNV database file path does not exist, '${cadd_snv_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(cadd_indel_db).exists() ) {
-        exit 1, "CADD indel database file path does not exist, '${cadd_indel_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(cadd_sv_db).exists() ) {
-        exit 1, "CADD SV database file path does not exist, '${cadd_sv_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(spliceai_snv_db).exists() ) {
-        exit 1, "SpliceAI SNV database file path does not exist, '${spliceai_snv_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(spliceai_indel_db).exists() ) {
-        exit 1, "SpliceAI indel database file path does not exist, '${spliceai_indel_db}' provided."
-    }
-    if ( annotate == 'yes' && !file(alphamissense_db).exists() ) {
-        exit 1, "AlphaMissense database file path does not exist, '${alphamissense_db}' provided."
-    }
-    if ( !calculate_depth ) {
-        exit 1, "Choice to calculate depth not made. Either include in parameter file or pass to --calculate_depth on the command line. Should be either 'yes' or 'no'."
-    }
-    if ( calculate_depth != 'yes' && calculate_depth != 'no' ) {
-        exit 1, "Choice to calculate depth should be either 'yes', or 'no', '${calculate_depth}' selected."
-    }
-    if ( !analyse_base_mods ) {
-        exit 1, "Choice to analyse base modifications not made. Either include in parameter file or pass to --analyse_base_mods on the command line. Should be either 'yes' or 'no'."
-    }
-    if ( analyse_base_mods != 'yes' && analyse_base_mods != 'no' ) {
-        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', '${analyse_base_mods}' selected."
-    }
-    if ( !check_relatedness ) {
-        exit 1, "Choice to check relatedness not made. Either include in parameter file or pass to --check_relatedness on the command line. Should be either 'yes' or 'no'."
-    }
-    if ( check_relatedness != 'yes' && check_relatedness != 'no' ) {
-        exit 1, "Choice to check relatedness should be either 'yes', or 'no', '${check_relatedness}' selected."
-    }
-    if ( snp_indel_caller != 'deeptrio' && check_relatedness == 'yes' ) {
-        exit 1, "You've chosen to check relatedness, but this is only available when the SNP/indel caller is set to 'deeptrio', '${snp_indel_caller}' selected. Either set 'check_relatedness' to 'no' in the parameter file or pass '--check_relatedness no' on the command line."
-    }
-    if ( check_relatedness == 'yes' && sites == 'NONE' ) {
-        exit 1, "You've chosen to check relatedness but you set 'sites' to 'NONE'. Please pass an appropriate sites file in the parameter file or pass to --sites on the command line."
-    }
-    if ( check_relatedness == 'no' && sites != 'NONE' ) {
-        exit 1, "You've chosen not to check relatedness but you haven't set 'sites' to 'NONE'. Please set sites to 'NONE' in the parameter file or pass to --sites NONE on the command line."
-    }
-    if ( !outdir ) {
-        exit 1, "No output directory provided. Either include in parameter file or pass to --outdir on the command line."
-    }
-    if ( !file(in_data).exists() ) {
-        exit 1, "In data csv file path does not exist, '${in_data}' provided."
-    }
-    if ( !file(ref).exists() ) {
-        exit 1, "Reference genome file path does not exist, '${ref}' provided."
-    }
-    if ( !file(ref_index).exists() ) {
-        exit 1, "Reference genome index file path does not exist, '${ref_index}' provided."
-    }
-    if ( !file(tandem_repeat).exists() ) {
-        exit 1, "Tandem repeat bed file path does not exist, '${tandem_repeat}' provided."
+    if (!file(ref_index).exists()) {
+        exit 1, "Reference genome index file does not exist, ref_index = '${ref_index}' provided."
     }
     if (!(haploidaware in ['yes', 'no'])) {
-        println("haploidaware = '${haploidaware}'")
-        exit 1, "haploidaware must be either 'yes' or 'no'"
+        exit 1, "haploidaware must be either 'yes' or 'no', haploidaware = '${haploidaware}' provided."
     }
     if (haploidaware == "yes") {
         if (sex != "XY") {
-            exit 1, "Haploid-aware mode is only supported when sex='XY'. You provided sex='${sex}'."
+            exit 1, "Haploid-aware mode is only supported when sex = 'XY', sex = '${sex}' provided."
         }
         if (parbed == "NONE") {
-            exit 1, "In haploid-aware mode, you must provide a valid PAR BED file (not 'NONE')."
+            exit 1, "In haploid-aware mode, provide a valid PAR BED file, parbed = 'NONE' provided."
         }
         if (!file(parbed).exists()) {
-            exit 1, "PAR BED file does not exist: '${parbed}'"
+            exit 1, "PAR BED file does not exist, parbed = '${parbed}' provided."
         }
     }
     else if (haploidaware == "no") {
         // sex can be anything, including unset
         if (parbed != "NONE") {
-            exit 1, "When haploidaware='no', you must set parbed='NONE'. You provided: '${parbed}'."
+            exit 1, "In haploid-aware mode, set the PAR BED file to 'NONE', haploidaware = '${haploidaware}' and parbed = '${parbed}' provided."
+        }
+    }
+    if (!file(tandem_repeat).exists()) {
+        exit 1, "Tandem repeat bed file does not exist, tandem_repeat = '${tandem_repeat}' provided. Set to 'NONE' if not required."
+    }
+    if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
+        if (!(snp_indel_caller in ['clair3', 'deepvariant', 'deeptrio'])) {
+            exit 1, "SNP/indel calling software should be 'clair3', 'deepvariant' or 'deeptrio', snp_indel_caller = '${snp_indel_caller}' provided."
+        }
+        if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
+            exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
+        }
+    }
+    if (!(annotate in ['yes', 'no'])) {
+        exit 1, "Choice to annotate should be either 'yes' or 'no', annotate = '${annotate}' provided."
+    }
+    if (annotate == 'yes') {
+        if (!file(vep_db).exists()) {
+            exit 1, "VEP cache directory does not exist, vep_db = '${vep_db}' provided."
+        }
+        if (!file(revel_db).exists()) {
+            exit 1, "REVEL database file does not exist, revel_db = '${revel_db}' provided."
+        }
+        if (!file(gnomad_db).exists()) {
+            exit 1, "gnomAD database file does not exist, gnomad_db = '${gnomad_db}' provided."
+        }
+        if (!file(clinvar_db).exists()) {
+            exit 1, "ClinVar database file does not exist, clinvar_db = '${clinvar_db}' provided."
+        }
+        if (!file(cadd_snv_db).exists()) {
+            exit 1, "CADD SNV database file does not exist, cadd_snv_db = '${cadd_snv_db}' provided."
+        }
+        if (!file(cadd_indel_db).exists()) {
+            exit 1, "CADD indel database file does not exist, cadd_indel_db = '${cadd_indel_db}' provided."
+        }
+        if (!file(cadd_sv_db).exists()) {
+            exit 1, "CADD SV database file does not exist, cadd_sv_db = '${cadd_sv_db}' provided."
+        }
+        if (!file(spliceai_snv_db).exists()) {
+            exit 1, "SpliceAI SNV database file does not exist, spliceai_snv_db = '${spliceai_snv_db}' provided."
+        }
+        if (!file(spliceai_indel_db).exists()) {
+            exit 1, "SpliceAI indel database file does not exist, spliceai_indel_db = '${spliceai_indel_db}' provided."
+        }
+        if (!file(alphamissense_db).exists()) {
+            exit 1, "AlphaMissense database file does not exist, alphamissense_db = '${alphamissense_db}' provided."
+        }
+        if (!ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes') {
+            exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
+        }
+    }
+    if (!(calculate_depth in ['yes', 'no'])) {
+        exit 1, "Choice to calculate depth should be either 'yes', or 'no', calculate_depth = '${calculate_depth}' provided."
+    }
+    if (!(analyse_base_mods in ['yes', 'no'])) {
+        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', analyse_base_mods = '${analyse_base_mods}' provided."
+    }
+    if (!(check_relatedness in ['yes', 'no'])) {
+        exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
+    }
+    if (check_relatedness == 'yes') {
+        if (snp_indel_caller != 'deeptrio') {
+            exit 1, "Checking relatedness is only available when the SNP/indel caller is 'deeptrio' (cohort mode), snp_indel_caller = '${snp_indel_caller}' and check_relatedness = '${check_relatedness}' provided."
+        }
+        if (sites == 'NONE') {
+            exit 1, "When checking relatedness, set an appropriate sites file. sites = '${sites}' provided."
+        }
+        if (!file(sites).exists()) {
+            exit 1, "Sites file does not exist, sites = '${sites}' provided."
+        }
+    }
+    else if (check_relatedness == 'no') {
+        if (sites != 'NONE') {
+            exit 1, "When not checking relatedness, set sites to 'NONE', sites = '${sites}' provided."
+        }
+    }
+    if (!outdir) {
+        exit 1, "No output directory (outdir) provided."
+    }
+    if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
+        if (tandem_repeat != 'NONE') {
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set the tandem repeat file to 'NONE', in_data_format = '${in_data_format}' and tandem_repeat = '${tandem_repeat}' provided."
+        }
+        if (annotate == 'no') {
+            exit 1, "In data format is SNP/indel VCF or SV VCF, but you've chosen not to annotate, in_data_format = '${in_data_format}' and annotate = '${annotate}' provided. Nothing for pipeface to do."
+        }
+        if (calculate_depth == 'yes') {
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set calculate depth to 'no', in_data_format = '${in_data_format}' and calculate_depth = '${calculate_depth}' provided."
+        }
+        if (check_relatedness != 'no') {
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set checking relatedness to 'no', in_data_format = '${in_data_format}' and check_relatedness = '${check_relatedness}' provided."
+        }
+    }
+    if (in_data_format == 'snp_indel_vcf') {
+        if (sv_caller != 'NONE') {
+            exit 1, "When the in data format is SNP/indel VCF, set the SV calling software to 'NONE', sv_caller = '${sv_caller}' provided."
+        }
+        if (snp_indel_caller == 'NONE') {
+            exit 1, "When the input data format is 'snp_indel_vcf', pass the SNP/indel calling software which was used to generate the input data (not 'NONE'), snp_indel_caller = '${snp_indel_caller}' provided."
+        }
+        if (ref == 'NONE' || ref_index == 'NONE') {
+            exit 1, "When the input data format is SNP/indel VCF, pass the reference genome and it's index which was used to generate the input data (not 'NONE'), ref = '${ref}' and ref_index = '${ref_index}' provided."
+        }
+    }
+    else if (in_data_format == 'sv_vcf') {
+        if (snp_indel_caller != 'NONE') {
+            exit 1, "When the in data format is SV VCF, set the SNP/indel calling software to 'NONE', snp_indel_caller = '${snp_indel_caller}' provided."
+        }
+        if (sv_caller == 'NONE') {
+            exit 1, "When the input data format is SV VCF, please pass the SV calling software which was used to generate the input data (not 'NONE'), sv_caller = '${sv_caller}' provided."
         }
     }
 
     // build variable
     ref_name = file(ref).getSimpleName()
 
+    // build input tuple
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
@@ -1904,14 +1524,14 @@ workflow {
 
             // only apply the haploidaware check here if it's on
             if (params.haploidaware == 'yes') {
-                def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists()) 
-                                    ? file(regions_of_interest) 
+                def check_file = (regions_of_interest != 'NONE' && file(regions_of_interest).exists())
+                                    ? file(regions_of_interest)
                                     : file(params.ref_index)
                 def fileContent = check_file.text
                 def chrX_found = fileContent.contains(params.chrXseq)
                 def chrY_found = fileContent.contains(params.chrYseq)
                 if (!chrX_found || !chrY_found) {
-                    throw new RuntimeException("ERROR: Haploid-aware mode requires both chrX and chrY to be present in ${check_file}")
+                    exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${check_file}."
                 }
             }
             return tuple(sample_id, family_id, extension, files, data_type, regions_of_interest, clair3_model)
@@ -1919,65 +1539,65 @@ workflow {
         .groupTuple(by: [0,1,2,4,5,6])
         .set { in_data_tuple }
 
-    // build a list of files NOT collaped by sample_id (as defined in the in_data.csv file) for reporting
-    Channel
-        .fromPath( in_data )
-        .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension(), row.file,file(row.file).getName() ) }
-        .set { in_data_list }
-
     // build channels from in_data.csv file for describing each metadata associated with samples/families
     // I can use these downstream to join to input tuples throughout the pipeline as needed to avoid needing to have all sample metadata in all process input/output tuples
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id ) }
-        .groupTuple(by: [0,1] )
+        .map { row-> tuple(row.sample_id, row.family_id) }
+        .groupTuple(by: [0,1])
         .set { id_tuple }
 
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, row.family_position ) }
-        .groupTuple(by: [0,1,2] )
+        .map { row-> tuple(row.sample_id, row.family_id, row.family_position) }
+        .groupTuple(by: [0,1,2])
         .set { family_position_tuple }
 
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, file(row.file).getExtension() ) }
-        .groupTuple(by: [0,1,2] )
+        .map { row-> tuple(row.sample_id, row.family_id, file(row.file).getExtension()) }
+        .groupTuple(by: [0,1,2])
         .set { extension_tuple }
 
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, row.file ) }
-        .groupTuple(by: [0,1] )
+        .map { row-> tuple(row.sample_id, row.family_id, row.file) }
+        .groupTuple(by: [0,1])
         .set { files_tuple }
 
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, row.data_type ) }
-        .groupTuple(by: [0,1,2] )
+        .map { row-> tuple(row.sample_id, row.family_id, "${row.file}.bai") }
+        .groupTuple(by: [0,1])
+        .set { index_tuple }
+
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row-> tuple(row.sample_id, row.family_id, row.data_type) }
+        .groupTuple(by: [0,1,2])
         .set { data_type_tuple }
 
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, row.regions_of_interest ) }
-        .groupTuple(by: [0,1,2] )
+        .map { row-> tuple(row.sample_id, row.family_id, row.regions_of_interest) }
+        .groupTuple(by: [0,1,2])
         .set { regions_of_interest_tuple }
 
     Channel
-        .fromPath( in_data )
+        .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row-> tuple( row.sample_id, row.family_id, row.clair3_model ) }
-        .groupTuple(by: [0,1,2] )
+        .map { row-> tuple(row.sample_id, row.family_id, row.clair3_model) }
+        .groupTuple(by: [0,1,2])
         .set { clair3_model_tuple }
 
-    // build channel from in_data.csv file for user input checks
+    // check user provided parameters in in_data.csv file
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
@@ -1990,81 +1610,72 @@ workflow {
             def regions_of_interest = row.regions_of_interest
             def clair3_model = row.clair3_model
 
-    // check user provided parameters in in_data.csv file
-    if ( sample_id.isEmpty() ) {
-       exit 1, "There is an empty entry in the 'sample_id' column of '$in_data'."
-    }
-    if ( in_file.isEmpty() ) {
-       exit 1, "There is an empty entry in the 'file' column of '$in_data'."
-    }
-    if ( !file(in_file).exists() ) {
-       exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't exist. Check file '$in_file'."
-    }
-    if ( file(in_file).getExtension() != 'bam' && file(in_file).getExtension() != 'gz' && file(in_file).getExtension() != 'fastq' ) {
-       exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. '$in_file' provided."
-    }
-    if ( in_data_format == 'aligned_bam' && !file(in_file + '.bai').exists() ) {
-       exit 1, "You've specified that the in data format is aligned BAM, but it looks '${in_file}' defined in the file column of '$in_data' isn't indexed (ie. '${in_file}.bai doesn't exist')."
-    }
-    if ( in_data_format == 'aligned_bam' && !in_file.contains('bam') && in_data_format_override != 'yes' ) {
-       exit 1, "You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file names defined in the file column of '$in_data'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
-    }
-    if ( in_data_format == 'snv_vcf' && !in_file.contains('vcf') && in_data_format_override != 'yes' ) {
-       exit 1, "You've specified that the in data format is SNV vcf, but it looks like you may not be passing a VCF file based on the file names defined in the file column of '$in_data'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
-    }
-    if ( in_data_format == 'sv_vcf' && !in_file.contains('vcf') && in_data_format_override != 'yes' ) {
-       exit 1, "You've specified that the in data format is SV vcf, but it looks like you may not be passing a VCF file based on the file names defined in the file column of '$in_data'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
-    }
-    if ( data_type.isEmpty() ) {
-       exit 1, "There is an empty entry in the 'data_type' column of '$in_data'."
-    }
-    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && data_type != 'ont' && data_type != 'pacbio' ) {
-       exit 1, "There is an entry in the 'data_type' column of '$in_data' that is not 'ont' or 'pacbio', '$data_type' provided."
-    }
-    if ( in_data_format == 'snv_vcf' && data_type != 'NONE' ) {
-       exit 1, "When the input data format is 'snv_vcf', please set the data type (data_type column of '$in_data') to 'NONE'."
-    }
-    if ( in_data_format == 'sv_vcf' && data_type != 'NONE' ) {
-       exit 1, "When the input data format is 'sv_vcf', please set the data type (data_type column of '$in_data') to 'NONE'."
-    }
-    if ( regions_of_interest.isEmpty() ) {
-       exit 1, "There is an empty entry in the 'regions_of_interest' column of '$in_data'."
-    }
-    if ( !file(regions_of_interest).exists() ) {
-       exit 1, "There is an entry in the 'regions_of_interest' column of '$in_data' which doesn't exist. Check file '$regions_of_interest'."
-    }
-    if ( clair3_model.isEmpty() ) {
-       exit 1, "There is an empty entry in the 'clair3_model' column of '$in_data'."
-    }
-    if ( !file(clair3_model).exists() ) {
-       exit 1, "There is an entry in the 'clair3_model' column of '$in_data' which doesn't exist. Check path '$clair3_model'."
-    }
-    if ( snp_indel_caller != 'clair3' && clair3_model != 'NONE' ) {
-       exit 1, "Pass 'NONE' in the 'clair3_model' column of '$in_data' when clair3 is NOT selected as the SNP/indel calling software, '$clair3_model' provided'."
-    }
-    if ( in_data_format != 'snv_vcf' && in_data_format != 'sv_vcf' && snp_indel_caller == 'clair3' && clair3_model == 'NONE' ) {
-       exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column of '$in_data' rather than setting it to 'NONE'."
-    }
-    if ( in_data_format == 'snv_vcf' && clair3_model != 'NONE' ) {
-       exit 1, "When the input data format is 'snv_vcf', please set the Clair3 model (clair3_model column of '$in_data') to 'NONE'."
-    }
-    if ( in_data_format == 'sv_vcf' && clair3_model != 'NONE' ) {
-       exit 1, "When the input data format is 'sv_vcf', please set the Clair3 model (clair3_model column of '$in_data') to 'NONE'."
-    }
-    }
+            if (sample_id.isEmpty()) {
+                exit 1, "There is an empty entry in the 'sample_id' column of '${in_data}'."
+            }
+            if (!file(in_file).exists()) {
+                exit 1, "There is an entry in the 'file' column of '${in_data}' which doesn't exist. Check file '${in_file}'."
+            }
+            if (!(file(in_file).getExtension() in ['bam', 'gz', 'fastq'])) {
+                exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. Check file '${in_file}'."
+            }
+            if (in_data_format == 'ubam') {
+                if (snp_indel_caller == 'clair3' && clair3_model == 'NONE') {
+                    exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column of '${in_data}' rather than setting it to 'NONE'."
+                }
+            }
+            else if (in_data_format == 'aligned_bam') {
+                if (!file(in_file + '.bai').exists()) {
+                    exit 1, "You've specified that the in data format is aligned BAM, but it looks like '${in_file}' defined in the file column of '${in_data}' isn't indexed (ie. '${in_file}.bai doesn't exist')."
+                }
+                if (!in_file.contains('bam') && in_data_format_override != 'yes') {
+                    exit 1, "You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file names defined in the file column of '${in_data}'. Check file '${in_file}'. Pass '--in_data_format_override yes' on the command line to override this error."
+                }
+            }
+            else if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
+                if (data_type != 'NONE') {
+                    exit 1, "When the input data format is SNP/indel VCF or SV VCF, please set the data type (data_type column of '${in_data}') to 'NONE'."
+                }
+                if (!in_file.contains('vcf') && in_data_format_override != 'yes') {
+                    exit 1, "You've specified that the in data format is SNP/indel VCF or SV VCF, but it looks like you may not be passing a VCF file based on the file names defined in the file column of '${in_data}'. ${in_file} passed. Pass '--in_data_format_override yes' on the command line to override this error."
+                }
+            }
+            if (data_type.isEmpty()) {
+                exit 1, "There is an empty entry in the 'data_type' column of '${in_data}'."
+            }
+            if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
+                if (!(data_type in ['ont', 'pacbio'])) {
+                    exit 1, "Entries in the 'data_type' column of '${in_data}' should be 'ont' or 'pacbio', '${data_type}' provided."
+                }
+            }
+            if (!file(regions_of_interest).exists()) {
+                exit 1, "There is an entry in the 'regions_of_interest' column of '${in_data}' which doesn't exist. Check file '${regions_of_interest}'."
+            }
+            if (!file(clair3_model).exists()) {
+                exit 1, "There is an entry in the 'clair3_model' column of '${in_data}' which doesn't exist. Check path '${clair3_model}'."
+            }
+            if (clair3_model != 'NONE') {
+                if (snp_indel_caller != 'clair3') {
+                    exit 1, "Pass 'NONE' in the 'clair3_model' column of '${in_data}' when clair3 is NOT selected as the SNP/indel calling software, '${clair3_model}' provided'."
+                }
+                if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
+                    exit 1, "When the input data format is SNP/indel VCF or SV VCF, please set the Clair3 model (clair3_model column of '${in_data}') to 'NONE'."
+                }
+            }
+        }
 
     // check user provided parameters relating in in_data.csv file relating to cohorts
-    if ( snp_indel_caller == 'deeptrio' ) {
+    if (snp_indel_caller == 'deeptrio') {
         Channel
             .fromPath(in_data)
             .splitCsv(header: true, sep: ',', strip: true)
             .map { row -> tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model) }
             .groupTuple(by: 1)
             .map { sample_ids, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
-                if ( ! family_positions.every { it in ['proband', 'father', 'mother'] } ) {
+                if (!family_positions.every {it in ['proband', 'father', 'mother']}) {
                     exit 1, "Entries in the 'family_position' column of '$in_data' should contain 'proband', 'father' and 'mother' for every 'family_id' in cohort mode, '$family_positions' provided for family '$family_ids'."
                 }
-                if ( sample_ids.unique().size() != 3 ) {
+                if (sample_ids.unique().size() != 3) {
                     exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 3 unique values for every 'family_id' in cohort mode, '$sample_ids' provided for family '$family_ids'."
                 }
         }
@@ -2073,29 +1684,26 @@ workflow {
     // workflow
     // pre-process, alignment and qc
     scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
-    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
-        bam_header = scrape_bam_header(in_data_list, outdir, outdir2)
-    }
-    if ( in_data_format == 'ubam_fastq' ) {
+    if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_tuple.join(extension_tuple, by: [0,1]).join(files_tuple, by: [0,1]))
         bam = minimap2(merged.join(extension_tuple, by: [0,1]).join(data_type_tuple, by: [0,1]), ref, ref_index)
     }
-    if ( in_data_format == 'aligned_bam' ) {
-        bam = id_tuple.join(files_tuple, by: [0,1])
+    if (in_data_format == 'aligned_bam') {
+        bam = id_tuple.join(files_tuple, by: [0,1]).join(index_tuple, by: [0,1])
     }
-    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' ) {
+    if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if ( calculate_depth == 'yes' ) {
             mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
         }
         // snp/indel calling
-        if ( snp_indel_caller == 'clair3' ) {
-            (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        if (snp_indel_caller == 'clair3') {
+            (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, haploidaware, sex)
         }
-        else if ( snp_indel_caller == 'deepvariant' | snp_indel_caller == 'deeptrio' ) {
-            deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
-            deepvariant_make_examples(deepvariant_dry_run.out.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index)
-            deepvariant_call_variants(deepvariant_make_examples.out)
-            (snp_indel_vcf_bam, gvcf) = deepvariant_post_processing(deepvariant_call_variants.out, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
+            dv_commands = deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
+            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index)
+            dv_calls = deepvariant_call_variants(dv_examples)
+            (snp_indel_vcf_bam, gvcf) = deepvariant_post_processing(dv_calls, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // split multiallelic variants
         snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
@@ -2103,45 +1711,28 @@ workflow {
         (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
         (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_split_phased_vcf_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-        // methylation analysis
-        if ( analyse_base_mods == 'yes' ) {
+        // base mod analysis
+        if (analyse_base_mods == 'yes') {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
             pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint snp/indel calling
-        if ( snp_indel_caller == 'deeptrio' ) {
-            tmp = haplotagged_bam_fam
-                .groupTuple(by: 1 )
-                .transpose()
-            proband_tuple = tmp
-                .filter { tuple ->
-                    tuple[2].contains("proband")
-                }
-            father_tuple = tmp
-                .filter { tuple ->
-                    tuple[2].contains("father")
-                }
-            mother_tuple = tmp
-                .filter { tuple ->
-                    tuple[2].contains("mother")
-                }
-            deeptrio_dry_run(proband_tuple.join(data_type_tuple, by: [0,1]), father_tuple.join(data_type_tuple, by: [0,1]), mother_tuple.join(data_type_tuple, by: [0,1]), ref, ref_index)
-            deeptrio_make_examples(deeptrio_dry_run.out, ref, ref_index)
-            deeptrio_call_variants(deeptrio_make_examples.out.proband.mix(deeptrio_make_examples.out.father, deeptrio_make_examples.out.mother))
-            deeptrio_postprocessing(deeptrio_call_variants.out, ref, ref_index)
-            proband_out = deeptrio_postprocessing.out.filter { tuple ->
-                tuple[1].contains("proband")
-            }
-            father_out = deeptrio_postprocessing.out.filter { tuple ->
-                tuple[1].contains("father")
-            }
-            mother_out = deeptrio_postprocessing.out.filter { tuple ->
-                tuple[1].contains("mother")
-            }
+        if (snp_indel_caller == 'deeptrio') {
+            tmp = haplotagged_bam_fam.groupTuple(by: 1).transpose()
+            proband_tuple = tmp.filter { tuple -> tuple[2].contains("proband") }
+            father_tuple = tmp.filter { tuple -> tuple[2].contains("father") }
+            mother_tuple = tmp.filter { tuple -> tuple[2].contains("mother") }
+            dt_commands = deeptrio_dry_run(proband_tuple.join(data_type_tuple, by: [0,1]), father_tuple.join(data_type_tuple, by: [0,1]), mother_tuple.join(data_type_tuple, by: [0,1]), ref, ref_index)
+            dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
+            dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
+            snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
+            proband_out = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
+            father_out = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
+            mother_out = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
             gvcfs_bams = proband_out.join(father_out).join(mother_out).map { tuple ->
                 [tuple[0], tuple[2], tuple[7], tuple[12], tuple[3], tuple[4], tuple[8], tuple[9], tuple[13], tuple[14], tuple[5], tuple[10], tuple[15]]
             }
-            if ( check_relatedness == 'yes' ) {
+            if (check_relatedness == 'yes') {
                 somalier(proband_tuple, father_tuple, mother_tuple, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
@@ -2151,86 +1742,65 @@ workflow {
             // joint phasing
             (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             // joint snp/indel annotation
-            if ( annotate == 'yes' ) {
-                vep_snv(joint_snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            if (annotate == 'yes') {
+                vep_snp_indel(joint_snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
         // sv calling
-        if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
+        if (sv_caller in ['sniffles', 'both']) {
             (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
-        if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
+        if (sv_caller in ['cutesv', 'both']) {
             (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
     }
-    if ( in_data_format == 'snv_vcf' ) {
+    if (in_data_format == 'snp_indel_vcf') {
         snp_indel_split_phased_vcf = id_tuple.join(files_tuple, by: [0,1])
     }
-    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'snv_vcf' ) {
+    if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
-        if ( annotate == 'yes' && snp_indel_caller != 'deeptrio' ) {
-            vep_snv(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+        if (annotate == 'yes' && snp_indel_caller != 'deeptrio') {
+            vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
     }
     // joint sv calling
-    if ( snp_indel_caller == 'deeptrio' ) {
+    if (snp_indel_caller == 'deeptrio') {
         // sv vcf merging
-        if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
-            sniffles_tmp = sv_vcf_haplotagged_bam_fam_sniffles
-                .groupTuple(by: 1 )
-                .transpose()
-            sniffles_proband_tuple = sniffles_tmp
-                .filter { tuple ->
-                    tuple[2].contains("proband")
-                }
-            sniffles_father_tuple = sniffles_tmp
-                .filter { tuple ->
-                    tuple[2].contains("father")
-                }
-            sniffles_mother_tuple = sniffles_tmp
-                .filter { tuple ->
-                    tuple[2].contains("mother")
-                }
+        if (sv_caller in ['sniffles', 'both']) {
+            sniffles_tmp = sv_vcf_haplotagged_bam_fam_sniffles.groupTuple(by: 1).transpose()
+            sniffles_proband_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("proband") }
+            sniffles_father_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("father") }
+            sniffles_mother_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("mother") }
             (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
-        if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
-            cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv
-                .groupTuple(by: 1 )
-                .transpose()
-            cutesv_proband_tuple = cutesv_tmp
-                .filter { tuple ->
-                    tuple[2].contains("proband")
-                }
-            cutesv_father_tuple = cutesv_tmp
-                .filter { tuple ->
-                    tuple[2].contains("father")
-                }
-            cutesv_mother_tuple = cutesv_tmp
-                .filter { tuple ->
-                    tuple[2].contains("mother")
-                }
+        if (sv_caller in ['cutesv', 'both']) {
+            cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv.groupTuple(by: 1).transpose()
+            cutesv_proband_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("proband") }
+            cutesv_father_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("father") }
+            cutesv_mother_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("mother") }
             (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint sv annotation
-        if ( annotate == 'yes' ) {
-            if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
+        if (annotate == 'yes') {
+            if (sv_caller in ['sniffles', 'both']) {
                 vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
-            if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
+            if (sv_caller in ['cutesv', 'both']) {
                 vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
     }
-    if ( in_data_format == 'sv_vcf' && snp_indel_caller != 'deeptrio' ) {
+    if (in_data_format == 'sv_vcf' && snp_indel_caller != 'deeptrio') {
         sv_vcf_sniffles = id_tuple.join(files_tuple, by: [0,1])
         sv_vcf_cutesv = id_tuple.join(files_tuple, by: [0,1])
     }
-    if ( in_data_format == 'ubam_fastq' | in_data_format == 'aligned_bam' | in_data_format == 'sv_vcf' ) {
-        if ( annotate == 'yes' && snp_indel_caller != 'deeptrio' ) {
-            if ( sv_caller == 'sniffles' | sv_caller == 'both' ) {
+    if (in_data_format in ['ubam_fastq', 'aligned_bam', 'sv_vcf']) {
+        // annotation
+        if (annotate == 'yes' && snp_indel_caller != 'deeptrio') {
+            if (sv_caller in ['sniffles', 'both']) {
                 vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
-            if ( sv_caller == 'cutesv' | sv_caller == 'both' ) {
+            if (sv_caller in ['cutesv', 'both']) {
                 vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
         }
