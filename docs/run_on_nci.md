@@ -14,7 +14,7 @@
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
     - [Singleton mode](#singleton-mode)
-    - [Cohort mode](#cohort-mode)
+    - [Duo/Trio mode](#duotrio-mode)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Start persistent session (optional)](#6-start-persistent-session-optional)
@@ -93,7 +93,7 @@ samtools faidx hs1.fa
 
 ### Somalier sites file (if running relatedness check)
 
-> **_Note:_** checking relatedness is only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
+> **_Note:_** checking relatedness is only available for duo/trio mode
 
 #### hg38
 
@@ -155,7 +155,7 @@ sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/
 
 > **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
 
-### Cohort mode
+### Duo/Trio mode
 
 Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
 
@@ -170,9 +170,11 @@ sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
 sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
-> **_Note:_** In cohort mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
+> **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
 
-> **_Note:_** In cohort mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+> **_Note:_** In duo mode, a `proband`, and either `father` or `mother` must be defined in the `family_position` column for every `family_id`
+
+> **_Note:_** In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
 
 > **_Note:_** Files with the same value in the `sample_id` column will be merged before analysis, this is used to handle multiple sequencing runs of the same sample
 
@@ -260,28 +262,24 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not 
     "tandem_repeat": "NONE"
 ```
 
-Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
+Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio'). Eg:
 
 
 ```json
-    "snp_indel_caller": "clair3",
+    "mode": "singleton",
 ```
 
-*OR*
+Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
 ```json
     "snp_indel_caller": "deepvariant",
 ```
 
-*OR*
-
-```json
-    "snp_indel_caller": "deeptrio",
-```
-
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
-> **_Note:_** Selecting DeepTrio as the SNP/indel caller initates cohort analysis
+> **_Note:_** Clair3 and DeepVariant is only available for singleton and duo mode
+
+> **_Note:_** DeepTrio is only available for trio mode
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -289,28 +287,10 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "sniffles",
 ```
 
-*OR*
-
-```json
-    "sv_caller": "cutesv",
-```
-
-*OR*
-
-```json
-    "sv_caller": "both",
-```
-
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",
-```
-
-*OR*
-
-```json
-    "annotate": "no",
 ```
 
 > **_Note:_** variant annotation is only available for hg38
@@ -321,22 +301,10 @@ Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
     "calculate_depth": "yes",
 ```
 
-*OR*
-
-```json
-    "calculate_depth": "no",
-```
-
 Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 
 ```json
     "analyse_base_mods": "yes",
-```
-
-*OR*
-
-```json
-    "analyse_base_mods": "no",
 ```
 
 > **_Note:_** these analyses assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
@@ -362,7 +330,7 @@ Optionally run relatedness checks. Specify the path to an appropriate somalier s
     "sites": "NONE"
 ```
 
-> **_Note:_** checking relatedness is only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
+> **_Note:_** checking relatedness is only available for duo/trio mode
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
