@@ -30,6 +30,7 @@ process scrape_settings {
         val ref
         val ref_index
         val tandem_repeat
+        val mode
         val snp_indel_caller
         val sv_caller
         val annotate
@@ -83,7 +84,7 @@ process scrape_settings {
         echo "In data format: $reported_in_data_format" >> \${F}
         echo "Input data file/files: $files" >> \${F}
         echo "Data type: $data_type" >> \${F}
-        echo "Regions of interest F: $regions_of_interest" >> \${F}
+        echo "Regions of interest file: $regions_of_interest" >> \${F}
         echo "Clair3 model: $clair3_model" >> \${F}
         echo "In data csv path: $in_data" >> \${F}
         echo "Reference genome: $ref" >> \${F}
@@ -91,14 +92,15 @@ process scrape_settings {
         echo "Haploid-aware: $haploidaware" >> \${F}
         echo "Sex: $sex" >> \${F}
         echo "PAR regions: $parbed" >> \${F}
-        echo "Tandem repeat F: $tandem_repeat" >> \${F}
+        echo "Tandem repeat file: $tandem_repeat" >> \${F}
+        echo "Mode: $mode" >> \${F}
         echo "SNP/indel caller: $snp_indel_caller" >> \${F}
         echo "SV caller: $reported_sv_caller" >> \${F}
         echo "Annotate: $annotate" >> \${F}
         echo "Calculate depth: $calculate_depth" >> \${F}
         echo "Analyse base modifications: $analyse_base_mods" >> \${F}
         echo "Check relatedness: $check_relatedness" >> \${F}
-        echo "Somalier sites F: $sites" >> \${F}
+        echo "Somalier sites file: $sites" >> \${F}
         echo "Outdir: $outdir" >> \${F}
         """
         else if (in_data_format in ['snp_indel_vcf', 'sv_vcf'])
@@ -109,7 +111,7 @@ process scrape_settings {
         echo "Family ID: $family_id" >> \${F}
         echo "Family position: $family_position" >> \${F}
         echo "In data format: $reported_in_data_format" >> \${F}
-        echo "Input data F/Fs: $Fs" >> \${F}
+        echo "Input data file/files: $files" >> \${F}
         echo "In data csv path: $in_data" >> \${F}
         echo "Annotate: $annotate" >> \${F}
         echo "Outdir: $outdir" >> \${F}
@@ -275,6 +277,7 @@ process clair3 {
         """
         # run clair3
         run_clair3.sh --bam_fn=$bam --ref_fn=$ref --output=./ --threads=${task.cpus} --platform=$platform --model_path=$clair3_model --sample_name=$sample_id --gvcf --include_all_ctgs $regions_of_interest_optional
+
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
@@ -348,7 +351,7 @@ process deepvariant_dry_run {
         val ref_index
         val sex
         val haploidaware
-        path parbed
+        val parbed
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), env(make_examples_args), env(call_variants_args)
@@ -395,7 +398,7 @@ process deepvariant_make_examples {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_args), val(call_variants_args), val(regions_of_interest)
         val ref
         val ref_index
-        path parbed
+        val parbed
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path('make_examples.*.gz{,.example_info.json}'), path('make_examples_call_variant_outputs.*.gz'), path('gvcf.*.gz')
@@ -454,7 +457,7 @@ process deepvariant_post_processing {
     }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out), val(family_position)
         val ref
         val ref_index
         val outdir
@@ -464,6 +467,7 @@ process deepvariant_post_processing {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sorted.bam"), path("${family_position}.sorted.bam.bai"), path("${family_position}_snp_indel.g.vcf.gz")
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
@@ -477,6 +481,10 @@ process deepvariant_post_processing {
         bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
         # index vcf
         tabix snp_indel.vcf.gz
+        # tag bam and gvcf with family_position for downstream glnexus
+        ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
+        ln -s sorted.bam ${family_position}.sorted.bam
+        ln -s sorted.bam.bai ${family_position}.sorted.bam.bai
         """
 
     stub:
@@ -661,9 +669,9 @@ process deeptrio_make_examples {
         val ref_index
 
     output:
-        tuple val(proband_family_id), val(proband_family_position), val(proband_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path('make_examples_child.*.gz'), path('gvcf_child.*.gz'), path('*.example_info.json'), val(call_variants_proband_args)  , emit: proband
-        tuple val(proband_family_id), val(father_family_position), val(father_sample_id), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path('make_examples_parent1.*.gz'), path('gvcf_parent1.*.gz'), path('*.example_info.json'), val(call_variants_father_args) , emit: father
-        tuple val(proband_family_id), val(mother_family_position), val(mother_sample_id), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('make_examples_parent2.*.gz'), path('gvcf_parent2.*.gz'), path('*.example_info.json'), val(call_variants_mother_args) , emit: mother
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path('make_examples_child.*.gz'), path('gvcf_child.*.gz'), path('*.example_info.json'), val(call_variants_proband_args)  , emit: proband
+        tuple val(father_sample_id), val(proband_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path('make_examples_parent1.*.gz'), path('gvcf_parent1.*.gz'), path('*.example_info.json'), val(call_variants_father_args) , emit: father
+        tuple val(mother_sample_id), val(proband_family_id) val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('make_examples_parent2.*.gz'), path('gvcf_parent2.*.gz'), path('*.example_info.json'), val(call_variants_mother_args) , emit: mother
 
     script:
         """
@@ -692,10 +700,10 @@ process deeptrio_make_examples {
 process deeptrio_call_variants {
 
     input:
-        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), path(example_info), val(call_variants_args)
+        tuple val(sample_id), val(proband_family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), path(example_info), val(call_variants_args)
 
     output:
-        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path('*.gz'), val(gvcf)
+        tuple val(sample_id), val(proband_family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path('*.gz'), val(gvcf)
 
     script:
         def matcher = make_examples[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -715,12 +723,12 @@ process deeptrio_call_variants {
 process deeptrio_postprocessing {
     
     input:
-        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf)
+        tuple val(sample_id), val(proband_family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf)
         val ref
         val ref_index
         
     output:
-        tuple val(proband_family_id), val(family_position), val(sample_id), path(haplotagged_bam), path(haplotagged_bam_index), path("${family_position}_snp_indel.g.vcf.gz")
+        tuple val(sample_id), val(proband_family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("${family_position}_snp_indel.g.vcf.gz")
 
     script:
         def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -740,7 +748,35 @@ process deeptrio_postprocessing {
 
 }
 
-process somalier {
+process somalier_duo {
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(parent_gvcf)
+        val ref
+        val ref_index
+        val sites
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.html')
+
+    script:
+        """
+        # run somalier extract
+        SOMALIER_SAMPLE_NAME=$proband_sample_id somalier extract -d extracted --sites $sites -f $ref $proband_haplotagged_bam
+        SOMALIER_SAMPLE_NAME=$parent_sample_id somalier extract -d extracted --sites $sites -f $ref $parent_haplotagged_bam
+        # run somalier relate
+        somalier relate extracted/*.somalier
+        """
+
+}
+
+process somalier_trio {
 
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
 
@@ -770,13 +806,43 @@ process somalier {
 
 }
 
-process glnexus {
+process glnexus_duo {
 
     input:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(proband_gvcf), path(father_gvcf), path(mother_gvcf)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(parent_gvcf)
+        val snp_indel_caller
 
     output:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+
+    script:
+        """
+        # run glnexus
+        glnexus_cli --config DeepVariant $proband_gvcf $parent_gvcf > snp_indel.bcf
+        # compress and index vcf
+        bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
+        tabix snp_indel.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.vcf.gz
+        touch snp_indel.vcf.gz.tbi
+        """
+
+}
+
+process glnexus_trio {
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
+        val snp_indel_caller
+
+    output:
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
@@ -795,15 +861,15 @@ process glnexus {
 
 }
 
-process joint_split_multiallele {
+process split_multiallele_duo {
 
     input:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
 
     output:
-        tuple val(proband_family_id), val(proband_sample_id), val(father_sample_id), val(mother_sample_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
 
     script:
         """
@@ -822,7 +888,82 @@ process joint_split_multiallele {
 
 }
 
-process whatshap_joint_phase {
+process split_multiallele_trio {
+
+    input:
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+
+    script:
+        """
+        # run bcftools norm
+        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.vcf
+        # compress and index vcf
+        bgzip -@ ${task.cpus} snp_indel.split.vcf
+        tabix snp_indel.split.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.split.vcf.gz
+        touch snp_indel.split.vcf.gz.tbi
+        """
+
+}
+
+process whatshap_phase_duo {
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+
+    input:
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('snp_indel.phased.vcf.gz')
+        tuple val(proband_family_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi'), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
+
+    script:
+        """
+        # handle missing parent
+        if [[ $parent_family_position == 'father' ]]; then
+            FATHER_SAMPLE_ID=$parent_sample_id
+            MOTHER_SAMPLE_ID="0"
+        elif [[ $parent_family_position == 'mother' ]]; then
+            FATHER_SAMPLE_ID="0"
+            MOTHER_SAMPLE_ID=$parent_sample_id
+        fi
+        # rename file for publishing purposes
+        ln -sf $snp_indel_split_vcf snp_indel.vcf.gz
+        printf "$proband_family_id\t$proband_sample_id\t\${FATHER_SAMPLE_ID}\t\${MOTHER_SAMPLE_ID}\t0\t1\n" > pedigree.ped
+        # run whatshap phase
+        whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --ped pedigree.ped snp_indel.vcf.gz $proband_haplotagged_bam $parent_haplotagged_bam
+        # index vcf
+        tabix snp_indel.phased.vcf.gz
+        # run whatshap stats
+        whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.vcf.gz
+        touch snp_indel.phased.vcf.gz.tbi
+        touch snp_indel.phased.read_list.txt
+        touch snp_indel.phased.stats.gtf
+        """
+
+}
+
+process whatshap_phase_trio {
 
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
@@ -1107,7 +1248,125 @@ process cutesv {
 
 }
 
-process jasmine_sniffles {
+process jasmine_sniffles_duo {
+
+    def sv_caller_merger = "sniffles.jasmine"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_sv_phased_vcf), path(parent_haplotagged_bam)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('sv.phased.vcf.gz')
+        tuple val(proband_family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
+
+    script:
+        // conditionally define iris arguments
+        // as default, iris will pass minimap -x map-ont
+        // the --pacbio flag passed to iris will pass minimap -x map-pb
+        // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+        if (proband_data_type == 'ont') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+        }
+        else if (proband_data_type == 'pacbio') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+        }
+        """
+        # unzip vcfs
+        gunzip -c $proband_sv_phased_vcf > proband.sv.phased.vcf
+        gunzip -c $parent_sv_phased_vcf > parent.sv.phased.vcf
+        # create file lists
+        realpath proband.sv.phased.vcf >> vcfs.txt
+        realpath parent.sv.phased.vcf >> vcfs.txt
+        realpath $proband_haplotagged_bam >> bams.txt
+        realpath $parent_haplotagged_bam >> bams.txt
+        # run jasmine
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort vcf and convert TRA variant tags to standard BND tags (allows them to be annotated
+        grep '##' sv.phased.tmp.vcf > sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf | sort -k 1,1V -k2,2n | sed 's/SVTYPE=TRA/SVTYPE=BND/g' | sed 's/<TRA>/<BND>/g' >> sv.phased.vcf
+        # compress and index vcf
+        bgzip \
+        -@ ${task.cpus} \
+        sv.phased.vcf
+        tabix sv.phased.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
+        """
+
+}
+
+process jasmine_cutesv_duo {
+
+    def sv_caller_merger = "cutesv.jasmine"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam), val(proband_data_type)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_sv_vcf), path(parent_haplotagged_bam)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('sv.vcf.gz')
+        tuple val(proband_family_id), path('sv.vcf.gz'), path('sv.vcf.gz.tbi')
+
+    script:
+        // conditionally define iris arguments
+        // as default, iris will pass minimap -x map-ont
+        // the --pacbio flag passed to iris will pass minimap -x map-pb
+        // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+        if (proband_data_type == 'ont') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+        }
+        else if (proband_data_type == 'pacbio') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+        }
+        """
+        # unzip vcfs
+        gunzip -c $proband_sv_vcf > proband.sv.vcf
+        gunzip -c $parent_sv_vcf > parent.sv.vcf
+        # create file lists
+        realpath proband.sv.vcf >> vcfs.txt
+        realpath parent.sv.vcf >> vcfs.txt
+        realpath $proband_haplotagged_bam >> bams.txt
+        realpath $parent_haplotagged_bam >> bams.txt
+        # run jasmine
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort vcf and convert TRA variant tags to standard BND tags (allows them to be annotated 
+        grep '##' sv.tmp.vcf > sv.vcf
+        grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.vcf
+        grep -v '#' sv.tmp.vcf | sort -k 1,1V -k2,2n | sed 's/SVTYPE=TRA/SVTYPE=BND/g' | sed 's/<TRA>/<BND>/g' >> sv.vcf
+        # compress and index vcf
+        bgzip -@ ${task.cpus} sv.vcf
+        tabix sv.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.vcf.gz
+        touch sv.vcf.gz.tbi
+        """
+
+}
+
+process jasmine_sniffles_trio {
 
     def sv_caller_merger = "sniffles.jasmine"
 
@@ -1171,7 +1430,7 @@ process jasmine_sniffles {
 
 }
 
-process jasmine_cutesv {
+process jasmine_cutesv_trio {
 
     def sv_caller_merger = "cutesv.jasmine"
 
@@ -1342,6 +1601,7 @@ workflow {
     ref = "${params.ref}".trim()
     ref_index = "${params.ref_index}".trim()
     tandem_repeat = "${params.tandem_repeat}".trim()
+    mode = "${params.mode}".trim()
     snp_indel_caller = "${params.snp_indel_caller}".trim()
     sv_caller = "${params.sv_caller}".trim()
     annotate = "${params.annotate}".trim()
@@ -1401,8 +1661,17 @@ workflow {
         exit 1, "Tandem repeat bed file does not exist, tandem_repeat = '${tandem_repeat}' provided. Set to 'NONE' if not required."
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
-        if (!(snp_indel_caller in ['clair3', 'deepvariant', 'deeptrio'])) {
-            exit 1, "SNP/indel calling software should be 'clair3', 'deepvariant' or 'deeptrio', snp_indel_caller = '${snp_indel_caller}' provided."
+        if (!(mode in ['singleton', 'duo', 'trio'])) {
+            exit 1, "Mode should be 'singleton', 'duo' or 'trio', mode = '${mode}' provided."
+        }
+        if (mode == 'singleton' && !(snp_indel_caller in ['clair3', 'deepvariant'])) {
+            exit 1, "When in singleton mode, the SNP/indel caller must be either 'clair3' or 'deepvariant', mode = '${mode}' and snp_indel_caller = '${snp_indel_caller}' provided."
+        }
+        if (mode == 'duo' && snp_indel_caller != 'deepvariant') {
+            exit 1, "When in duo mode, the SNP/indel caller must be 'deepvariant', mode = '${mode}' and snp_indel_caller = '${snp_indel_caller}' provided."
+        }
+        if (mode == 'trio' && snp_indel_caller != 'deeptrio') {
+            exit 1, "When in trio mode, the SNP/indel caller must be 'deeptrio', mode = '${mode}' and snp_indel_caller = '${snp_indel_caller}' provided."
         }
         if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
             exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
@@ -1456,8 +1725,8 @@ workflow {
         exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
     }
     if (check_relatedness == 'yes') {
-        if (snp_indel_caller != 'deeptrio') {
-            exit 1, "Checking relatedness is only available when the SNP/indel caller is 'deeptrio' (cohort mode), snp_indel_caller = '${snp_indel_caller}' and check_relatedness = '${check_relatedness}' provided."
+        if (!(mode in ['duo', 'trio'])) {
+            exit 1, "Checking relatedness is only available when running in duo or trio mode, mode = '${mode}' and check_relatedness = '${check_relatedness}' provided."
         }
         if (sites == 'NONE') {
             exit 1, "When checking relatedness, set an appropriate sites file. sites = '${sites}' provided."
@@ -1468,13 +1737,16 @@ workflow {
     }
     else if (check_relatedness == 'no') {
         if (sites != 'NONE') {
-            exit 1, "When not checking relatedness, set sites to 'NONE', sites = '${sites}' provided."
+            exit 1, "When not checking relatedness, set sites file to 'NONE', sites = '${sites}' provided."
         }
     }
     if (!outdir) {
         exit 1, "No output directory (outdir) provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
+        if (mode != 'NONE') {
+            exit 1, "When the in data format is SNP/indel VCF or SV VCF, set the mode to 'NONE', in_data_format = '${in_data_format}' and mode = '${mode}' provided."
+        }
         if (tandem_repeat != 'NONE') {
             exit 1, "When the in data format is SNP/indel VCF or SV VCF, set the tandem repeat file to 'NONE', in_data_format = '${in_data_format}' and tandem_repeat = '${tandem_repeat}' provided."
         }
@@ -1667,7 +1939,7 @@ workflow {
         }
 
     // check user provided parameters relating in in_data.csv file relating to cohorts
-    if (snp_indel_caller == 'deeptrio') {
+    if (mode in ['duo', 'trio']) {
         Channel
             .fromPath(in_data)
             .splitCsv(header: true, sep: ',', strip: true)
@@ -1675,17 +1947,24 @@ workflow {
             .groupTuple(by: 1)
             .map { sample_ids, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
                 if (!family_positions.every {it in ['proband', 'father', 'mother']}) {
-                    exit 1, "Entries in the 'family_position' column of '$in_data' should contain 'proband', 'father' and 'mother' for every 'family_id' in cohort mode, '$family_positions' provided for family '$family_ids'."
+                    exit 1, "Entries in the 'family_position' column of '$in_data' should contain 'proband', 'father' and 'mother' for every 'family_id' in duo/trio mode, '$family_positions' provided for family '$family_ids'. 'mode = ${mode}' provided."
                 }
-                if (sample_ids.unique().size() != 3) {
-                    exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 3 unique values for every 'family_id' in cohort mode, '$sample_ids' provided for family '$family_ids'."
+                if (mode == "duo") {
+                    if (sample_ids.unique().size() != 2) {
+                        exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 2 unique values for every 'family_id' in duo mode, '$sample_ids' provided for family '$family_ids'. 'mode = ${mode}' provided."
+                    }
+                }
+                if (mode == "trio") {
+                    if (sample_ids.unique().size() != 3) {
+                        exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 3 unique values for every 'family_id' in trio mode, '$sample_ids' provided for family '$family_ids'. 'mode = ${mode}' provided."
+                    }
                 }
         }
     }
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_tuple.join(extension_tuple, by: [0,1]).join(files_tuple, by: [0,1]))
         bam = minimap2(merged.join(extension_tuple, by: [0,1]).join(data_type_tuple, by: [0,1]), ref, ref_index)
@@ -1705,7 +1984,7 @@ workflow {
             dv_commands = deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, sex, haploidaware, parbed)
             dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_vcf_bam, gvcf) = deepvariant_post_processing(dv_calls, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (snp_indel_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // split multiallelic variants
         snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
@@ -1719,30 +1998,45 @@ workflow {
             pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint snp/indel calling
-        if (snp_indel_caller == 'deeptrio') {
-            tmp = haplotagged_bam_fam.groupTuple(by: 1).transpose()
-            proband_tuple = tmp.filter { tuple -> tuple[2].contains("proband") }
-            father_tuple = tmp.filter { tuple -> tuple[2].contains("father") }
-            mother_tuple = tmp.filter { tuple -> tuple[2].contains("mother") }
-            dt_commands = deeptrio_dry_run(proband_tuple.join(data_type_tuple, by: [0,1]), father_tuple.join(data_type_tuple, by: [0,1]), mother_tuple.join(data_type_tuple, by: [0,1]), ref, ref_index)
+        if (mode == 'duo') {
+            tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
+            proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
+            parent_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
+            // check relatedness
+            if (check_relatedness == 'yes') {
+                somalier_duo(proband_gvcf_bam, parent_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
+            }
+            // gvcf merging
+            joint_snp_indel_vcf_bam = glnexus_duo(proband_gvcf_bam, parent_gvcf_bam, snp_indel_caller)
+            // joint split multiallelic variants
+            joint_snp_indel_split_vcf_bam = split_multiallele_duo(joint_snp_indel_vcf_bam, ref, ref_index)
+            // joint phasing
+            (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_phase_duo(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        }
+        if (mode == 'trio') {
+            tmp = haplotagged_bam_fam.groupTuple(by: 2).transpose()
+            proband_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
+            father_bam = tmp.filter { tuple -> tuple[2].contains("father") }
+            mother_bam = tmp.filter { tuple -> tuple[2].contains("mother") }
+            dt_commands = deeptrio_dry_run(proband_bam.join(data_type_tuple, by: [0,1]), father_bam.join(data_type_tuple, by: [0,1]), mother_bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
             dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
-            proband_out = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
-            father_out = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
-            mother_out = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
-            gvcfs_bams = proband_out.join(father_out).join(mother_out).map { tuple ->
-                [tuple[0], tuple[2], tuple[7], tuple[12], tuple[3], tuple[4], tuple[8], tuple[9], tuple[13], tuple[14], tuple[5], tuple[10], tuple[15]]
-            }
+            proband_gvcfs = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
+            father_gvcfs = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
+            mother_gvcfs = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
+            // check relatedness
             if (check_relatedness == 'yes') {
-                somalier(proband_tuple, father_tuple, mother_tuple, ref, ref_index, sites, outdir, outdir2, ref_name)
+                somalier_trio(proband_gvcfs, father_gvcfs, mother_gvcfs, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_vcf_bam = glnexus(gvcfs_bams)
-            // split joint multiallelic variants
-            joint_snp_indel_split_vcf_bam = joint_split_multiallele(joint_snp_indel_vcf_bam, ref, ref_index)
+            joint_snp_indel_vcf_bam = glnexus_trio(gvcfs_bams, snp_indel_caller)
+            // joint split multiallelic variants
+            joint_snp_indel_split_vcf_bam = split_multiallele_trio(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
-            (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_joint_phase(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_phase_trio(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        }
+        if (mode in ['duo', 'trio']) {
             // joint snp/indel annotation
             if (annotate == 'yes') {
                 vep_snp_indel(joint_snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
@@ -1761,27 +2055,44 @@ workflow {
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
-        if (annotate == 'yes' && snp_indel_caller != 'deeptrio') {
+        if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
             vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
     }
     // joint sv calling
-    if (snp_indel_caller == 'deeptrio') {
+    if (mode == 'duo') {
+        // sv vcf merging
+        if (sv_caller in ['sniffles', 'both']) {
+            sniffles_tmp = sv_vcf_haplotagged_bam_fam_sniffles.groupTuple(by: 1).transpose()
+            sniffles_proband_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("proband") }
+            sniffles_parent_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
+            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles_duo(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_parent_tuple, ref, ref_index, outdir, outdir2, ref_name)
+        }
+        if (sv_caller in ['cutesv', 'both']) {
+            cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv.groupTuple(by: 1).transpose()
+            cutesv_proband_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("proband") }
+            cutesv_parent_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
+            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv_duo(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_parent_tuple, ref, ref_index, outdir, outdir2, ref_name)
+        }
+    }
+    if (mode == 'trio') {
         // sv vcf merging
         if (sv_caller in ['sniffles', 'both']) {
             sniffles_tmp = sv_vcf_haplotagged_bam_fam_sniffles.groupTuple(by: 1).transpose()
             sniffles_proband_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("proband") }
             sniffles_father_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("father") }
             sniffles_mother_tuple = sniffles_tmp.filter { tuple -> tuple[2].contains("mother") }
-            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_sniffles, joint_sv_vcf_sniffles_indexed) = jasmine_sniffles_trio(sniffles_proband_tuple.join(data_type_tuple, by: [0,1]), sniffles_father_tuple, sniffles_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
         if (sv_caller in ['cutesv', 'both']) {
             cutesv_tmp = sv_vcf_haplotagged_bam_fam_cutesv.groupTuple(by: 1).transpose()
             cutesv_proband_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("proband") }
             cutesv_father_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("father") }
             cutesv_mother_tuple = cutesv_tmp.filter { tuple -> tuple[2].contains("mother") }
-            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
+            (joint_sv_vcf_cutesv, joint_sv_vcf_cutesv_indexed) = jasmine_cutesv_trio(cutesv_proband_tuple.join(data_type_tuple, by: [0,1]), cutesv_father_tuple, cutesv_mother_tuple, ref, ref_index, outdir, outdir2, ref_name)
         }
+    }
+    if (mode in ['duo', 'trio']) {
         // joint sv annotation
         if (annotate == 'yes') {
             if (sv_caller in ['sniffles', 'both']) {
@@ -1792,13 +2103,13 @@ workflow {
             }
         }
     }
-    if (in_data_format == 'sv_vcf' && snp_indel_caller != 'deeptrio') {
+    if (in_data_format == 'sv_vcf' && !(mode in ['duo', 'trio'])) {
         sv_vcf_sniffles = id_tuple.join(files_tuple, by: [0,1])
         sv_vcf_cutesv = id_tuple.join(files_tuple, by: [0,1])
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'sv_vcf']) {
         // annotation
-        if (annotate == 'yes' && snp_indel_caller != 'deeptrio') {
+        if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
             if (sv_caller in ['sniffles', 'both']) {
                 vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
             }
