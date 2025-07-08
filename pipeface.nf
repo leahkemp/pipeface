@@ -1498,13 +1498,13 @@ process vep_sniffles_sv {
     def sv_caller_merger = "sniffles.jasmine"
 
     publishDir { task ->
-        if (params.snp_indel_caller != 'deeptrio') {
+        if (mode == 'singleton') {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (params.snp_indel_caller != 'deeptrio') {
+        if (mode == 'singleton') {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
             return "$family_id.$ref_name.$sv_caller_merger.$filename"
@@ -1521,6 +1521,7 @@ process vep_sniffles_sv {
         val outdir
         val outdir2
         val ref_name
+        val mode
 
     output:
         tuple val(sample_id), val(family_id), path('sv.phased.annotated.vcf.gz'), path('sv.phased.annotated.vcf.gz.tbi')
@@ -1547,13 +1548,13 @@ process vep_cutesv_sv {
     def sv_caller_merger = "cutesv.jasmine"
 
     publishDir { task ->
-        if (params.snp_indel_caller != 'deeptrio') {
+        if (mode == 'singleton') {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (params.snp_indel_caller != 'deeptrio') {
+        if (mode == 'singleton') {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
             return "$family_id.$ref_name.$sv_caller_merger.$filename"
@@ -1570,6 +1571,7 @@ process vep_cutesv_sv {
         val outdir
         val outdir2
         val ref_name
+        val mode
 
     output:
         tuple val(sample_id), val(family_id), path('sv.annotated.vcf.gz'), path('sv.annotated.vcf.gz.tbi')
@@ -2096,10 +2098,10 @@ workflow {
         // joint sv annotation
         if (annotate == 'yes') {
             if (sv_caller in ['sniffles', 'both']) {
-                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(joint_sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name, mode)
             }
             if (sv_caller in ['cutesv', 'both']) {
-                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(joint_sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name, mode)
             }
         }
     }
@@ -2111,10 +2113,10 @@ workflow {
         // annotation
         if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
             if (sv_caller in ['sniffles', 'both']) {
-                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_sniffles_sv(sv_vcf_sniffles, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name, mode)
             }
             if (sv_caller in ['cutesv', 'both']) {
-                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+                vep_cutesv_sv(sv_vcf_cutesv, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name, mode)
             }
         }
     }
