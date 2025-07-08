@@ -1007,13 +1007,13 @@ process whatshap_phase_trio {
 process vep_snp_indel {
 
     publishDir { task ->
-        if (params.snp_indel_caller != 'deeptrio') {
+        if (mode == 'singleton') {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (params.snp_indel_caller != 'deeptrio') {
+        if (mode == 'singleton') {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
             return "$family_id.$ref_name.$snp_indel_caller.$filename"
@@ -1037,6 +1037,7 @@ process vep_snp_indel {
         val outdir2
         val ref_name
         val snp_indel_caller
+        val mode
 
     output:
         tuple val(sample_id), val(family_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
@@ -2041,7 +2042,7 @@ workflow {
         if (mode in ['duo', 'trio']) {
             // joint snp/indel annotation
             if (annotate == 'yes') {
-                vep_snp_indel(joint_snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+                vep_snp_indel(joint_snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
             }
         }
         // sv calling
@@ -2058,7 +2059,7 @@ workflow {
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
         if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
-            vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     // joint sv calling
