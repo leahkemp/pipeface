@@ -200,7 +200,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
 ## Run it!
 
-See a walkthrough for how to [run pipeface on NCI](./docs/run_on_nci.md).
+See a walkthrough for [running pipeface on NCI](./docs/run_on_nci.md).
 
 ## Credit
 
