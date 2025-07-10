@@ -6,7 +6,7 @@ Pipefaceee.
 
 Nextflow pipeline to process long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
-There currently exists tools and workflows that undertake comparable analyses, but pipeface serves as a central workflow to process long read data (both ONT and pacbio HiFi data). Pipeface's future hold's STR, CNV and tandem repeat calling.
+Pipeface's future hold's mitochondrial, STR, CNV and tandem repeat calling.
 
 <p align="center">
     <img src="./images/pipeface.png">
