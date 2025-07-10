@@ -1078,10 +1078,9 @@ process minimod {
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path('modfreqs_hap1.bw'), path('modfreqs_hap1.bed'), path('modfreqs_hap2.bw'), path('modfreqs_hap2.bed'), path('modfreqs_combined.bw'), path('modfreqs_combined.bed'), optional: true
+        tuple val(sample_id), val(family_id), path('modfreqs_hap1.bw'), path('modfreqs_hap1.bed'), path('modfreqs_hap2.bw'), path('modfreqs_hap2.bed'), path('modfreqs_combined.bw'), path('modfreqs_combined.bed'), path('modfreqs_unphased.bed'), optional: true
 
     script:
-        if (data_type == 'ont')
         """
         # run minimod
         minimod mod-freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes -o modfreqs.tmp.bed
@@ -1089,18 +1088,16 @@ process minimod {
         awk 'NR > 1 { print }' modfreqs.tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # seperate haplotypes
-            awk '\$9==1' modfreqs.bed > modfreqs_hap1.bed
-            awk '\$9==2' modfreqs.bed > modfreqs_hap2.bed
-            awk '\$9=="*" || \$9==0' modfreqs.bed > modfreqs_combined.bed
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.tmp.bed > \${FILE}.bed; done
+            awk '\$9==1' modfreqs.bed >> modfreqs_hap1.bed
+            awk '\$9==2' modfreqs.bed >> modfreqs_hap2.bed
+            awk '\$9=="*"' modfreqs.bed >> modfreqs_combined.bed
+            awk '\$9==0' modfreqs.bed >> modfreqs_unphased.bed
             # generate bigwig
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do cut -f1-3,7 \\${FILE}.bed > \\${FILE}.formatted.bed; done
             cut -f1,2 $ref_index > chrom.sizes
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \\${FILE}.formatted.bed chrom.sizes \\${FILE}.bw; done
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do awk 'NR > 1 { print }' \${FILE}.bed | cut -f1-3,7 > \${FILE}.formatted.bed; done
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do bedGraphToBigWig \${FILE}.formatted.bed chrom.sizes \${FILE}.bw; done
         fi
-        """
-        else if (data_type == 'pacbio')
-        """
-        echo "Data type is pacbio, not running minimod on this data."
         """
 
     stub:
@@ -1111,53 +1108,6 @@ process minimod {
         touch modfreqs_hap2.bw
         touch modfreqs_combined.bed
         touch modfreqs_combined.bw
-        """
-
-}
-
-process pbcpgtools {
-
-    def software = "pbcpgtools"
-
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'cpg_scores*'
-
-    input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
-        val ref
-        val ref_index
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        tuple val(sample_id), val(family_id), path('cpg_scores_hap1.bw'), path('cpg_scores_hap1.bed'), path('cpg_scores_hap2.bw'), path('cpg_scores_hap2.bed'), path('cpg_scores_combined.bw'), path('cpg_scores_combined.bed'), optional: true
-
-    script:
-        if (data_type == 'pacbio')
-        """
-        # run pb-cpg-tools
-        aligned_bam_to_cpg_scores --bam $haplotagged_bam --ref $ref --pileup-mode model --model /g/data/if89/apps/pb-CpG-tools/2.3.2/pileup_calling_model.v1.tflite --modsites-mode denovo --hap-tag HP --threads ${task.cpus}
-        # rename files
-        ln -s aligned_bam_to_cpg_scores.hap1.bw cpg_scores_hap1.bw
-        ln -s aligned_bam_to_cpg_scores.hap1.bed cpg_scores_hap1.bed
-        ln -s aligned_bam_to_cpg_scores.hap2.bw cpg_scores_hap2.bw
-        ln -s aligned_bam_to_cpg_scores.hap2.bed cpg_scores_hap2.bed
-        ln -s aligned_bam_to_cpg_scores.combined.bw cpg_scores_combined.bw
-        ln -s aligned_bam_to_cpg_scores.combined.bed cpg_scores_combined.bed
-        """
-        else if (data_type == 'ont')
-        """
-        echo "Data type is ONT, not running pb-CpG-tools on this data."
-        """
-
-    stub:
-        """
-        touch cpg_scores_hap1.bw
-        touch cpg_scores_hap1.bed
-        touch cpg_scores_hap2.bw
-        touch cpg_scores_hap2.bed
-        touch cpg_scores_combined.bw
-        touch cpg_scores_combined.bed
         """
 
 }
@@ -2002,7 +1952,6 @@ workflow {
         // base mod analysis
         if (analyse_base_mods == 'yes') {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-            pbcpgtools(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
         // joint snp/indel calling
         if (mode == 'duo') {

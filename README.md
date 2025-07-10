@@ -28,8 +28,7 @@ split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only)"}}
-generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only)"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (hg38 only)"}}
 
@@ -37,7 +36,6 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
-haplotagging-.->generate_meth_probs
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
 ```
@@ -61,8 +59,7 @@ joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only)"}}
-generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only)"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
@@ -71,7 +68,6 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
-haplotagging-.->generate_meth_probs
 haplotagging-.->joint_somalier
 snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
@@ -98,8 +94,7 @@ joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (ONT uBAM's containing base modifications only)"}}
-generate_meth_probs{{"Generate site methylation probabilities (pacbio uBAM's containing base modifications only)"}}
+calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
@@ -108,7 +103,6 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
-haplotagging-.->generate_meth_probs
 haplotagging-.->joint_somalier
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
@@ -134,7 +128,6 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
-- [pb-CpG-tools](https://github.com/PacificBiosciences/pb-CpG-tools)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
 ## Main input files
@@ -160,8 +153,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Phased Clair3 or DeepVariant SNP/indel VCF file
 - Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
 - Clair3 or DeepVariant SNP/indel gVCF file
-- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 
@@ -172,8 +164,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Clair3 or DeepVariant SNP/indel gVCF file
 - Joint phased Clair3 or DeepVariant SNP/indel VCF file
 - Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
-- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 - Joint relatedness and quality control somalier TSV and HTML files
@@ -185,8 +176,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Clair3 or DeepVariant SNP/indel gVCF file
 - Joint phased DeepTrio SNP/indel VCF file
 - Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 only)
-- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (ONT uBAM's containing base modifications only)
-- Bed and bigwig site methylation probabilities for complete read set and separate haplotypes (pacbio uBAM's containing base modifications only)
+- Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 - Joint relatedness and quality control somalier TSV and HTML files
