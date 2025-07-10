@@ -227,13 +227,6 @@ Specify the path to the reference genome and it's index. Eg:
     "ref_index": "/path/to/hg38.fa.fai",
 ```
 
-*OR*
-
-```json
-    "ref": "/path/to/hs1.fa",
-    "ref_index": "/path/to/hs1.fa.fai",
-```
-
 Optionally turn on haploid-aware mode (for XY samples only). Eg:
 
 ```json
@@ -256,12 +249,6 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not 
     "tandem_repeat": "/path/to/tandem_repeat.bed",
 ```
 
-*OR*
-
-```json
-    "tandem_repeat": "NONE"
-```
-
 Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio'). Eg:
 
 
@@ -277,9 +264,11 @@ Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
-> **_Note:_** Clair3 and DeepVariant is only available for singleton and duo mode
+> **_Note:_** In singleton mode, Clair3 and DeepVariant is available
 
-> **_Note:_** DeepTrio is only available for trio mode
+> **_Note:_** In duo mode, only DeepVariant is available
+
+> **_Note:_** In trio mode, only DeepTrio is available
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -319,13 +308,6 @@ Optionally run relatedness checks. Specify the path to an appropriate somalier s
 *OR*
 
 ```json
-    "check_relatedness": "yes",
-    "sites": "/path/to/sites.chm13v2.T2T.v0.2.19.vcf.gz",
-```
-
-*OR*
-
-```json
     "check_relatedness": "no",
     "sites": "NONE"
 ```
@@ -347,7 +329,7 @@ Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
 
 ```bash
-module load nextflow/24.04.4
+module load nextflow/24.04.5
 ```
 
 ## 8. Run pipeface

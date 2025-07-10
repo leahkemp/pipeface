@@ -112,7 +112,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 ## Main analyses
 
 - ONT and/or pacbio HiFi data
-- Individuals or cohorts
+- Singletons, duos or trios
 - WGS and/or targeted
 - hg38 or hs1 reference genome
 
