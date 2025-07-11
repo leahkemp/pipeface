@@ -483,8 +483,8 @@ process deepvariant_post_processing {
         tabix snp_indel.vcf.gz
         # tag bam and gvcf with family_position for downstream glnexus
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
-        ln -s sorted.bam ${family_position}.sorted.bam
-        ln -s sorted.bam.bai ${family_position}.sorted.bam.bai
+        ln -s $bam ${family_position}.sorted.bam
+        ln -s $bam_index ${family_position}.sorted.bam.bai
         """
 
     stub:
