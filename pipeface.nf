@@ -2014,7 +2014,6 @@ workflow {
             vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
-    // joint sv calling
     if (mode == 'duo') {
         // sv vcf merging
         if (sv_caller in ['sniffles', 'both']) {
