@@ -1764,7 +1764,7 @@ workflow {
                     exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${check_file}."
                 }
             }
-            return tuple(sample_id, family_id, extension, files, data_type, regions_of_interest, clair3_model)
+            return tuple(sample_id, family_id, files, data_type, regions_of_interest, clair3_model)
         }
         .groupTuple(by: [0,1,2,4,5,6])
         .set { in_data_tuple }
