@@ -1,4 +1,4 @@
-Pipeface: 0.8.0
+Pipeface: 0.9.0
 Samtools: 1.21
 Minimap2: 2.28-r1209
 minimod: 0.3.0
@@ -8,7 +8,6 @@ DeepVariant: 1.8.0
 DeepTrio: 1.8.0
 GLnexus: 1.4.3
 WhatsHap: 2.3
-pb-CpG-tools: 2.3.2
 Sniffles2: 2.6.0
 cuteSV: 2.1.1
 jasmine: 1.1.5-r1

@@ -9,6 +9,7 @@
     "sex": "",
     "parbed": "",
     "tandem_repeat": "",
+    "mode": "",
     "snp_indel_caller": "",
     "sv_caller": "",
     "annotate": "",
