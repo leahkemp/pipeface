@@ -669,9 +669,9 @@ process deeptrio_make_examples {
         val ref_index
 
     output:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path('make_examples_child.*.gz'), path('gvcf_child.*.gz'), path('*.example_info.json'), val(call_variants_proband_args)  , emit: proband
-        tuple val(father_sample_id), val(proband_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path('make_examples_parent1.*.gz'), path('gvcf_parent1.*.gz'), path('*.example_info.json'), val(call_variants_father_args) , emit: father
-        tuple val(mother_sample_id), val(proband_family_id) val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('make_examples_parent2.*.gz'), path('gvcf_parent2.*.gz'), path('*.example_info.json'), val(call_variants_mother_args) , emit: mother
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path('make_examples_child.*.gz'), path('gvcf_child.*.gz'), path('*.example_info.json'), val(call_variants_proband_args), emit: proband
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path('make_examples_parent1.*.gz'), path('gvcf_parent1.*.gz'), path('*.example_info.json'), val(call_variants_father_args), emit: father
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('make_examples_parent2.*.gz'), path('gvcf_parent2.*.gz'), path('*.example_info.json'), val(call_variants_mother_args), emit: mother
 
     script:
         """
@@ -1007,13 +1007,13 @@ process whatshap_phase_trio {
 process vep_snp_indel {
 
     publishDir { task ->
-        if (mode == 'singleton') {
+        if (mode in ['singleton', 'NONE']) {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (mode == 'singleton') {
+        if (mode in ['singleton', 'NONE']) {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
             return "$family_id.$ref_name.$snp_indel_caller.$filename"
@@ -1453,13 +1453,13 @@ process vep_sniffles_sv {
     def sv_caller_merger = "sniffles.jasmine"
 
     publishDir { task ->
-        if (mode == 'singleton') {
+        if (mode in ['singleton', 'NONE']) {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (mode == 'singleton') {
+        if (mode in ['singleton', 'NONE']) {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
             return "$family_id.$ref_name.$sv_caller_merger.$filename"
@@ -1503,13 +1503,13 @@ process vep_cutesv_sv {
     def sv_caller_merger = "cutesv.jasmine"
 
     publishDir { task ->
-        if (mode == 'singleton') {
+        if (mode in ['singleton', 'NONE']) {
             return "$outdir/$family_id/$outdir2/$sample_id"
         } else {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: 'copy', overwrite: true, saveAs: { filename ->
-        if (mode == 'singleton') {
+        if (mode in ['singleton', 'NONE']) {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
             return "$family_id.$ref_name.$sv_caller_merger.$filename"
@@ -1977,15 +1977,15 @@ workflow {
             dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
-            proband_gvcfs = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
-            father_gvcfs = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
-            mother_gvcfs = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
+            proband_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
+            father_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
+            mother_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
             // check relatedness
             if (check_relatedness == 'yes') {
-                somalier_trio(proband_gvcfs, father_gvcfs, mother_gvcfs, ref, ref_index, sites, outdir, outdir2, ref_name)
+                somalier_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_vcf_bam = glnexus_trio(gvcfs_bams, snp_indel_caller)
+            joint_snp_indel_vcf_bam = glnexus_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, snp_indel_caller)
             // joint split multiallelic variants
             joint_snp_indel_split_vcf_bam = split_multiallele_trio(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
