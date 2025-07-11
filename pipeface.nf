@@ -23,7 +23,7 @@ process scrape_settings {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
 
     input:
-        tuple val(sample_id), val(family_id), val(extension), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
+        tuple val(sample_id), val(family_id), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
         val pipeface_version
         val in_data
         val in_data_format
@@ -1747,7 +1747,6 @@ workflow {
         .map { row ->
             def sample_id = row.sample_id
             def family_id = row.family_id
-            def extension = file(row.file).getExtension()
             def files = row.file
             def data_type = row.data_type
             def regions_of_interest = row.regions_of_interest
