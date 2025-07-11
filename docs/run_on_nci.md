@@ -170,7 +170,7 @@ sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
 sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
-> **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
+> **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
 
 > **_Note:_** In duo mode, a `proband`, and either `father` or `mother` must be defined in the `family_position` column for every `family_id`
 
