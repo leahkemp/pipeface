@@ -172,7 +172,7 @@ sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 
 > **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
 
-> **_Note:_** In duo mode, a `proband`, and either `father` or `mother` must be defined in the `family_position` column for every `family_id`
+> **_Note:_** In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
 
 > **_Note:_** In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
 
@@ -296,9 +296,9 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
     "analyse_base_mods": "yes",
 ```
 
-> **_Note:_** these analyses assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+> **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
-Optionally run relatedness checks. Specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
+Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
 ```json
     "check_relatedness": "yes",
@@ -326,7 +326,7 @@ Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces
 
 ## 7. Get pipeline dependencies
 
-You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
+You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies. Eg:
 
 ```bash
 module load nextflow/24.04.5
