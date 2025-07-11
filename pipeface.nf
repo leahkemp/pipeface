@@ -273,7 +273,7 @@ process clair3 {
         else if (data_type == 'pacbio') {
             platform = 'hifi'
         }
-        if ( haploidaware == 'no' | sex == 'XX' )
+        if (haploidaware == 'no' | sex == 'XX')
         """
         # run clair3
         run_clair3.sh --bam_fn=$bam --ref_fn=$ref --output=./ --threads=${task.cpus} --platform=$platform --model_path=$clair3_model --sample_name=$sample_id --gvcf --include_all_ctgs $regions_of_interest_optional
@@ -284,7 +284,7 @@ process clair3 {
         ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
         ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
         """
-        else if ( haploidaware == 'yes' && sex == 'XY' )
+        else if (haploidaware == 'yes' && sex == 'XY')
         """
         # if regions were given, we use them to subset the genome index to construct the genome.bed file
         if [[ -f "${regions_of_interest}" ]]; then
@@ -1929,7 +1929,7 @@ workflow {
         bam = id_tuple.join(files_tuple, by: [0,1]).join(index_tuple, by: [0,1])
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
-        if ( calculate_depth == 'yes' ) {
+        if (calculate_depth == 'yes') {
             mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
         }
         // snp/indel calling
