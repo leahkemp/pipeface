@@ -1766,7 +1766,7 @@ workflow {
             }
             return tuple(sample_id, family_id, files, data_type, regions_of_interest, clair3_model)
         }
-        .groupTuple(by: [0,1,2,4,5,6])
+        .groupTuple(by: [0,1,3,4,5])
         .set { in_data_tuple }
 
     // build channels from in_data.csv file for describing each metadata associated with samples/families
