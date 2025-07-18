@@ -14,7 +14,7 @@
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
   - [3. Modify in\_data.csv](#3-modify-in_datacsv)
     - [Singleton mode](#singleton-mode)
-    - [Cohort mode](#cohort-mode)
+    - [Duo/Trio mode](#duotrio-mode)
   - [4. Modify nextflow\_pipeface.config](#4-modify-nextflow_pipefaceconfig)
   - [5. Modify parameters\_pipeface.json](#5-modify-parameters_pipefacejson)
   - [6. Start persistent session (optional)](#6-start-persistent-session-optional)
@@ -93,7 +93,7 @@ samtools faidx hs1.fa
 
 ### Somalier sites file (if running relatedness check)
 
-> **_Note:_** checking relatedness is only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
+> **_Note:_** checking relatedness is only available for duo/trio mode
 
 #### hg38
 
@@ -141,7 +141,7 @@ tar -xvf hifi_revio.tar.gz
 
 ### Singleton mode
 
-Specify the sample ID, family ID (optional), file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
+Specify the sample ID, family ID (optional), file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
@@ -155,9 +155,9 @@ sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/
 
 > **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
 
-### Cohort mode
+### Duo/Trio mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be analysed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
@@ -170,11 +170,13 @@ sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
 sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
-> **_Note:_** In cohort mode, `family_id` and `family_position` are used to define the joint SNP/indel calling
+> **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
 
-> **_Note:_** In cohort mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+> **_Note:_** In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
 
-> **_Note:_** Files with the same value in the `sample_id` column will be merged before analysis, this is used to handle multiple sequencing runs of the same sample
+> **_Note:_** In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+
+> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample
 
 Requirements:
 
@@ -225,13 +227,6 @@ Specify the path to the reference genome and it's index. Eg:
     "ref_index": "/path/to/hg38.fa.fai",
 ```
 
-*OR*
-
-```json
-    "ref": "/path/to/hs1.fa",
-    "ref_index": "/path/to/hs1.fa.fai",
-```
-
 Optionally turn on haploid-aware mode (for XY samples only). Eg:
 
 ```json
@@ -254,34 +249,26 @@ Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not 
     "tandem_repeat": "/path/to/tandem_repeat.bed",
 ```
 
-*OR*
+Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio'). Eg:
+
 
 ```json
-    "tandem_repeat": "NONE"
+    "mode": "singleton",
 ```
 
 Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
-
-
-```json
-    "snp_indel_caller": "clair3",
-```
-
-*OR*
 
 ```json
     "snp_indel_caller": "deepvariant",
 ```
 
-*OR*
-
-```json
-    "snp_indel_caller": "deeptrio",
-```
-
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
-> **_Note:_** Selecting DeepTrio as the SNP/indel caller initates cohort analysis
+> **_Note:_** In singleton mode, Clair3 and DeepVariant is available
+
+> **_Note:_** In duo mode, only DeepVariant is available
+
+> **_Note:_** In trio mode, only DeepTrio is available
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -289,28 +276,10 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "sniffles",
 ```
 
-*OR*
-
-```json
-    "sv_caller": "cutesv",
-```
-
-*OR*
-
-```json
-    "sv_caller": "both",
-```
-
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",
-```
-
-*OR*
-
-```json
-    "annotate": "no",
 ```
 
 > **_Note:_** variant annotation is only available for hg38
@@ -321,27 +290,15 @@ Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
     "calculate_depth": "yes",
 ```
 
-*OR*
-
-```json
-    "calculate_depth": "no",
-```
-
 Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 
 ```json
     "analyse_base_mods": "yes",
 ```
 
-*OR*
+> **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
-```json
-    "analyse_base_mods": "no",
-```
-
-> **_Note:_** these analyses assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
-
-Optionally run relatedness checks. Specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
+Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
 ```json
     "check_relatedness": "yes",
@@ -351,18 +308,11 @@ Optionally run relatedness checks. Specify the path to an appropriate somalier s
 *OR*
 
 ```json
-    "check_relatedness": "yes",
-    "sites": "/path/to/sites.chm13v2.T2T.v0.2.19.vcf.gz",
-```
-
-*OR*
-
-```json
     "check_relatedness": "no",
     "sites": "NONE"
 ```
 
-> **_Note:_** checking relatedness is only available for cohort mode (ie. when DeepTrio is selected as the SNP/indel caller)
+> **_Note:_** checking relatedness is only available for duo/trio mode
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
@@ -376,10 +326,10 @@ Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces
 
 ## 7. Get pipeline dependencies
 
-You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies
+You may use the centrally installed nextflow environmental module available on NCI to access the nextflow and java dependencies. Eg:
 
 ```bash
-module load nextflow/24.04.4
+module load nextflow/24.04.5
 ```
 
 ## 8. Run pipeface
@@ -392,6 +342,6 @@ nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config 
 
 The resources requested and the queue each process is submitted to may be modified by modifying [nextflow_pipeface.config](https://github.com/leahkemp/pipeface/blob/main/config/nextflow_pipeface.config). Please keep in mind that some datasets will require modifications to the default resources (particularly memory, disk usage, walltime). For example WGS data with greater than typical (~30x) sequencing depth.
 
-Similarly, with some coding skills, the software installs used by each process in the pipeline may be modified. This means you're able to substitute in different software installs or different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
+Similarly, with bioinformatics skills, the software installs used by each process in the pipeline may be modified. This means you're able to substitute in different software installs or different versions of software used by the pipeline. However, keep in mind that the pipeline doesn't account for differences in parameterisation between software versions.
 
-This also means this pipeline is portable to other HPC's if appropriate environmental modules are included in [nextflow_pipeface.config](https://github.com/leahkemp/pipeface/blob/main/config/nextflow_pipeface.config) (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed. If you wish to use the variant annotation component of the pipeline, you'll additionally need to create local copies of the variant annotation databases used by the pipeline.
+This also means this pipeline is portable to other HPC's if appropriate environmental modules are included in [nextflow_pipeface.config](https://github.com/leahkemp/pipeface/blob/main/config/nextflow_pipeface.config) (or if you get around to creating a nextflow configuration file pointing to appropriate containerised software before I do) and modify the job scheduler specific configuration if needed. If you wish to use the variant annotation component of the pipeline, you'll additionally need to create local copies of the variant annotation databases used by the pipeline. However annotation can simply be turned off if needed.
