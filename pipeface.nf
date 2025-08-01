@@ -1240,12 +1240,11 @@ process jasmine_sniffles_duo {
         realpath $parent_haplotagged_bam >> bams.txt
         # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
-        # ref filling
-        bcftools +fill-from-fasta - -- -c REF -f $ref < sv.phased.tmp.vcf | bcftools sort -Oz -o sv.phased.tmp2.vcf
         # fix vcf header (remove prefix to sample names that jasmine adds)
-        grep '##' sv.phased.tmp2.vcf > sv.phased.vcf
-        grep '#CHROM' sv.phased.tmp2.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.phased.vcf
-        grep -v '#' sv.phased.tmp2.vcf >> sv.phased.vcf
+        grep '##' sv.phased.tmp.vcf > sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf >> sv.phased.vcf
+        bcftools sort sv.phased.vcf -o sv.phased.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} sv.phased.vcf
         tabix sv.phased.vcf.gz
@@ -1300,12 +1299,11 @@ process jasmine_cutesv_duo {
         realpath $parent_haplotagged_bam >> bams.txt
         # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
-        # ref filling
-        bcftools +fill-from-fasta - -- -c REF -f $ref < sv.tmp.vcf | bcftools sort -Oz -o sv.tmp2.vcf
         # fix vcf header (remove prefix to sample names that jasmine adds)
-        grep '##' sv.tmp2.vcf > sv.vcf
-        grep '#CHROM' sv.tmp2.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.vcf
-        grep -v '#' sv.tmp2.vcf >> sv.vcf
+        grep '##' sv.tmp.vcf > sv.vcf
+        grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.vcf
+        grep -v '#' sv.tmp.vcf >> sv.vcf
+        bcftools sort sv.vcf -o sv.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
@@ -1364,12 +1362,11 @@ process jasmine_sniffles_trio {
         realpath $mother_haplotagged_bam >> bams.txt
         # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
-        # ref filling
-        bcftools +fill-from-fasta - -- -c REF -f $ref < sv.phased.tmp.vcf | bcftools sort -Oz -o sv.phased.tmp2.vcf
         # fix vcf header (remove prefix to sample names that jasmine adds)
-        grep '##' sv.phased.tmp2.vcf > sv.phased.vcf
-        grep '#CHROM' sv.phased.tmp2.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
-        grep -v '#' sv.phased.tmp2.vcf >> sv.phased.vcf
+        grep '##' sv.phased.tmp.vcf > sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
+        grep -v '#' sv.phased.tmp.vcf >> sv.phased.vcf
+        bcftools sort sv.phased.vcf -o sv.phased.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} sv.phased.vcf
         tabix sv.phased.vcf.gz
@@ -1428,12 +1425,11 @@ process jasmine_cutesv_trio {
         realpath $mother_haplotagged_bam >> bams.txt
         # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
-        # ref filling
-        bcftools +fill-from-fasta - -- -c REF -f $ref < sv.tmp.vcf | bcftools sort -Oz -o sv.tmp2.vcf
         # fix vcf header (remove prefix to sample names that jasmine adds)
-        grep '##' sv.tmp2.vcf > sv.vcf
-        grep '#CHROM' sv.tmp2.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
-        grep -v '#' sv.tmp2.vcf >> sv.vcf
+        grep '##' sv.tmp.vcf > sv.vcf
+        grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
+        grep -v '#' sv.tmp.vcf >> sv.vcf
+        bcftools sort sv.vcf -o sv.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
