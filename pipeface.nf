@@ -6,10 +6,9 @@ def pipeface_version = "0.9.0"
 // create dummy NONE file for optional pipeface inputs
 new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
 
-// set defaults for optional params (set default optional input files to dummy NONE file)
+// set defaults
 // secret sauce second outdir
 params.outdir2 = ""
-params.tandem_repeat = "NONE"
 params.annotate_override = ""
 params.in_data_format_override = ""
 
@@ -36,6 +35,8 @@ process scrape_settings {
         val annotate
         val calculate_depth
         val analyse_base_mods
+        val call_cnvs
+        val blacklist
         val check_relatedness
         val sites
         val outdir
@@ -99,6 +100,8 @@ process scrape_settings {
         echo "Annotate: $annotate" >> \${F}
         echo "Calculate depth: $calculate_depth" >> \${F}
         echo "Analyse base modifications: $analyse_base_mods" >> \${F}
+        echo "Call CNV's: $call_cnvs" >> \${F}
+        echo "Spectre blacklist: $blacklist" >> \${F}
         echo "Check relatedness: $check_relatedness" >> \${F}
         echo "Somalier sites file: $sites" >> \${F}
         echo "Outdir: $outdir" >> \${F}
@@ -226,14 +229,15 @@ process mosdepth {
 
     output:
         tuple val(sample_id), val(family_id), path('depth.txt')
+        tuple val(sample_id), path('depth.regions.bed.gz'), path('depth.regions.bed.gz.csi')
 
     script:
         // define a string to optionally pass regions of interest bed file
         def regions_of_interest_optional = file(regions_of_interest).name != 'NONE' ? "-b $regions_of_interest" : ''
         """
         # run mosdepth
-        mosdepth depth $bam $regions_of_interest_optional --no-per-base -t ${task.cpus}
-        # rename file
+        mosdepth depth $bam $regions_of_interest_optional --no-per-base -x -b 1000 -Q 20 -t ${task.cpus}
+        # rename files
         ln -s depth.mosdepth.summary.txt depth.txt
         """
 
@@ -506,11 +510,12 @@ process split_multiallele {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
 
     script:
         """
         # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.unsorted.vcf
         # sort
         bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
         # compress and index vcf
@@ -1131,6 +1136,7 @@ process sniffles {
         tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz')
         tuple val(sample_id), val(family_id), path('sv.phased.vcf.gz'), path('sv.phased.vcf.gz.tbi')
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sv.phased.vcf.gz"), path("${family_position}.sorted.haplotagged.bam")
+        tuple val(sample_id), path('sv.phased.snf')
 
     script:
         // define a string to optionally pass tandem repeat bed file
@@ -1138,7 +1144,7 @@ process sniffles {
         """
         # run sniffles
         sniffles \
-        --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
+        --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional --snf sv.phased.snf
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
@@ -1443,6 +1449,179 @@ process jasmine_cutesv_trio {
 
 }
 
+process create_mdr {
+
+    input:
+        val ref
+        val ref_index
+
+    output:
+        path('mdr')
+
+    script:
+        """
+        spectre RemoveNs --reference $ref --output-dir ./ --output-file mdr
+        """
+
+    stub:
+        """
+        touch mdr
+        """
+
+}
+
+process snf2json {
+
+    input:
+        tuple val(sample_id), path(snf)
+
+    output:
+        tuple val(sample_id), path('snfj')
+
+    script:
+        """
+        snf2json $snf snfj
+        """
+
+    stub:
+        """
+        touch mdr
+        """
+
+}
+
+process spectre {
+
+    cnv_software = "spectre"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$cnv_software.$filename" }, pattern: 'cnv.*.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(snp_indel_vcf), path(snp_indel_vcf_index), val(family_position), path(depth), path(depth_index), path(snf)
+        val mdr
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+        val blacklist
+
+    output:
+        tuple val(sample_id), val(family_id), path('cnv.vcf.gz'), path('cnv.vcf.gz.tbi'), path('cnv.bed.gz'), path('cnv.bed.gz.tbi')
+        tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.cnv.spc.gz")
+
+    script:
+        // define a string to optionally pass spectre blacklist file
+        def backlist_optional = file(blacklist).name != 'NONE' ? "--blacklist $blacklist" : ''
+        if (snp_indel_caller == 'clair3')
+        """
+        # run spectre
+        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv $snp_indel_vcf --snfj snfj --threads ${task.cpus}
+        # rename files
+        ln -s ${sample_id}.vcf.gz cnv.vcf.gz
+        ln -s ${sample_id}.vcf.gz.tbi cnv.vcf.gz.tbi
+        ln -s ${sample_id}.spc.gz cnv.spc.gz
+        """
+        else if (snp_indel_caller in ['deepvariant', 'deeptrio'])
+        """
+        # fix VCF header to allow spectre to run
+        zgrep '#' $snp_indel_vcf | sed 's/FORMAT=<ID=VAF,Number=A/FORMAT=<ID=VAF,Number=1/' > snp_indel.mod.vcf
+        zgrep -v '#' $snp_indel_vcf >> snp_indel.mod.vcf
+        bgzip snp_indel.mod.vcf
+        tabix snp_indel.mod.vcf.gz
+        # run spectre
+        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv snp_indel.mod.vcf.gz --snfj snfj --threads ${task.cpus}
+        # rename files
+        ln -s ${sample_id}.vcf.gz cnv.vcf.gz
+        ln -s ${sample_id}.vcf.gz.tbi cnv.vcf.gz.tbi
+        ln -s ${sample_id}_cnv.bed.gz cnv.bed.gz
+        ln -s ${sample_id}_cnv.bed.gz.tbi cnv.bed.gz.tbi
+        ln -s ${sample_id}.spc.gz cnv.spc.gz
+        # tag spc with family_position for downstream spectre
+        ln -s cnv.spc.gz ${family_position}.cnv.spc.gz
+        """
+
+    stub:
+        """
+        touch cnv.vcf.gz
+        touch cnv.vcf.gz.tbi
+        touch cnv.bed.gz
+        touch cnv.bed.gz.tbi
+        touch cnv.spc.gz
+        """
+
+}
+
+process spectre_duo {
+
+    cnv_software = "spectre"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$cnv_software.$filename" }, pattern: 'cnv.vcf.gz*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_spc)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_spc)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('cnv.vcf.gz'), path('cnv.vcf.gz.tbi')
+
+    script:
+        """
+        # run spectre
+        spectre Population --candidates $proband_spc $parent_spc --sample-id $proband_family_id --output-dir ./
+        # rename files
+        ln -s population_mode_${proband_family_id}.vcf.gz cnv.vcf.gz
+        ln -s population_mode_${proband_family_id}.vcf.gz.tbi cnv.vcf.gz.tbi
+        """
+
+    stub:
+        """
+        touch cnv.vcf.gz
+        touch cnv.vcf.gz.tbi
+        touch cnv.spc.gz
+        """
+
+}
+
+process spectre_trio {
+
+    cnv_software = "spectre"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$cnv_software.$filename" }, pattern: 'cnv.vcf.gz*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_spc)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_spc)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_spc)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('cnv.vcf.gz'), path('cnv.vcf.gz.tbi')
+
+    script:
+        """
+        # run spectre
+        spectre Population --candidates $proband_spc $father_spc $mother_spc --sample-id $proband_family_id --output-dir ./
+        # rename files
+        ln -s population_mode_${proband_family_id}.vcf.gz cnv.vcf.gz
+        ln -s population_mode_${proband_family_id}.vcf.gz.tbi cnv.vcf.gz.tbi
+        """
+
+    stub:
+        """
+        touch cnv.vcf.gz
+        touch cnv.vcf.gz.tbi
+        touch cnv.spc.gz
+        """
+
+}
+
 process vep_sniffles_sv {
 
     def sv_caller = "sniffles"
@@ -1562,6 +1741,8 @@ workflow {
     annotate_override = "${params.annotate_override}".trim()
     calculate_depth = "${params.calculate_depth}".trim()
     analyse_base_mods = "${params.analyse_base_mods}".trim()
+    call_cnvs = "${params.call_cnvs}".trim()
+    blacklist = "${params.blacklist}".trim()
     check_relatedness = "${params.check_relatedness}".trim()
     sites = "${params.sites}".trim()
     outdir = "${params.outdir}".trim()
@@ -1674,6 +1855,25 @@ workflow {
     if (!(analyse_base_mods in ['yes', 'no'])) {
         exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', analyse_base_mods = '${analyse_base_mods}' provided."
     }
+    if (!(call_cnvs in ['yes', 'no'])) {
+        exit 1, "Choice to call CNV's should be either 'yes', or 'no', call_cnvs = '${call_cnvs}' provided."
+    }
+    if (!file(blacklist).exists()) {
+        exit 1, "Spectre blacklist bed file does not exist, blacklist = '${blacklist}' provided. Set to 'NONE' if not required."
+    }
+    if (call_cnvs == 'yes') {
+        if (calculate_depth != 'yes') {
+            exit 1, "Calculating depth is required when calling CNV's, call_cnvs = '${call_cnvs}' and calculate_depth = '${calculate_depth}' provided."
+        }
+        if (!(sv_caller in ['sniffles', 'both'])) {
+            exit 1, "It's required to run sniffles SV calling when calling CNV's, call_cnvs = '${call_cnvs}' and sv_caller = '${sv_caller}' provided."
+        }
+    }
+    if (call_cnvs == 'no') {
+        if (blacklist != 'NONE') {
+            exit 1, "When not calling CNV's, set the spectre blacklist file to 'NONE', call_cnvs = '${call_cnvs}' and blacklist = '${blacklist}' provided."
+        }
+    }
     if (!(check_relatedness in ['yes', 'no'])) {
         exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
     }
@@ -1682,7 +1882,7 @@ workflow {
             exit 1, "Checking relatedness is only available when running in duo or trio mode, mode = '${mode}' and check_relatedness = '${check_relatedness}' provided."
         }
         if (sites == 'NONE') {
-            exit 1, "When checking relatedness, set an appropriate sites file. sites = '${sites}' provided."
+            exit 1, "When checking relatedness, set an appropriate sites file. check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
         }
         if (!file(sites).exists()) {
             exit 1, "Sites file does not exist, sites = '${sites}' provided."
@@ -1690,7 +1890,7 @@ workflow {
     }
     else if (check_relatedness == 'no') {
         if (sites != 'NONE') {
-            exit 1, "When not checking relatedness, set sites file to 'NONE', sites = '${sites}' provided."
+            exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
         }
     }
     if (!outdir) {
@@ -1888,6 +2088,11 @@ workflow {
                     exit 1, "When the input data format is SNP/indel VCF or SV VCF, please set the Clair3 model (clair3_model column of '${in_data}') to 'NONE'."
                 }
             }
+            if (clair3_model == 'NONE') {
+                if (snp_indel_caller == 'clair3') {
+                    exit 1, "When the SNP/indel caller is clair3, a clair3 model must be provided, snp_indel_caller = '${snp_indel_caller}' and clair3_model = '${clair3_model}' provided."
+                }
+            }
         }
 
     // check user provided parameters relating in in_data.csv file relating to cohorts
@@ -1916,7 +2121,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, call_cnvs, blacklist, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_tuple.join(extension_tuple, by: [0,1]).join(files_tuple, by: [0,1]))
         bam = minimap2(merged.join(extension_tuple, by: [0,1]).join(data_type_tuple, by: [0,1]), ref, ref_index)
@@ -1926,7 +2131,7 @@ workflow {
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (calculate_depth == 'yes') {
-            mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
+            (depth_summary, depth_regions) = mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
@@ -1939,7 +2144,7 @@ workflow {
             (snp_indel_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // split multiallelic variants
-        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
+        (snp_indel_split_vcf_bam, snp_indel_split_vcf) = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
         // phasing
         (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
@@ -1995,10 +2200,30 @@ workflow {
         }
         // sv calling
         if (sv_caller in ['sniffles', 'both']) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles, snf) = sniffles(haplotagged_bam.join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
         }
         if (sv_caller in ['cutesv', 'both']) {
             (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_tuple, by: [0,1]).join(family_position_tuple, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+        }
+        // cnv calling
+        if (call_cnvs == 'yes') {
+            mdr = create_mdr(ref, ref_index)
+            snfj = snf2json(snf)
+            (cnv_vcf, spc) = spectre(snp_indel_split_vcf.join(family_position_tuple, by: [0,1]).join(depth_regions, by: 0).join(snfj, by: 0), mdr, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, blacklist)
+            // joint cnv calling
+            if (mode == 'duo') {
+                tmp = spc.groupTuple(by: 1).transpose()
+                proband_spc = tmp.filter { tuple -> tuple[2].contains("proband") }
+                parent_spc = tmp.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
+                spectre_duo(proband_spc, parent_spc, outdir, outdir2, ref_name)
+            }
+            if (mode == 'trio') {
+                tmp = spc.groupTuple(by: 2).transpose()
+                proband_spc = tmp.filter { tuple -> tuple[2].contains("proband") }
+                father_spc = tmp.filter { tuple -> tuple[2].contains("father") }
+                mother_spc = tmp.filter { tuple -> tuple[2].contains("mother") }
+                spectre_trio(proband_spc, father_spc, mother_spc, outdir, outdir2, ref_name)
+            }
         }
     }
     if (in_data_format == 'snp_indel_vcf') {

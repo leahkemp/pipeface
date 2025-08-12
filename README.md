@@ -6,7 +6,7 @@ Pipefaceee.
 
 Nextflow pipeline to process long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
-Pipeface's future hold's mitochondrial, STR, CNV and tandem repeat calling.
+Pipeface's future hold's mitochondrial, STR and tandem repeat calling.
 
 <p align="center">
     <img src="./images/pipeface.png">
@@ -29,6 +29,7 @@ snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
+cnv_calling{{"CNV calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (hg38 only)"}}
 
@@ -36,6 +37,9 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
+snp_indel_phasing-.->cnv_calling
+depth-.->cnv_calling
+sv_calling-.->cnv_calling
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
 ```
@@ -60,6 +64,8 @@ joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
+cnv_calling{{"CNV calling"}}
+joint_cnv_calling{{"Joint CNV calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
@@ -69,6 +75,9 @@ alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->joint_somalier
+snp_indel_phasing-.->cnv_calling-.->joint_cnv_calling
+depth-.->cnv_calling
+sv_calling-.->cnv_calling
 snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
@@ -95,6 +104,8 @@ joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
+cnv_calling{{"CNV calling"}}
+joint_cnv_calling{{"Joint CNV calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
@@ -104,6 +115,9 @@ alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->joint_somalier
+snp_indel_phasing-.->cnv_calling-.->joint_cnv_calling
+depth-.->cnv_calling
+sv_calling-.->cnv_calling
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 
@@ -127,6 +141,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - [somalier](https://github.com/brentp/somalier)
 - [Samtools](https://github.com/samtools/samtools)
 - [mosdepth](https://github.com/brentp/mosdepth)
+- [Spectre](https://github.com/fritzsedlazeck/Spectre)
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
@@ -156,6 +171,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Un-phased Spectre CNV VCF file
+- Spectre SPC file
 
 ### Duo
 
@@ -167,6 +184,9 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Un-phased Spectre CNV VCF file
+- Spectre SPC file
+- Joint un-phased Spectre CNV VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 
 ### Trio
@@ -179,6 +199,9 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Un-phased Spectre CNV VCF file
+- Spectre SPC file
+- Joint un-phased Spectre CNV VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
