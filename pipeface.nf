@@ -1497,7 +1497,7 @@ process spectre {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$cnv_software.$filename" }, pattern: 'cnv.*.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(snp_indel_vcf), path(snp_indel_vcf_index), val(family_position), path(depth), path(depth_index), path(snf)
+        tuple val(sample_id), val(family_id), path(snp_indel_vcf), path(snp_indel_vcf_index), val(family_position), path(depth), path(depth_index), path(snfj)
         val mdr
         val ref
         val ref_index
@@ -1517,7 +1517,7 @@ process spectre {
         if (snp_indel_caller == 'clair3')
         """
         # run spectre
-        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv $snp_indel_vcf --snfj snfj --threads ${task.cpus}
+        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv $snp_indel_vcf --snfj $snfj --threads ${task.cpus}
         # rename files
         ln -s ${sample_id}.vcf.gz cnv.vcf.gz
         ln -s ${sample_id}.vcf.gz.tbi cnv.vcf.gz.tbi
@@ -1531,7 +1531,7 @@ process spectre {
         bgzip snp_indel.mod.vcf
         tabix snp_indel.mod.vcf.gz
         # run spectre
-        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv snp_indel.mod.vcf.gz --snfj snfj --threads ${task.cpus}
+        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv snp_indel.mod.vcf.gz --snfj $snfj --threads ${task.cpus}
         # rename files
         ln -s ${sample_id}.vcf.gz cnv.vcf.gz
         ln -s ${sample_id}.vcf.gz.tbi cnv.vcf.gz.tbi
