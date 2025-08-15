@@ -237,7 +237,7 @@ process mosdepth {
         """
         # run mosdepth
         mosdepth depth $bam $regions_of_interest_optional --no-per-base -x -b 1000 -Q 20 -t ${task.cpus}
-        # rename files
+        # rename file
         ln -s depth.mosdepth.summary.txt depth.txt
         """
 
@@ -265,6 +265,7 @@ process clair3 {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
@@ -471,6 +472,7 @@ process deepvariant_post_processing {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sorted.bam"), path("${family_position}.sorted.bam.bai"), path("${family_position}_snp_indel.g.vcf.gz")
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
@@ -510,7 +512,6 @@ process split_multiallele {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
 
     script:
         """
@@ -1514,20 +1515,16 @@ process spectre {
     script:
         // define a string to optionally pass spectre blacklist file
         def backlist_optional = file(blacklist).name != 'NONE' ? "--blacklist $blacklist" : ''
-        if (snp_indel_caller == 'clair3')
         """
-        # run spectre
-        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv $snp_indel_vcf --snfj $snfj --threads ${task.cpus}
-        # rename files
-        ln -s ${sample_id}.vcf.gz cnv.vcf.gz
-        ln -s ${sample_id}.vcf.gz.tbi cnv.vcf.gz.tbi
-        ln -s ${sample_id}.spc.gz cnv.spc.gz
-        """
-        else if (snp_indel_caller in ['deepvariant', 'deeptrio'])
-        """
+        # remove multiallelic sites
+        zcat $snp_indel_vcf | awk '/^#/ || (\$5 !~ /,/) {print}' > snp_indel.biallelic.vcf
         # fix VCF header to allow spectre to run
-        zgrep '#' $snp_indel_vcf | sed 's/FORMAT=<ID=VAF,Number=A/FORMAT=<ID=VAF,Number=1/' > snp_indel.mod.vcf
-        zgrep -v '#' $snp_indel_vcf >> snp_indel.mod.vcf
+        if [[ "${snp_indel_caller}" == "clair3" ]]; then
+            grep '#' snp_indel.biallelic.vcf | sed 's/FORMAT=<ID=AF,Number=A/FORMAT=<ID=AF,Number=1/' > snp_indel.mod.vcf
+        elif [[ "${snp_indel_caller}" == "deepvariant" ]] || [[ "${snp_indel_caller}" == "deeptrio" ]]; then
+            grep '#' snp_indel.biallelic.vcf | sed 's/FORMAT=<ID=VAF,Number=A/FORMAT=<ID=VAF,Number=1/' > snp_indel.mod.vcf
+        fi
+        zgrep -v '#' snp_indel.biallelic.vcf >> snp_indel.mod.vcf
         bgzip snp_indel.mod.vcf
         tabix snp_indel.mod.vcf.gz
         # run spectre
@@ -1759,6 +1756,30 @@ workflow {
     alphamissense_db = "${params.alphamissense_db}".trim()
 
     // check user provided parameters
+    if ( !in_data ) {
+        exit 1, "No in data csv file (in_data) provided."
+    }
+    if ( !ref ) {
+        exit 1, "No reference genome file (ref) provided."
+    }
+    if ( !ref_index ) {
+        exit 1, "No reference genome index file (ref_index) provided."
+    }
+    if ( !parbed ) {
+        exit 1, "No PAR BED file (parbed) provided. Set to 'NONE' if not required."
+    }
+    if ( !tandem_repeat ) {
+        exit 1, "No tandem repeat file (tandem_repeat) provided. Set to 'NONE' if not required."
+    }
+    if ( !blacklist ) {
+        exit 1, "No spectre blacklist file (blacklist) provided. Set to 'NONE' if not required."
+    }
+    if ( !sites ) {
+        exit 1, "No sites file (sites) provided. Set to 'NONE' if not required."
+    }
+    if ( !outdir ) {
+        exit 1, "No output directory (outdir) provided."
+    }
     if (!file(in_data).exists()) {
         exit 1, "In data csv file does not exist, 'in_data = ${in_data}' provided."
     }
@@ -1892,9 +1913,6 @@ workflow {
         if (sites != 'NONE') {
             exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
         }
-    }
-    if (!outdir) {
-        exit 1, "No output directory (outdir) provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
         if (mode != 'NONE') {
@@ -2135,16 +2153,16 @@ workflow {
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
-            (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, haploidaware, sex)
+            (snp_indel_vcf_bam, snp_indel_vcf, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, haploidaware, sex)
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
             dv_commands = deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, sex, haploidaware, parbed)
             dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (snp_indel_vcf_bam, snp_indel_vcf, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // split multiallelic variants
-        (snp_indel_split_vcf_bam, snp_indel_split_vcf) = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
+        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
         // phasing
         (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
@@ -2209,7 +2227,7 @@ workflow {
         if (call_cnvs == 'yes') {
             mdr = create_mdr(ref, ref_index)
             snfj = snf2json(snf)
-            (cnv_vcf, spc) = spectre(snp_indel_split_vcf.join(family_position_tuple, by: [0,1]).join(depth_regions, by: 0).join(snfj, by: 0), mdr, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, blacklist)
+            (cnv_vcf, spc) = spectre(snp_indel_vcf.join(family_position_tuple, by: [0,1]).join(depth_regions, by: 0).join(snfj, by: 0), mdr, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, blacklist)
             // joint cnv calling
             if (mode == 'duo') {
                 tmp = spc.groupTuple(by: 1).transpose()
