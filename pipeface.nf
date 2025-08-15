@@ -2196,9 +2196,9 @@ workflow {
             dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
-            proband_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
-            father_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
-            mother_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
+            proband_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("proband") }
+            father_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("father") }
+            mother_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("mother") }
             // check relatedness
             if (check_relatedness == 'yes') {
                 somalier_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
