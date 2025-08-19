@@ -6,8 +6,10 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
-    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
+    - [Spectre blacklist (if CNV calling)](#spectre-blacklist-if-cnv-calling)
       - [hg38](#hg38-1)
+    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
+      - [hg38](#hg38-2)
       - [hs1](#hs1-1)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
@@ -89,6 +91,14 @@ gunzip and build index
 gunzip hs1.fa.gz
 module load samtools/1.19
 samtools faidx hs1.fa
+```
+
+### Spectre blacklist (if CNV calling)
+
+#### hg38
+
+```bash
+wget https://raw.githubusercontent.com/fritzsedlazeck/Spectre/refs/heads/main/data/grch38_blacklist_spectre.bed
 ```
 
 ### Somalier sites file (if running relatedness check)
@@ -276,7 +286,7 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "sniffles",
 ```
 
-Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
+Optionally annotate variant ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",
@@ -284,19 +294,42 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 > **_Note:_** variant annotation is only available for hg38
 
-Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
+Optionally calculate alignment depth ('yes' or 'no'). Eg:
 
 ```json
     "calculate_depth": "yes",
 ```
 
-Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
+Optionally analyse base modifications ('yes' or 'no'). Eg:
 
 ```json
     "analyse_base_mods": "yes",
 ```
 
 > **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+
+Optionally call CNV's ('yes' or 'no') and specify the path to an appropriate spectre blacklist file. Set to 'NONE' if not required. Eg:
+
+```json
+    "call_cnvs": "yes",
+    "blacklist": "/path/to/grch38_blacklist_spectre.bed",
+```
+
+*OR*
+
+```json
+    "call_cnvs": "yes",
+    "blacklist": "NONE",
+```
+
+*OR*
+
+```json
+    "call_cnvs": "no",
+    "blacklist": "NONE",
+```
+
+> **_Note:_** calculating alignment depth must be turned on if calling CNV's
 
 Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
@@ -335,7 +368,7 @@ module load nextflow/24.04.5
 ## 8. Run pipeface
 
 ```bash
-nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config -with-timeline -with-dag -with-report
+nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
 ```
 
 ## Advanced
