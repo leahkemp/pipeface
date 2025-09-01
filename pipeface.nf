@@ -1839,13 +1839,16 @@ workflow {
             if (sample_id.isEmpty()) {
                 exit 1, "There is an empty entry in the 'sample_id' column of '${in_data}'."
             }
+            if (in_file.isEmpty()) {
+                exit 1, "There is an empty entry in the 'file' column of '${in_data}'."
+            }
             if (!file(in_file).exists()) {
                 exit 1, "There is an entry in the 'file' column of '${in_data}' which doesn't exist. Check file '${in_file}'."
             }
             if (!(file(in_file).getExtension() in ['bam', 'gz', 'fastq'])) {
                 exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. Check file '${in_file}'."
             }
-            if (in_data_format == 'ubam') {
+            if (in_data_format == 'ubam_fastq') {
                 if (snp_indel_caller == 'clair3' && clair3_model == 'NONE') {
                     exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column of '${in_data}' rather than setting it to 'NONE'."
                 }
@@ -1874,8 +1877,14 @@ workflow {
                     exit 1, "Entries in the 'data_type' column of '${in_data}' should be 'ont' or 'pacbio', '${data_type}' provided."
                 }
             }
+            if (regions_of_interest.isEmpty()) {
+                exit 1, "There is an empty entry in the 'regions_of_interest' column of '${in_data}'."
+            }
             if (!file(regions_of_interest).exists()) {
                 exit 1, "There is an entry in the 'regions_of_interest' column of '${in_data}' which doesn't exist. Check file '${regions_of_interest}'."
+            }
+            if (clair3_model.isEmpty()) {
+                exit 1, "There is an empty entry in the 'clair3_model' column of '${in_data}'."
             }
             if (!file(clair3_model).exists()) {
                 exit 1, "There is an entry in the 'clair3_model' column of '${in_data}' which doesn't exist. Check path '${clair3_model}'."
