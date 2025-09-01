@@ -781,9 +781,9 @@ process somalier_trio {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index)
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
         val ref
         val ref_index
         val sites
@@ -792,7 +792,7 @@ process somalier_trio {
         val ref_name
 
     output:
-        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.groups.tsv'), path('somalier.html')
+        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.html')
 
     script:
         """
@@ -1973,9 +1973,9 @@ workflow {
             dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
-            proband_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("proband") }
-            father_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("father") }
-            mother_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[1].contains("mother") }
+            proband_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("proband") }
+            father_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("father") }
+            mother_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("mother") }
             // check relatedness
             if (check_relatedness == 'yes') {
                 somalier_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
