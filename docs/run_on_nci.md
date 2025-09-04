@@ -276,7 +276,7 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "sniffles",
 ```
 
-Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
+Optionally annotate variants ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",
@@ -284,13 +284,13 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 > **_Note:_** variant annotation is only available for hg38
 
-Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
+Optionally calculate alignment depth ('yes' or 'no'). Eg:
 
 ```json
     "calculate_depth": "yes",
 ```
 
-Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
+Optionally analyse base modifications ('yes' or 'no'). Eg:
 
 ```json
     "analyse_base_mods": "yes",
@@ -335,7 +335,7 @@ module load nextflow/24.04.5
 ## 8. Run pipeface
 
 ```bash
-nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config -with-timeline -with-dag -with-report
+nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
 ```
 
 ## Advanced
