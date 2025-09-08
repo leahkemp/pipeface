@@ -286,7 +286,7 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "sniffles",
 ```
 
-Optionally annotate variant ('yes' or 'no'). Eg:
+Optionally annotate variants ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",

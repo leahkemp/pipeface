@@ -787,9 +787,9 @@ process somalier_trio {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index)
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
         val ref
         val ref_index
         val sites
@@ -798,7 +798,7 @@ process somalier_trio {
         val ref_name
 
     output:
-        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.groups.tsv'), path('somalier.html')
+        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.html')
 
     script:
         """
@@ -1051,7 +1051,7 @@ process vep_snp_indel {
     script:
         """
         # run vep
-        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
+        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
         --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
@@ -1656,7 +1656,7 @@ process vep_sniffles_sv {
     script:
         """
         # run vep
-        vep -i $sv_phased_vcf -o sv.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg  --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
+        vep -i $sv_phased_vcf -o sv.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg  --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
         # index vcf
         tabix sv.phased.annotated.vcf.gz
         """
@@ -1706,7 +1706,7 @@ process vep_cutesv_sv {
     script:
         """
         # run vep
-        vep -i $sv_vcf -o sv.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --no_intergenic --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
+        vep -i $sv_vcf -o sv.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
         # index vcf
         tabix sv.annotated.vcf.gz
         """
@@ -2057,13 +2057,16 @@ workflow {
             if (sample_id.isEmpty()) {
                 exit 1, "There is an empty entry in the 'sample_id' column of '${in_data}'."
             }
+            if (in_file.isEmpty()) {
+                exit 1, "There is an empty entry in the 'file' column of '${in_data}'."
+            }
             if (!file(in_file).exists()) {
                 exit 1, "There is an entry in the 'file' column of '${in_data}' which doesn't exist. Check file '${in_file}'."
             }
             if (!(file(in_file).getExtension() in ['bam', 'gz', 'fastq'])) {
                 exit 1, "There is an entry in the 'file' column of '$in_data' which doesn't have a 'bam', 'gz' or 'fastq' file extension. Check file '${in_file}'."
             }
-            if (in_data_format == 'ubam') {
+            if (in_data_format == 'ubam_fastq') {
                 if (snp_indel_caller == 'clair3' && clair3_model == 'NONE') {
                     exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 model in the 'clair3_model' column of '${in_data}' rather than setting it to 'NONE'."
                 }
@@ -2092,8 +2095,14 @@ workflow {
                     exit 1, "Entries in the 'data_type' column of '${in_data}' should be 'ont' or 'pacbio', '${data_type}' provided."
                 }
             }
+            if (regions_of_interest.isEmpty()) {
+                exit 1, "There is an empty entry in the 'regions_of_interest' column of '${in_data}'."
+            }
             if (!file(regions_of_interest).exists()) {
                 exit 1, "There is an entry in the 'regions_of_interest' column of '${in_data}' which doesn't exist. Check file '${regions_of_interest}'."
+            }
+            if (clair3_model.isEmpty()) {
+                exit 1, "There is an empty entry in the 'clair3_model' column of '${in_data}'."
             }
             if (!file(clair3_model).exists()) {
                 exit 1, "There is an entry in the 'clair3_model' column of '${in_data}' which doesn't exist. Check path '${clair3_model}'."
