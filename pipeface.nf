@@ -219,17 +219,19 @@ process mosdepth {
 
     def depth_software = "mosdepth"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(regions_of_interest)
         val outdir
         val outdir2
         val ref_name
+        val ref_index
 
     output:
         tuple val(sample_id), val(family_id), path('depth.txt')
         tuple val(sample_id), path('depth.regions.bed.gz'), path('depth.regions.bed.gz.csi')
+        tuple val(sample_id), path('depth.regions.bw')
 
     script:
         // define a string to optionally pass regions of interest bed file
@@ -237,6 +239,11 @@ process mosdepth {
         """
         # run mosdepth
         mosdepth depth $bam $regions_of_interest_optional --no-per-base -x -b 1000 -Q 20 -t ${task.cpus}
+        # sort
+        zcat depth.regions.bed.gz | sort -k1,1 -k2,2n > depth.regions.bed
+        # generate bigwig
+        cut -f1,2 $ref_index > chrom.sizes
+        bedGraphToBigWig depth.regions.bed chrom.sizes depth.regions.bw
         # rename file
         ln -s depth.mosdepth.summary.txt depth.txt
         """
@@ -1528,7 +1535,7 @@ process spectre {
         bgzip snp_indel.mod.vcf
         tabix snp_indel.mod.vcf.gz
         # run spectre
-        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv snp_indel.mod.vcf.gz --snfj $snfj --threads ${task.cpus}
+        spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv snp_indel.mod.vcf.gz --snfj $snfj --threads ${task.cpus} --min-cnv-len 90000
         # rename files
         ln -s ${sample_id}.vcf.gz cnv.vcf.gz
         ln -s ${sample_id}.vcf.gz.tbi cnv.vcf.gz.tbi
@@ -2158,7 +2165,7 @@ workflow {
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (calculate_depth == 'yes') {
-            (depth_summary, depth_regions) = mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name)
+            (depth_summary, depth_regions) = mosdepth(bam.join(regions_of_interest_tuple, by: [0,1]), outdir, outdir2, ref_name, ref_index)
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
