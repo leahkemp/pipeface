@@ -101,8 +101,8 @@ RUN git clone --recurse-submodules https://github.com/bioinfomethods/Jasmine.git
 ## deploy env ##
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
-LABEL description="docker image containing software required for pipeface v0.9.3"
-LABEL version="dev"
+LABEL description="docker image containing most software required for pipeface"
+LABEL version="0.0.1"
 LABEL maintainer.name="Leah Kemp"
 LABEL maintainer.email="leahmhkemp@gmail.com"
 
