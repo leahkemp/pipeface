@@ -341,7 +341,7 @@ process clair3_haploid_aware {
         val ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('haploid_snp_indel.vcf.gz'), path('diploid_snp_indel.vcf.gz'), path('haploid_snp_indel.g.vcf.gz'), path('diploid_snp_indel.g.vcf.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('haploid_snp_indel.vcf.gz'), path('haploid_snp_indel.vcf.gz.tbi'), path('diploid_snp_indel.vcf.gz'), path('diploid_snp_indel.vcf.gz.tbi'), path('haploid_snp_indel.g.vcf.gz'), path('haploid_snp_indel.g.vcf.gz.tbi'), path('diploid_snp_indel.g.vcf.gz'), path('diploid_snp_indel.g.vcf.gz.tbi')
 
     script:
         // conditionally define platform
@@ -359,9 +359,13 @@ process clair3_haploid_aware {
         run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="diploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="${diploid_bed}"
         # rename files
         ln -s haploid/merge_output.vcf.gz haploid_snp_indel.vcf.gz
+        ln -s haploid/merge_output.vcf.gz.tbi haploid_snp_indel.vcf.gz.tbi
         ln -s diploid/merge_output.vcf.gz diploid_snp_indel.vcf.gz
+        ln -s diploid/merge_output.vcf.gz.tbi diploid_snp_indel.vcf.gz.tbi
         ln -s haploid/merge_output.gvcf.gz haploid_snp_indel.g.vcf.gz
+        ln -s haploid/merge_output.gvcf.gz.tbi haploid_snp_indel.g.vcf.gz.tbi
         ln -s diploid/merge_output.gvcf.gz diploid_snp_indel.g.vcf.gz
+        ln -s diploid/merge_output.gvcf.gz.tbi diploid_snp_indel.g.vcf.gz.tbi
         """
 
     stub:
@@ -379,7 +383,7 @@ process clair3_post_proccessing {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(haploid_snp_indel_vcf), path(diploid_snp_indel_vcf), path(haploid_snp_indel_gvcf), path(diploid_snp_indel_gvcf)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(haploid_snp_indel_vcf), path(haploid_snp_indel_vcf_index), path(diploid_snp_indel_vcf), path(diploid_snp_indel_vcf_index), path(haploid_snp_indel_gvcf), path(haploid_snp_indel_gvcf_index), path(diploid_snp_indel_gvcf), path(diploid_snp_indel_gvcf_index)
         val outdir
         val outdir2
         val ref_name
