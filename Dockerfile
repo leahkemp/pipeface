@@ -65,11 +65,6 @@ RUN wget "https://github.com/brentp/somalier/releases/download/v0.2.19/somalier"
     chmod a+x somalier && \
     mv somalier /usr/local/bin/
 
-# glnexus
-RUN wget "https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.4.1/glnexus_cli" && \
-    chmod a+x glnexus_cli && \
-    mv glnexus_cli /usr/local/bin/
-
 # spectre
 RUN pip install spectre-cnv==0.2.1 --break-system-packages
 
@@ -124,7 +119,6 @@ COPY --from=build \
     /usr/local/bin/cuteSV \
     /usr/local/bin/sniffles \
     /usr/local/bin/somalier \
-    /usr/local/bin/glnexus_cli \
     /usr/local/bin/spectre \
     /usr/local/bin/snf2json \
     /usr/local/bin/bedtools \
