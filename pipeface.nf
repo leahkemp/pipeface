@@ -378,7 +378,7 @@ process clair3_haploid_aware {
 
 }
 
-process clair3_post_proccessing {
+process clair3_post_processing {
 
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
@@ -902,16 +902,54 @@ process glnexus_duo {
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
         tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(parent_gvcf)
-        val snp_indel_caller
+
+    output:
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path('snp_indel.bcf')
+
+    script:
+        """
+        glnexus_cli --config DeepVariant $proband_gvcf $parent_gvcf > snp_indel.bcf
+        """
+
+    stub:
+        """
+        touch snp_indel.bcf
+        """
+
+}
+
+process glnexus_trio {
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
+
+    output:
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.bcf')
+
+    script:
+        """
+        glnexus_cli --config DeepVariant $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
+        """
+
+    stub:
+        """
+        touch snp_indel.bcf
+        """
+
+}
+
+process glnexus_post_processing_duo {
+
+    input:
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(snp_indel_bcf)
 
     output:
         tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
-        # run glnexus
-        glnexus_cli --config DeepVariant $proband_gvcf $parent_gvcf > snp_indel.bcf
-        # compress and index vcf
         bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
         """
@@ -924,22 +962,16 @@ process glnexus_duo {
 
 }
 
-process glnexus_trio {
+process glnexus_post_processing_trio {
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
-        val snp_indel_caller
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(snp_indel_bcf)
 
     output:
         tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
-        # run glnexus
-        glnexus_cli --config DeepVariant $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
-        # compress and index vcf
         bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
         """
@@ -2036,7 +2068,7 @@ workflow {
             if (haploidaware == 'yes' && sex == 'XY') {
                 bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
                 haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
-                (snp_indel_vcf_bam, gvcf) = clair3_post_proccessing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
+                (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
@@ -2067,7 +2099,8 @@ workflow {
                 somalier_duo(proband_gvcf_bam, parent_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_vcf_bam = glnexus_duo(proband_gvcf_bam, parent_gvcf_bam, snp_indel_caller)
+            joint_snp_indel_bcf_bam = glnexus_duo(proband_gvcf_bam, parent_gvcf_bam)
+            joint_snp_indel_vcf_bam = glnexus_post_processing_duo(joint_snp_indel_bcf_bam)
             // joint split multiallelic variants
             joint_snp_indel_split_vcf_bam = split_multiallele_duo(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
@@ -2090,7 +2123,8 @@ workflow {
                 somalier_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_vcf_bam = glnexus_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, snp_indel_caller)
+            joint_snp_indel_bcf_bam = glnexus_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam)
+            joint_snp_indel_vcf_bam = glnexus_post_processing_trio(joint_snp_indel_bcf_bam)
             // joint split multiallelic variants
             joint_snp_indel_split_vcf_bam = split_multiallele_trio(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
