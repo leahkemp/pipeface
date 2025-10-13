@@ -85,6 +85,7 @@ cat revel_with_transcript_ids | tr "," "\t" > tabbed_revel.tsv
 sed '1s/.*/#&/' tabbed_revel.tsv > new_tabbed_revel.tsv
 bgzip new_tabbed_revel.tsv
 zgrep -h -v ^#chr new_tabbed_revel.tsv.gz | awk '$3 != "." ' | sort -k1,1 -k3,3n - | cat - > new_tabbed_revel_grch38.tsv
+bgzip new_tabbed_revel_grch38.tsv
 tabix -f -s 1 -b 3 -e 3 new_tabbed_revel_grch38.tsv.gz
 ```
 
@@ -137,6 +138,7 @@ Merge into a single file
 zcat gnomad.joint.v4.1.sites.chr1.vcf.bgz | head -n1000 | grep '#' > gnomad.joint.v4.1.sites.chrall.vcf
 for i in {1..22} X Y; do zgrep -v '#' gnomad.joint.v4.1.sites.chr${i}.vcf.gz >> gnomad.joint.v4.1.sites.chrall.vcf; done
 bgzip gnomad.joint.v4.1.sites.chrall.vcf
+tabix gnomad.joint.v4.1.sites.chrall.vcf.gz
 ```
 
 ### ClinVar
@@ -242,7 +244,7 @@ params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 
 Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job sheduler.
 
-> **_Note:_** the 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require a queue with appropriate GPU's available
+> **_Note:_** the 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPU's
 
 ## 3. Get pipeline dependencies
 
