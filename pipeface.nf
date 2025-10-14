@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.9.2"
+def pipeface_version = "0.9.3"
 
 // create dummy NONE file for optional pipeface inputs
 new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
@@ -256,8 +256,6 @@ process clair3 {
         val outdir2
         val ref_name
         val snp_indel_caller
-        val haploidaware
-        val sex
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
@@ -273,61 +271,9 @@ process clair3 {
         else if (data_type == 'pacbio') {
             platform = 'hifi'
         }
-        if (haploidaware == 'no' | sex == 'XX')
         """
         # run clair3
         run_clair3.sh --bam_fn=$bam --ref_fn=$ref --output=./ --threads=${task.cpus} --platform=$platform --model_path=$clair3_model --sample_name=$sample_id --gvcf --include_all_ctgs $regions_of_interest_optional
-
-        # rename files
-        ln -s merge_output.vcf.gz snp_indel.vcf.gz
-        ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
-        ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
-        ln -s merge_output.gvcf.gz.tbi snp_indel.g.vcf.gz.tbi
-        """
-        else if (haploidaware == 'yes' && sex == 'XY')
-        """
-        # if regions were given, we use them to subset the genome index to construct the genome.bed file
-        if [[ -f "${regions_of_interest}" ]]; then
-            awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
-                "${ref}.fai" "${regions_of_interest}" > genome.bed
-        else
-        # fallback: use full genome .fai
-            awk '{ print \$1 "\\t0\\t" \$2 }' "${ref}.fai" > genome.bed
-        fi
-        genomebed="genome.bed"
-        mkdir -p {haploid,diploid}
-
-        # separate out genome bed into a haploid and diploid bed each
-        grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
-        grep "^chrX" ${params.parbed} > xpar.bed
-        grep "^chrY" ${params.parbed} > ypar.bed
-        grep "^chrX" \${genomebed} > chrX_full.bed
-        grep "^chrY" \${genomebed} > chrY_full.bed
-        bedtools subtract -a chrX_full.bed -b xpar.bed > xnonpar.bed
-        bedtools subtract -a chrY_full.bed -b ypar.bed > ynonpar.bed
-        cat autosomes.bed xpar.bed ypar.bed | sort -k1,1V -k2,2n > diploid.bed
-        cat xnonpar.bed ynonpar.bed | sort -k1,1 -k2,2n > haploid.bed
-        
-        # run clair3 (haploid)
-        run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="haploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="haploid.bed" --haploid_precise
-        
-        # run clair3 (diploid)
-        run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="diploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="diploid.bed" 
-
-        # merging diploid and haploid vcf & gvcf files
-        bcftools +fixploidy haploid/merge_output.vcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.vcf
-        bcftools +fixploidy haploid/merge_output.gvcf.gz -- -f 2 -t GT > haploid/merge_output_ploidyfixed.gvcf
-        bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.vcf
-        bgzip -@ ${task.cpus} haploid/merge_output_ploidyfixed.gvcf
-        tabix -p vcf haploid/merge_output_ploidyfixed.vcf.gz
-        tabix -p vcf haploid/merge_output_ploidyfixed.gvcf.gz
-        bcftools concat -a -Oz -o merge_output.unsorted.vcf.gz diploid/merge_output.vcf.gz haploid/merge_output_ploidyfixed.vcf.gz
-        bcftools sort -Oz -o merge_output.vcf.gz merge_output.unsorted.vcf.gz
-        tabix -p vcf merge_output.vcf.gz
-        bcftools concat -a -Oz -o merge_output.unsorted.gvcf.gz diploid/merge_output.gvcf.gz haploid/merge_output_ploidyfixed.gvcf.gz
-        bcftools sort -Oz -o merge_output.gvcf.gz merge_output.unsorted.gvcf.gz
-        tabix -p vcf merge_output.gvcf.gz
-
         # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
@@ -339,6 +285,135 @@ process clair3 {
         """
         touch snp_indel.vcf.gz
         touch snp_indel.vcf.gz.tbi
+        """
+
+}
+
+process clair3_pre_processing {
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(regions_of_interest)
+        val ref
+        val ref_index
+        path parbed
+
+    output:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('diploid.bed'), path('haploid.bed')
+
+    script:
+        """
+        # if regions were given, we use them to subset the genome index to construct the genome.bed file
+        if [[ -f "${regions_of_interest}" ]]; then
+            awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
+                "${ref}.fai" "${regions_of_interest}" > genome.bed
+        else
+        # fallback: use full genome .fai
+            awk '{ print \$1 "\\t0\\t" \$2 }' "${ref}.fai" > genome.bed
+        fi
+        genomebed="genome.bed"
+        # separate out genome bed into a haploid and diploid bed each
+        grep -v -E "^chrX|^chrY" \${genomebed} > autosomes.bed
+        grep "^chrX" ${parbed} > xpar.bed
+        grep "^chrY" ${parbed} > ypar.bed
+        grep "^chrX" \${genomebed} > chrX_full.bed
+        grep "^chrY" \${genomebed} > chrY_full.bed
+        bedtools subtract -a chrX_full.bed -b xpar.bed > xnonpar.bed
+        bedtools subtract -a chrY_full.bed -b ypar.bed > ynonpar.bed
+        cat autosomes.bed xpar.bed ypar.bed | sort -k1,1V -k2,2n > diploid.bed
+        cat xnonpar.bed ynonpar.bed | sort -k1,1 -k2,2n > haploid.bed
+        """
+
+    stub:
+        """
+        touch diploid.bed
+        touch haploid.bed
+        """
+
+}
+
+process clair3_haploid_aware {
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(diploid_bed), path(haploid_bed), val(data_type), val(clair3_model)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('haploid_snp_indel.vcf.gz'), path('haploid_snp_indel.vcf.gz.tbi'), path('diploid_snp_indel.vcf.gz'), path('diploid_snp_indel.vcf.gz.tbi'), path('haploid_snp_indel.g.vcf.gz'), path('haploid_snp_indel.g.vcf.gz.tbi'), path('diploid_snp_indel.g.vcf.gz'), path('diploid_snp_indel.g.vcf.gz.tbi')
+
+    script:
+        // conditionally define platform
+        if (data_type == 'ont') {
+            platform = 'ont'
+        }
+        else if (data_type == 'pacbio') {
+            platform = 'hifi'
+        }
+        """
+        mkdir -p {haploid,diploid}
+        # run clair3 (haploid)
+        run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="haploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="${haploid_bed}" --haploid_precise
+        # run clair3 (diploid)
+        run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="diploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="${diploid_bed}"
+        # rename files
+        ln -s haploid/merge_output.vcf.gz haploid_snp_indel.vcf.gz
+        ln -s haploid/merge_output.vcf.gz.tbi haploid_snp_indel.vcf.gz.tbi
+        ln -s diploid/merge_output.vcf.gz diploid_snp_indel.vcf.gz
+        ln -s diploid/merge_output.vcf.gz.tbi diploid_snp_indel.vcf.gz.tbi
+        ln -s haploid/merge_output.gvcf.gz haploid_snp_indel.g.vcf.gz
+        ln -s haploid/merge_output.gvcf.gz.tbi haploid_snp_indel.g.vcf.gz.tbi
+        ln -s diploid/merge_output.gvcf.gz diploid_snp_indel.g.vcf.gz
+        ln -s diploid/merge_output.gvcf.gz.tbi diploid_snp_indel.g.vcf.gz.tbi
+        """
+
+    stub:
+        """
+        touch haploid_merge_output.vcf.gz
+        touch diploid_merge_output.vcf.gz
+        touch haploid_snp_indel.g.vcf.gz
+        touch diploid_snp_indel.g.vcf.gz
+        """
+
+}
+
+process clair3_post_processing {
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(haploid_snp_indel_vcf), path(haploid_snp_indel_vcf_index), path(diploid_snp_indel_vcf), path(diploid_snp_indel_vcf_index), path(haploid_snp_indel_gvcf), path(haploid_snp_indel_gvcf_index), path(diploid_snp_indel_gvcf), path(diploid_snp_indel_gvcf_index)
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+
+    output:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
+
+    script:
+        """
+        # merge diploid and haploid vcf & gvcf files
+        bcftools +fixploidy $haploid_snp_indel_vcf -- -f 2 -t GT > haploid_ploidyfixed.vcf
+        bcftools +fixploidy $haploid_snp_indel_gvcf -- -f 2 -t GT > haploid_ploidyfixed.g.vcf
+        bgzip -@ ${task.cpus} haploid_ploidyfixed.vcf
+        bgzip -@ ${task.cpus} haploid_ploidyfixed.g.vcf
+        tabix -p vcf haploid_ploidyfixed.vcf.gz
+        tabix -p vcf haploid_ploidyfixed.g.vcf.gz
+        bcftools concat -a -Oz -o unsorted.vcf.gz $diploid_snp_indel_vcf haploid_ploidyfixed.vcf.gz
+        bcftools sort -Oz -o snp_indel.vcf.gz unsorted.vcf.gz
+        tabix -p vcf snp_indel.vcf.gz
+        bcftools concat -a -Oz -o unsorted.g.vcf.gz $diploid_snp_indel_gvcf haploid_ploidyfixed.g.vcf.gz
+        bcftools sort -Oz -o snp_indel.g.vcf.gz unsorted.g.vcf.gz
+        tabix -p vcf snp_indel.g.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.g.vcf.gz
+        touch snp_indel.g.vcf.gz.tbi
         """
 
 }
@@ -375,7 +450,7 @@ process deepvariant_dry_run {
         }
         """
         # do a dry-run of deepvariant
-        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.raw.vcf.gz --output_gvcf=snp_indel.raw.g.vcf.gz --model_type=$model --dry_run=true \
+        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
@@ -475,12 +550,8 @@ process deepvariant_post_processing {
         def num_shards = matcher[0][2] as int
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
-        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.raw.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}"
-        vcf_stats_report --input_vcf "snp_indel.raw.vcf.gz" --outfile_base "snp_indel.raw"
-        # filter out refcall variants
-        bcftools view -f 'PASS' snp_indel.raw.vcf.gz -o snp_indel.vcf.gz
-        # index vcf
-        tabix snp_indel.vcf.gz
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}"
+        vcf_stats_report --input_vcf "snp_indel.vcf.gz" --outfile_base "snp_indel"
         # tag bam and gvcf with family_position for downstream glnexus
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
         ln -s $bam ${family_position}.sorted.bam
@@ -497,10 +568,30 @@ process deepvariant_post_processing {
 
 }
 
-process split_multiallele {
+process filter_ref_call {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
+
+    output:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.filtered.vcf.gz')
+
+    script:
+        """
+        # filter out refcall variants
+        bcftools view -f 'PASS' $snp_indel_vcf -o snp_indel.filtered.vcf.gz
+        """
+    stub:
+        """
+        touch snp_indel.filtered.vcf.gz
+        """
+
+}
+
+process split_multiallele {
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf)
         val ref
         val ref_index
 
@@ -510,7 +601,7 @@ process split_multiallele {
     script:
         """
         # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.unsorted.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.unsorted.vcf
         # sort
         bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
         # compress and index vcf
@@ -811,16 +902,54 @@ process glnexus_duo {
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
         tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(parent_gvcf)
-        val snp_indel_caller
+
+    output:
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path('snp_indel.bcf')
+
+    script:
+        """
+        glnexus_cli --config DeepVariant $proband_gvcf $parent_gvcf > snp_indel.bcf
+        """
+
+    stub:
+        """
+        touch snp_indel.bcf
+        """
+
+}
+
+process glnexus_trio {
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
+
+    output:
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.bcf')
+
+    script:
+        """
+        glnexus_cli --config DeepVariant $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
+        """
+
+    stub:
+        """
+        touch snp_indel.bcf
+        """
+
+}
+
+process glnexus_post_processing_duo {
+
+    input:
+        tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(snp_indel_bcf)
 
     output:
         tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
-        # run glnexus
-        glnexus_cli --config DeepVariant $proband_gvcf $parent_gvcf > snp_indel.bcf
-        # compress and index vcf
         bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
         """
@@ -833,22 +962,16 @@ process glnexus_duo {
 
 }
 
-process glnexus_trio {
+process glnexus_post_processing_trio {
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(father_gvcf)
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(mother_gvcf)
-        val snp_indel_caller
+        tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(snp_indel_bcf)
 
     output:
         tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
 
     script:
         """
-        # run glnexus
-        glnexus_cli --config DeepVariant $proband_gvcf $father_gvcf $mother_gvcf > snp_indel.bcf
-        # compress and index vcf
         bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
         """
@@ -1939,13 +2062,22 @@ workflow {
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
-            (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, haploidaware, sex)
+            if (haploidaware == 'no' | sex == 'XX') {
+                (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            }
+            if (haploidaware == 'yes' && sex == 'XY') {
+                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
+                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
+                (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
+            }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
             dv_commands = deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, sex, haploidaware, parbed)
             dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            // filter refcall variants
+            snp_indel_vcf_bam = filter_ref_call(snp_indel_raw_vcf_bam)
         }
         // split multiallelic variants
         snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
@@ -1967,7 +2099,8 @@ workflow {
                 somalier_duo(proband_gvcf_bam, parent_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_vcf_bam = glnexus_duo(proband_gvcf_bam, parent_gvcf_bam, snp_indel_caller)
+            joint_snp_indel_bcf_bam = glnexus_duo(proband_gvcf_bam, parent_gvcf_bam)
+            joint_snp_indel_vcf_bam = glnexus_post_processing_duo(joint_snp_indel_bcf_bam)
             // joint split multiallelic variants
             joint_snp_indel_split_vcf_bam = split_multiallele_duo(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
@@ -1990,7 +2123,8 @@ workflow {
                 somalier_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_vcf_bam = glnexus_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, snp_indel_caller)
+            joint_snp_indel_bcf_bam = glnexus_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam)
+            joint_snp_indel_vcf_bam = glnexus_post_processing_trio(joint_snp_indel_bcf_bam)
             // joint split multiallelic variants
             joint_snp_indel_split_vcf_bam = split_multiallele_trio(joint_snp_indel_vcf_bam, ref, ref_index)
             // joint phasing
