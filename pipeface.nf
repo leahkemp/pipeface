@@ -339,6 +339,9 @@ process clair3_haploid_aware {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(diploid_bed), path(haploid_bed), val(data_type), val(clair3_model)
         val ref
         val ref_index
+        val outdir
+        val outdir2
+        val ref_name
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('haploid_snp_indel.vcf.gz'), path('haploid_snp_indel.vcf.gz.tbi'), path('diploid_snp_indel.vcf.gz'), path('diploid_snp_indel.vcf.gz.tbi'), path('haploid_snp_indel.g.vcf.gz'), path('haploid_snp_indel.g.vcf.gz.tbi'), path('diploid_snp_indel.g.vcf.gz'), path('diploid_snp_indel.g.vcf.gz.tbi')
@@ -2067,7 +2070,7 @@ workflow {
             }
             if (haploidaware == 'yes' && sex == 'XY') {
                 bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
-                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index)
+                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
                 (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
