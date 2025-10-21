@@ -2390,7 +2390,7 @@ workflow {
                 spectre_duo(proband_spc, parent_spc, outdir, outdir2, ref_name)
             }
             if (mode == 'trio') {
-                tmp = spc.groupTuple(by: 2).transpose()
+                tmp = spc.groupTuple(by: 1).transpose()
                 proband_spc = tmp.filter { tuple -> tuple[2].contains("proband") }
                 father_spc = tmp.filter { tuple -> tuple[2].contains("father") }
                 mother_spc = tmp.filter { tuple -> tuple[2].contains("mother") }
