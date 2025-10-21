@@ -145,6 +145,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
+*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
+
 ## Main input files
 
 ### Required
@@ -213,17 +215,9 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Enables correct handling of the haploid nature of chrX and chrY for XY samples, along with PAR regions
 - Only supported for singletons at the moment
 
-## Assumptions
-
-- Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
-- Access to if89 project (to access software installs used by pipeface)
-- Access to xy86 project (to access variant databases used by pipeface, only required if running variant annotation)
-
-*[See the list of software and their versions used by this version of pipeface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](./config/nextflow_pipeface.config) file is used).*
-
 ## Run it!
 
-See a walkthrough for [running pipeface on NCI](./docs/run_on_nci.md).
+See a walkthrough for [setting up](./docs/setup.md) and [running pipeface on NCI](./docs/run_on_nci.md) or [another HPC](./docs/run_on_other_hpc.md).
 
 ## Credit
 
