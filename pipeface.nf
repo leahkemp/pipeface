@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.9.3"
+def pipeface_version = "0.9.4"
 
 // create dummy NONE file for optional pipeface inputs
 new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
