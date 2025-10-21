@@ -2110,7 +2110,7 @@ workflow {
             (joint_snp_indel_split_phased_vcf, joint_phased_read_list) = whatshap_phase_duo(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
         }
         if (mode == 'trio') {
-            tmp = haplotagged_bam_fam.groupTuple(by: 2).transpose()
+            tmp = haplotagged_bam_fam.groupTuple(by: 1).transpose()
             proband_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
             father_bam = tmp.filter { tuple -> tuple[2].contains("father") }
             mother_bam = tmp.filter { tuple -> tuple[2].contains("mother") }
@@ -2118,9 +2118,10 @@ workflow {
             dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
-            proband_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("proband") }
-            father_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("father") }
-            mother_gvcf_bam = snp_indel_gvcf_bam.filter { tuple -> tuple[2].contains("mother") }
+            tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
+            proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
+            father_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("father") }
+            mother_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("mother") }
             // check relatedness
             if (check_relatedness == 'yes') {
                 somalier_trio(proband_gvcf_bam, father_gvcf_bam, mother_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
