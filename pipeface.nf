@@ -559,7 +559,6 @@ process deepvariant_post_processing {
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
-        tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sorted.bam"), path("${family_position}.sorted.bam.bai"), path("${family_position}_snp_indel.g.vcf.gz")
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
