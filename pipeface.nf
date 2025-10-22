@@ -406,6 +406,7 @@ process clair3_post_processing {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
 
     script:
@@ -557,6 +558,7 @@ process deepvariant_post_processing {
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
+        tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), val(family_id), path('snp_indel.vcf.gz'), path('snp_indel.vcf.gz.tbi')
         tuple val(sample_id), val(family_id), val(family_position), path("${family_position}.sorted.bam"), path("${family_position}.sorted.bam.bai"), path("${family_position}_snp_indel.g.vcf.gz")
         tuple val(sample_id), path('snp_indel.g.vcf.gz'), path('snp_indel.g.vcf.gz.tbi')
@@ -2296,19 +2298,19 @@ workflow {
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
             if (haploidaware == 'no' | sex == 'XX') {
-                (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+                (snp_indel_vcf_bam, snp_indel_vcf, gvcf) = clair3(bam.join(data_type_tuple, by: [0,1]).join(regions_of_interest_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             }
             if (haploidaware == 'yes' && sex == 'XY') {
                 bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
                 haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_tuple, by: [0,1]).join(clair3_model_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
-                (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
+                (snp_indel_vcf_bam, snp_indel_vcf, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
             dv_commands = deepvariant_dry_run(bam.join(data_type_tuple, by: [0,1]), ref, ref_index, sex, haploidaware, parbed)
             dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_tuple, by: [0,1]), ref, ref_index, parbed)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (snp_indel_raw_vcf_bam, snp_indel_vcf, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             // filter refcall variants
             snp_indel_vcf_bam = filter_ref_call(snp_indel_raw_vcf_bam)
         }
