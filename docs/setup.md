@@ -6,8 +6,10 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
-    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
+    - [Spectre blacklist (if CNV calling)](#spectre-blacklist-if-cnv-calling)
       - [hg38](#hg38-1)
+    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
+      - [hg38](#hg38-2)
       - [hs1](#hs1-1)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
@@ -82,6 +84,14 @@ gunzip and build index
 ```bash
 gunzip hs1.fa.gz
 samtools faidx hs1.fa
+```
+
+### Spectre blacklist (if CNV calling)
+
+#### hg38
+
+```bash
+wget https://raw.githubusercontent.com/fritzsedlazeck/Spectre/refs/heads/main/data/grch38_blacklist_spectre.bed
 ```
 
 ### Somalier sites file (if running relatedness check)
@@ -274,6 +284,29 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 ```
 
 > **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+
+Optionally call CNV's ('yes' or 'no') and specify the path to an appropriate spectre blacklist file. Set to 'NONE' if not required. Eg:
+
+```json
+    "call_cnvs": "yes",
+    "blacklist": "/path/to/grch38_blacklist_spectre.bed",
+```
+
+*OR*
+
+```json
+    "call_cnvs": "yes",
+    "blacklist": "NONE",
+```
+
+*OR*
+
+```json
+    "call_cnvs": "no",
+    "blacklist": "NONE",
+```
+
+> **_Note:_** calculating alignment depth must be turned on if calling CNV's
 
 Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
