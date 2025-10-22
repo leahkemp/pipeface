@@ -1625,6 +1625,38 @@ process snf2json {
 
 }
 
+process spectre_pre_processing {
+
+    input:
+        tuple val(sample_id), val(family_id), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val snp_indel_caller
+
+    output:
+        tuple val(sample_id), val(family_id), path('snp_indel.mod.vcf.gz'), path('snp_indel.mod.vcf.gz.tbi')
+
+    script:
+        """
+        # remove multiallelic sites
+        zcat $snp_indel_vcf | awk '/^#/ || (\$5 !~ /,/) {print}' > snp_indel.biallelic.vcf
+        # fix VCF header to allow spectre to run
+        if [[ "${snp_indel_caller}" == "clair3" ]]; then
+            grep '#' snp_indel.biallelic.vcf | sed 's/FORMAT=<ID=AF,Number=A/FORMAT=<ID=AF,Number=1/' > snp_indel.mod.vcf
+        elif [[ "${snp_indel_caller}" == "deepvariant" ]] || [[ "${snp_indel_caller}" == "deeptrio" ]]; then
+            grep '#' snp_indel.biallelic.vcf | sed 's/FORMAT=<ID=VAF,Number=A/FORMAT=<ID=VAF,Number=1/' > snp_indel.mod.vcf
+        fi
+        zgrep -v '#' snp_indel.biallelic.vcf >> snp_indel.mod.vcf
+        bgzip snp_indel.mod.vcf
+        tabix snp_indel.mod.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.mod.vcf.gz
+        touch snp_indel.mod.vcf.gz.tbi
+        """
+
+}
+
 process spectre {
 
     cnv_software = "spectre"
@@ -1632,7 +1664,7 @@ process spectre {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$cnv_software.$filename" }, pattern: 'cnv.*.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(snp_indel_vcf), path(snp_indel_vcf_index), val(family_position), path(depth), path(depth_index), path(snfj)
+        tuple val(sample_id), val(family_id), path(snp_indel_vcf_mod), path(snp_indel_vcf_mod_index), val(family_position), path(depth), path(depth_index), path(snfj)
         val mdr
         val ref
         val ref_index
@@ -1650,17 +1682,6 @@ process spectre {
         // define a string to optionally pass spectre blacklist file
         def backlist_optional = file(blacklist).name != 'NONE' ? "--blacklist $blacklist" : ''
         """
-        # remove multiallelic sites
-        zcat $snp_indel_vcf | awk '/^#/ || (\$5 !~ /,/) {print}' > snp_indel.biallelic.vcf
-        # fix VCF header to allow spectre to run
-        if [[ "${snp_indel_caller}" == "clair3" ]]; then
-            grep '#' snp_indel.biallelic.vcf | sed 's/FORMAT=<ID=AF,Number=A/FORMAT=<ID=AF,Number=1/' > snp_indel.mod.vcf
-        elif [[ "${snp_indel_caller}" == "deepvariant" ]] || [[ "${snp_indel_caller}" == "deeptrio" ]]; then
-            grep '#' snp_indel.biallelic.vcf | sed 's/FORMAT=<ID=VAF,Number=A/FORMAT=<ID=VAF,Number=1/' > snp_indel.mod.vcf
-        fi
-        zgrep -v '#' snp_indel.biallelic.vcf >> snp_indel.mod.vcf
-        bgzip snp_indel.mod.vcf
-        tabix snp_indel.mod.vcf.gz
         # run spectre
         spectre CNVCaller --coverage $depth --sample-id $sample_id --output-dir ./ --reference $ref --metadata $mdr $backlist_optional --snv snp_indel.mod.vcf.gz --snfj $snfj --threads ${task.cpus} --min-cnv-len 90000
         # rename files
@@ -2382,7 +2403,8 @@ workflow {
         if (call_cnvs == 'yes') {
             mdr = create_mdr(ref, ref_index)
             snfj = snf2json(snf)
-            (cnv_vcf, spc) = spectre(snp_indel_vcf.join(family_position_tuple, by: [0,1]).join(depth_regions, by: 0).join(snfj, by: 0), mdr, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, blacklist)
+            snp_indel_vcf_mod = spectre_pre_processing(snp_indel_vcf, snp_indel_caller)
+            (cnv_vcf, spc) = spectre(snp_indel_vcf_mod.join(family_position_tuple, by: [0,1]).join(depth_regions, by: 0).join(snfj, by: 0), mdr, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, blacklist)
             // joint cnv calling
             if (mode == 'duo') {
                 tmp = spc.groupTuple(by: 1).transpose()
