@@ -173,6 +173,8 @@ curl -O https://krishna.gs.washington.edu/download/CADD/v1.7/GRCh38/whole_genome
 curl -O https://krishna.gs.washington.edu/download/CADD/v1.7/GRCh38/whole_genome_SNVs.tsv.gz.tbi
 curl -O https://krishna.gs.washington.edu/download/CADD/v1.7/GRCh38/gnomad.genomes.r4.0.indel.tsv.gz
 curl -O https://krishna.gs.washington.edu/download/CADD/v1.7/GRCh38/gnomad.genomes.r4.0.indel.tsv.gz.tbi
+curl -O https://kircherlab.bihealth.org/download/CADD-SV/v1.1/1000G_phase3_SVs.tsv.gz
+curl -O https://kircherlab.bihealth.org/download/CADD-SV/v1.1/1000G_phase3_SVs.tsv.gz.tbi
 ```
 
 Check download was successful by checking md5sums
@@ -182,6 +184,8 @@ md5sum whole_genome_SNVs.tsv.gz
 md5sum whole_genome_SNVs.tsv.gz.tbi
 md5sum gnomad.genomes.r4.0.indel.tsv.gz
 md5sum gnomad.genomes.r4.0.indel.tsv.gz.tbi
+md5sum 1000G_phase3_SVs.tsv.gz
+md5sum 1000G_phase3_SVs.tsv.gz.tbi
 ```
 
 Expected md5sums
@@ -191,6 +195,8 @@ Expected md5sums
 347df8fac17ea374c4598f4f44c7ce8b  whole_genome_SNVs.tsv.gz.tbi
 4b9c685c96d396af4d001c2f7dd9d8f9  gnomad.genomes.r4.0.indel.tsv.gz
 85f3d2daa9202c5915c0ce0f1c749a66  gnomad.genomes.r4.0.indel.tsv.gz.tbi
+1149f1df5490db9daaf520f957f59f23  1000G_phase3_SVs.tsv.gz
+6ab7ffaead8e9f4246953bbd3b35dbd6  1000G_phase3_SVs.tsv.gz.tbi
 ```
 
 ### spliceAI
