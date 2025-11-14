@@ -29,7 +29,7 @@ snp_indel_phasing{{"SNP/indel phasing"}}
 snp_indel_annotation{{"SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
-str_calling{{"STR calling"}}
+tr_calling{{"TR calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_annotation{{"Structural variant annotation (hg38 only)"}}
 
@@ -62,7 +62,7 @@ joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
-joint_str_calling{{"Joint STR calling"}}
+joint_tr_calling{{"Joint TR calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
@@ -99,7 +99,7 @@ joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
-joint_str_calling{{"Joint STR calling"}}
+joint_tr_calling{{"Joint TR calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
 joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
@@ -175,9 +175,11 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Joint phased DeepVariant SNP/indel VCF file
 - Joint phased and annotated DeepVariant SNP/indel VCF file (hg38 only)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
+- Phased tandem repeat VCF file
 - Joint phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Joint phased tandem repeat VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 
 ### Trio
@@ -188,9 +190,11 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Joint phased DeepTrio SNP/indel VCF file
 - Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 only)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAM's containing base modifications only)
+- Phased tandem repeat VCF file
 - Joint phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Joint phased tandem repeat VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 
 > **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
