@@ -37,7 +37,7 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
-haplotagging-.->str_calling
+haplotagging-.->tr_calling
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
 ```
@@ -71,7 +71,7 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
-haplotagging-.->joint_str_calling
+haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
 snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
@@ -108,7 +108,7 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
-haplotagging-.->joint_str_calling
+haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
 sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
