@@ -152,6 +152,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Regions of interest BED file
 - Tandem repeat BED file
 - PAR regions BED file (if running in haploid aware mode)
+- Tandem repeat calling regions (if running tandem repeat calling)
 
 ## Main output files
 
