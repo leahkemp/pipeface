@@ -2271,8 +2271,8 @@ workflow {
         // tr calling
         if (tr_calling == 'yes') {
             split_beds = longtr_pre_processing(tr_call_regions)
+            longtr(haplotagged_bam, split_beds, ref, ref_index, outdir, outdir2, ref_name)
         }
-        longtr(haplotagged_bam, split_beds, ref, ref_index, outdir, outdir2, ref_name)
         if (mode == 'duo') {
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
             proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
