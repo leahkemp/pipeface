@@ -6,8 +6,6 @@ Pipefaceee.
 
 Nextflow pipeline to process long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
-Pipeface's future hold's mitochondrial and CNV calling.
-
 <p align="center">
     <img src="./images/pipeface.png">
 
