@@ -581,16 +581,19 @@ process filter_ref_call {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.filtered.vcf.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.filtered.vcf.gz'), path('snp_indel.filtered.vcf.gz.tbi')
 
     script:
         """
         # filter out refcall variants
         bcftools view -f 'PASS' $snp_indel_vcf -o snp_indel.filtered.vcf.gz
+        # index vcf
+        tabix snp_indel.filtered.vcf.gz
         """
     stub:
         """
         touch snp_indel.filtered.vcf.gz
+        touch snp_indel.filtered.vcf.gz.tbi
         """
 
 }
@@ -598,7 +601,7 @@ process filter_ref_call {
 process split_multiallele {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
 
