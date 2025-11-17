@@ -93,11 +93,22 @@ RUN git clone --recurse-submodules https://github.com/bioinfomethods/Jasmine.git
     ./build_jar.sh && \
     sed -i '1s|^.*$|#!/bin/bash|' jasmine
 
+# longtr
+ENV PATH="/root/miniconda3/bin:${PATH}"
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py39_25.9.1-3-Linux-x86_64.sh -O /miniconda.sh && \
+    bash /miniconda.sh -b && \
+    conda config --add channels defaults && \
+    conda config --add channels bioconda && \
+    conda config --add channels conda-forge && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    conda install -c conda-forge -c bioconda longtr
+
 ## deploy env ##
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
 LABEL description="docker image containing most software required for pipeface"
-LABEL version="0.0.1"
+LABEL version="0.0.2"
 LABEL maintainer.name="Leah Kemp"
 LABEL maintainer.email="leahmhkemp@gmail.com"
 
@@ -136,3 +147,9 @@ COPY --from=build \
     /usr/local/lib/ \
     /usr/local/lib/
 
+COPY --from=build \
+    /root/miniconda3 \
+    /root/miniconda3
+
+# add conda to path
+ENV PATH="/root/miniconda3/bin:${PATH}"

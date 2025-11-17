@@ -6,6 +6,7 @@
     - [Reference genome](#reference-genome)
       - [hg38](#hg38)
       - [hs1](#hs1)
+    - [Tandem repeat call regions file (if running tandem repeat calling)](#tandem-repeat-call-regions-file-if-running-tandem-repeat-calling)
     - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
       - [hg38](#hg38-1)
       - [hs1](#hs1-1)
@@ -82,6 +83,35 @@ gunzip and build index
 ```bash
 gunzip hs1.fa.gz
 samtools faidx hs1.fa
+```
+
+### Tandem repeat call regions file (if running tandem repeat calling)
+
+> **_Note:_** You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catelog below.
+
+Get a copy of the Broad Institute tandem repeat catalog
+
+```bash
+wget https://github.com/broadinstitute/tandem-repeat-catalog/releases/download/v1.0.2/variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
+gunzip variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
+```
+
+Check download was successful by checking md5sum
+
+```bash
+md5sum variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
+```
+
+Expected md5sum
+
+```txt
+d50345a1967c507bcdd3cf35c4db27d0  variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
+```
+
+Prepare file for LongTR
+
+```bash
+cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
 ```
 
 ### Somalier sites file (if running relatedness check)
@@ -274,6 +304,20 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 ```
 
 > **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+
+Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
+
+```json
+    "tr_calling": "yes",
+    "tr_call_regions": "/path/to/variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed",
+```
+
+*OR*
+
+```json
+    "tr_calling": "no",
+    "tr_call_regions": "NONE"
+```
 
 Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
