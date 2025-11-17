@@ -60,6 +60,7 @@ joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
+tr_calling{{"TR calling"}}
 joint_tr_calling{{"Joint TR calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
@@ -69,6 +70,7 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
+haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
 snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
@@ -97,6 +99,7 @@ joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 haplotagging{{"Haplotagging bams"}}
 calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
+tr_calling{{"TR calling"}}
 joint_tr_calling{{"Joint TR calling"}}
 sv_calling{{"Structural variant calling"}}
 sv_vcf_merging{{"Structural variant VCF merging"}}
@@ -106,6 +109,7 @@ input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->
 alignment-.->depth
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
+haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
