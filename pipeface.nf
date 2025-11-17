@@ -1252,17 +1252,19 @@ process longtr_pre_processing {
 
     output:
         path('split_beds.txt')
+        path('split.*.bed')
 
     script:
         """
         # split up bed
         split -l 10000 $tr_call_regions split. --additional-suffix=.bed
-        realpath split.*.bed > split_beds.txt
+        realpath --relative-to=./ split.*.bed > split_beds.txt
         """
 
     stub:
         """
         touch split_beds.txt
+        touch split.aa.bed
         """
 
 }
@@ -1275,6 +1277,7 @@ process longtr {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index)
+        path split_beds_list
         path split_beds
         val ref
         val ref_index
@@ -1291,9 +1294,9 @@ process longtr {
         parallel -j ${task.cpus} '
             LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter --log {/.}.log
             tabix tr.{/.}.vcf.gz
-        ' < $split_beds
+        ' < $split_beds_list
         # merge vcfs
-        if [ \$(wc -l < $split_beds) -eq 1 ]; then
+        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
             ln -s tr.split.*.vcf.gz tr.vcf.gz
         else
             bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
@@ -1319,6 +1322,7 @@ process longtr_duo {
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
         tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index)
+        path split_beds_list
         path split_beds
         val ref
         val ref_index
@@ -1335,9 +1339,9 @@ process longtr_duo {
         parallel -j ${task.cpus} '
             LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter --log {/.}.log
             tabix tr.{/.}.vcf.gz
-        ' < $split_beds
+        ' < $split_beds_list
         # merge vcfs
-        if [ \$(wc -l < $split_beds) -eq 1 ]; then
+        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
             ln -s tr.split.*.vcf.gz tr.vcf.gz
         else
             bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
@@ -1364,6 +1368,7 @@ process longtr_trio {
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index)
+        path split_beds_list
         path split_beds
         val ref
         val ref_index
@@ -1380,9 +1385,9 @@ process longtr_trio {
         parallel -j ${task.cpus} '
             LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter --log {/.}.log
             tabix tr.{/.}.vcf.gz
-        ' < $split_beds
+        ' < $split_beds_list
         # merge vcfs
-        if [ \$(wc -l < $split_beds) -eq 1 ]; then
+        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
             ln -s tr.split.*.vcf.gz tr.vcf.gz
         else
             bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
@@ -2273,8 +2278,8 @@ workflow {
         }
         // tr calling
         if (tr_calling == 'yes') {
-            split_beds = longtr_pre_processing(tr_call_regions)
-            longtr(haplotagged_bam, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+            (split_beds_list, split_beds) = longtr_pre_processing(tr_call_regions)
+            longtr(haplotagged_bam, split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
         }
         if (mode == 'duo') {
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
@@ -2285,7 +2290,7 @@ workflow {
             parent_bam = tmp2.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
             // joint tr calling
             if (tr_calling == 'yes') {
-                longtr_duo(proband_bam, parent_bam, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+                longtr_duo(proband_bam, parent_bam, split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
             }
             // check relatedness
             if (check_relatedness == 'yes') {
@@ -2311,7 +2316,7 @@ workflow {
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
             // joint tr calling
             if (tr_calling == 'yes') {
-                longtr_trio(proband_bam, father_bam, mother_bam, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+                longtr_trio(proband_bam, father_bam, mother_bam, split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
             }
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
             proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
