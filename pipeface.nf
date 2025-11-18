@@ -1276,7 +1276,7 @@ process longtr {
     publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
         path split_beds_list
         path split_beds
         val ref
@@ -1289,10 +1289,12 @@ process longtr {
         tuple val(sample_id), val(family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
 
     script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
         # run longtr and index vcfs
         parallel -j ${task.cpus} '
-            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter --log {/.}.log
+            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
             tabix tr.{/.}.vcf.gz
         ' < $split_beds_list
         # merge vcfs
@@ -1320,8 +1322,8 @@ process longtr_duo {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
-        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), val(data_type)
         path split_beds_list
         path split_beds
         val ref
@@ -1334,10 +1336,12 @@ process longtr_duo {
         tuple val(proband_sample_id), val(proband_family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
 
     script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
         # run longtr and index vcfs
         parallel -j ${task.cpus} '
-            LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter --log {/.}.log
+            LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
             tabix tr.{/.}.vcf.gz
         ' < $split_beds_list
         # merge vcfs
@@ -1365,9 +1369,9 @@ process longtr_trio {
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index)
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index)
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(data_type)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(data_type)
         path split_beds_list
         path split_beds
         val ref
@@ -1380,10 +1384,12 @@ process longtr_trio {
         tuple val(proband_sample_id), val(proband_family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
 
     script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
         # run longtr and index vcfs
         parallel -j ${task.cpus} '
-            LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter --log {/.}.log
+            LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
             tabix tr.{/.}.vcf.gz
         ' < $split_beds_list
         # merge vcfs
@@ -2279,7 +2285,7 @@ workflow {
         // tr calling
         if (tr_calling == 'yes') {
             (split_beds_list, split_beds) = longtr_pre_processing(tr_call_regions)
-            longtr(haplotagged_bam, split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+            longtr(haplotagged_bam.join(data_type_tuple, by: [0,1]), split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
         }
         if (mode == 'duo') {
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
@@ -2290,7 +2296,7 @@ workflow {
             parent_bam = tmp2.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
             // joint tr calling
             if (tr_calling == 'yes') {
-                longtr_duo(proband_bam, parent_bam, split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+                longtr_duo(proband_bam.join(data_type_tuple, by: [0,1]), parent_bam.join(data_type_tuple, by: [0,1]), split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
             }
             // check relatedness
             if (check_relatedness == 'yes') {
@@ -2316,7 +2322,7 @@ workflow {
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
             // joint tr calling
             if (tr_calling == 'yes') {
-                longtr_trio(proband_bam, father_bam, mother_bam, split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+                longtr_trio(proband_bam.join(data_type_tuple, by: [0,1]), father_bam.join(data_type_tuple, by: [0,1]), mother_bam.join(data_type_tuple, by: [0,1]), split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
             }
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
             proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
