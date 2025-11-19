@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.9.4"
+def pipeface_version = "0.10.0"
 
 // create dummy NONE file for optional pipeface inputs
 new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
@@ -36,6 +36,8 @@ process scrape_settings {
         val annotate
         val calculate_depth
         val analyse_base_mods
+        val tr_calling
+        val tr_call_regions
         val check_relatedness
         val sites
         val outdir
@@ -99,6 +101,8 @@ process scrape_settings {
         echo "Annotate: $annotate" >> \${F}
         echo "Calculate depth: $calculate_depth" >> \${F}
         echo "Analyse base modifications: $analyse_base_mods" >> \${F}
+        echo "Tandem repeat calling: $tr_calling" >> \${F}
+        echo "Tandem repeat call regions: $tr_call_regions" >> \${F}
         echo "Check relatedness: $check_relatedness" >> \${F}
         echo "Somalier sites file: $sites" >> \${F}
         echo "Outdir: $outdir" >> \${F}
@@ -577,16 +581,19 @@ process filter_ref_call {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
 
     output:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.filtered.vcf.gz')
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path('snp_indel.filtered.vcf.gz'), path('snp_indel.filtered.vcf.gz.tbi')
 
     script:
         """
         # filter out refcall variants
         bcftools view -f 'PASS' $snp_indel_vcf -o snp_indel.filtered.vcf.gz
+        # index vcf
+        tabix snp_indel.filtered.vcf.gz
         """
     stub:
         """
         touch snp_indel.filtered.vcf.gz
+        touch snp_indel.filtered.vcf.gz.tbi
         """
 
 }
@@ -594,7 +601,7 @@ process filter_ref_call {
 process split_multiallele {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
 
@@ -1238,6 +1245,171 @@ process minimod {
 
 }
 
+process longtr_pre_processing {
+
+    input:
+        val tr_call_regions
+
+    output:
+        path('split_beds.txt')
+        path('split.*.bed')
+
+    script:
+        """
+        # split up bed
+        split -l 10000 $tr_call_regions split. --additional-suffix=.bed
+        realpath --relative-to=./ split.*.bed > split_beds.txt
+        """
+
+    stub:
+        """
+        touch split_beds.txt
+        touch split.aa.bed
+        """
+
+}
+
+process longtr {
+
+    def software = "longtr"
+
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        path split_beds_list
+        path split_beds
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
+
+    script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
+        """
+        # run longtr and index vcfs
+        parallel -j ${task.cpus} '
+            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
+            tabix tr.{/.}.vcf.gz
+        ' < $split_beds_list
+        # merge vcfs
+        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
+            ln -s tr.split.*.vcf.gz tr.vcf.gz
+        else
+            bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
+        fi
+        # index vcf
+        tabix tr.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.vcf.gz
+        touch tr.vcf.gz.tbi
+        """
+
+}
+
+process longtr_duo {
+
+    def software = "longtr"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type)
+        tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), val(data_type)
+        path split_beds_list
+        path split_beds
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
+
+    script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
+        """
+        # run longtr and index vcfs
+        parallel -j ${task.cpus} '
+            LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
+            tabix tr.{/.}.vcf.gz
+        ' < $split_beds_list
+        # merge vcfs
+        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
+            ln -s tr.split.*.vcf.gz tr.vcf.gz
+        else
+            bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
+        fi
+        # index vcf
+        tabix tr.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.vcf.gz
+        touch tr.vcf.gz.tbi
+        """
+
+}
+
+process longtr_trio {
+
+    def software = "longtr"
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+
+    input:
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type)
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(data_type)
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(data_type)
+        path split_beds_list
+        path split_beds
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(proband_sample_id), val(proband_family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
+
+    script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
+        """
+        # run longtr and index vcfs
+        parallel -j ${task.cpus} '
+            LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
+            tabix tr.{/.}.vcf.gz
+        ' < $split_beds_list
+        # merge vcfs
+        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
+            ln -s tr.split.*.vcf.gz tr.vcf.gz
+        else
+            bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
+        fi
+        # index vcf
+        tabix tr.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.vcf.gz
+        touch tr.vcf.gz.tbi
+        """
+
+}
+
 process sniffles {
 
     def sv_caller = "sniffles"
@@ -1688,6 +1860,8 @@ workflow {
     annotate_override = "${params.annotate_override}".trim()
     calculate_depth = "${params.calculate_depth}".trim()
     analyse_base_mods = "${params.analyse_base_mods}".trim()
+    tr_calling = "${params.tr_calling}".trim()
+    tr_call_regions = "${params.tr_call_regions}".trim()
     check_relatedness = "${params.check_relatedness}".trim()
     sites = "${params.sites}".trim()
     outdir = "${params.outdir}".trim()
@@ -1800,6 +1974,22 @@ workflow {
     if (!(analyse_base_mods in ['yes', 'no'])) {
         exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', analyse_base_mods = '${analyse_base_mods}' provided."
     }
+    if (!(tr_calling in ['yes', 'no'])) {
+        exit 1, "Choice to call tandem repeats should be either 'yes', or 'no', tr_calling = '${tr_calling}' provided."
+    }
+    if (!file(tr_call_regions).exists()) {
+        exit 1, "tandem repeat call regions file does not exist, tr_call_regions = '${tr_call_regions}' provided. Set to 'NONE' if not required."
+    }
+    if (tr_calling == 'yes') {
+        if (tr_call_regions == "NONE") {
+            exit 1, "When calling tandem repeats, provide a valid tandem repeat call regions file, tr_calling = '${tr_calling}' and tr_call_regions = 'NONE' provided."
+        }
+    }
+    else if (tr_calling == 'no') {
+        if (tr_call_regions != 'NONE') {
+            exit 1, "When not calling tandem repeats, set tandem repeat call regions file to 'NONE', tr_calling = '${tr_calling}' and tr_call_regions = '${tr_call_regions}' provided."
+        }
+    }
     if (!(check_relatedness in ['yes', 'no'])) {
         exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
     }
@@ -1816,7 +2006,7 @@ workflow {
     }
     else if (check_relatedness == 'no') {
         if (sites != 'NONE') {
-            exit 1, "When not checking relatedness, set sites file to 'NONE', sites = '${sites}' provided."
+            exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
         }
     }
     if (!outdir) {
@@ -2051,7 +2241,7 @@ workflow {
 
     // workflow
     // pre-process, alignment and qc
-    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_tuple.join(family_position_tuple, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_tuple.join(extension_tuple, by: [0,1]).join(files_tuple, by: [0,1]))
         bam = minimap2(merged.join(extension_tuple, by: [0,1]).join(data_type_tuple, by: [0,1]), ref, ref_index)
@@ -2092,11 +2282,22 @@ workflow {
         if (analyse_base_mods == 'yes') {
             minimod(haplotagged_bam.join(data_type_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
-        // joint snp/indel calling
+        // tr calling
+        if (tr_calling == 'yes') {
+            (split_beds_list, split_beds) = longtr_pre_processing(tr_call_regions)
+            longtr(haplotagged_bam.join(data_type_tuple, by: [0,1]), split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+        }
         if (mode == 'duo') {
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
             proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
             parent_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
+            tmp2 = haplotagged_bam_fam.groupTuple(by: 1).transpose()
+            proband_bam = tmp2.filter { tuple -> tuple[2].contains("proband") }
+            parent_bam = tmp2.filter { tuple -> tuple[2].contains("father") || tuple[2].contains("mother") }
+            // joint tr calling
+            if (tr_calling == 'yes') {
+                longtr_duo(proband_bam.join(data_type_tuple, by: [0,1]), parent_bam.join(data_type_tuple, by: [0,1]), split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+            }
             // check relatedness
             if (check_relatedness == 'yes') {
                 somalier_duo(proband_gvcf_bam, parent_gvcf_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
@@ -2114,10 +2315,15 @@ workflow {
             proband_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
             father_bam = tmp.filter { tuple -> tuple[2].contains("father") }
             mother_bam = tmp.filter { tuple -> tuple[2].contains("mother") }
+            // joint snp/indel calling
             dt_commands = deeptrio_dry_run(proband_bam.join(data_type_tuple, by: [0,1]), father_bam.join(data_type_tuple, by: [0,1]), mother_bam.join(data_type_tuple, by: [0,1]), ref, ref_index)
             dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
             snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
+            // joint tr calling
+            if (tr_calling == 'yes') {
+                longtr_trio(proband_bam.join(data_type_tuple, by: [0,1]), father_bam.join(data_type_tuple, by: [0,1]), mother_bam.join(data_type_tuple, by: [0,1]), split_beds_list, split_beds, ref, ref_index, outdir, outdir2, ref_name)
+            }
             tmp = snp_indel_gvcf_bam.groupTuple(by: 1).transpose()
             proband_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("proband") }
             father_gvcf_bam = tmp.filter { tuple -> tuple[2].contains("father") }
