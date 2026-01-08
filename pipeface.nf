@@ -849,7 +849,16 @@ process deeptrio_postprocessing {
 
 process somalier_duo {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename ->
+        def clean = filename.replaceFirst(/^.*\.somalier$/, 'somalier')
+        if( filename.contains(proband_sample_id) ) {
+            return "$proband_sample_id/$proband_sample_id.$ref_name.$clean"
+        } else if( filename.contains(parent_sample_id) ) {
+            return "$parent_sample_id/$parent_sample_id.$ref_name.$clean"
+        } else {
+            return "$proband_family_id.$ref_name.$filename"
+        }
+    } , pattern: '*somalier*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
@@ -862,13 +871,14 @@ process somalier_duo {
         val ref_name
 
     output:
-        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.html')
+        tuple val(proband_sample_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.html'), path('*.somalier')
 
     script:
         """
         # run somalier extract
         SOMALIER_SAMPLE_NAME=$proband_sample_id somalier extract -d extracted --sites $sites -f $ref $proband_haplotagged_bam
         SOMALIER_SAMPLE_NAME=$parent_sample_id somalier extract -d extracted --sites $sites -f $ref $parent_haplotagged_bam
+        cp extracted/* .
         # run somalier relate
         somalier relate extracted/*.somalier
         """
@@ -876,6 +886,19 @@ process somalier_duo {
 }
 
 process somalier_trio {
+
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename ->
+        def clean = filename.replaceFirst(/^.*\.somalier$/, 'somalier')
+        if( filename.contains(proband_sample_id) ) {
+            return "$proband_sample_id/$proband_sample_id.$ref_name.$clean"
+        } else if( filename.contains(father_sample_id) ) {
+            return "$father_sample_id/$father_sample_id.$ref_name.$clean"
+        } else if( filename.contains(mother_sample_id) ) {
+            return "$mother_sample_id/$mother_sample_id.$ref_name.$clean"
+        } else {
+            return "$proband_family_id.$ref_name.$filename"
+        }
+    } , pattern: '*somalier*'
 
     publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
 
@@ -1886,13 +1909,13 @@ workflow {
         exit 1, "No reference genome file (ref) provided."
     }
     if (!ref_index) {
-           exit 1, "No reference genome index file (ref_index) provided."
+        exit 1, "No reference genome index file (ref_index) provided."
     }
     if (!(haploidaware in ['yes', 'no'])) {
         exit 1, "haploidaware must be either 'yes' or 'no', haploidaware = '${haploidaware}' provided."
     }
     if (!tandem_repeat) {
-           exit 1, "No tandem repeat file (tandem_repeat) provided. Set to 'NONE' if not required."
+        exit 1, "No tandem repeat file (tandem_repeat) provided. Set to 'NONE' if not required."
     }
     if (!(annotate in ['yes', 'no'])) {
         exit 1, "Choice to annotate should be either 'yes' or 'no', annotate = '${annotate}' provided."
