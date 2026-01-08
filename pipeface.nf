@@ -922,6 +922,7 @@ process somalier_trio {
         SOMALIER_SAMPLE_NAME=$proband_sample_id somalier extract -d extracted --sites $sites -f $ref $proband_haplotagged_bam
         SOMALIER_SAMPLE_NAME=$mother_sample_id somalier extract -d extracted --sites $sites -f $ref $mother_haplotagged_bam
         SOMALIER_SAMPLE_NAME=$father_sample_id somalier extract -d extracted --sites $sites -f $ref $father_haplotagged_bam
+        cp extracted/* .
         # run somalier relate
         somalier relate extracted/*.somalier
         """
