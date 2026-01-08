@@ -46,8 +46,7 @@ input_somalier-.->joint_somalier
 
 ### Optional
 
-- DeepVariant gVCF files
-- Aligned BAM files
+- DeepVariant gVCF files and aligned BAM files
 - Somalier extracted files
 
 ## Main output files
