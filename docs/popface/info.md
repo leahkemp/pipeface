@@ -7,6 +7,7 @@
 flowchart LR
 
 input_gvcf("Input data: <br><br> DeepVariant gVCF's")
+input_bam("Input data: <br><br> aligned BAM")
 gvcf_merging{{"gVCF merging"}}
 joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 split_vcf{{"Split joint VCF"}}
@@ -18,6 +19,7 @@ input_somalier("Input data: <br><br> Somalier extracted files")
 joint_somalier{{"Joint somalier relatedness/quality control check"}}
 
 input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
+input_bam-.->snp_indel_phasing
 input_somalier-.->joint_somalier
 
 ```
