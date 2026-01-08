@@ -7,7 +7,7 @@
 flowchart LR
 
 input_gvcf("Input data: <br><br> DeepVariant gVCF's")
-input_bam("Input data: <br><br> Aligned BAM")
+input_bam("Input data: <br><br> Aligned BAM's")
 gvcf_merging{{"gVCF merging"}}
 joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 split_vcf{{"Split joint VCF"}}
