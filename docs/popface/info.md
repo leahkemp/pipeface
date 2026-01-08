@@ -36,7 +36,7 @@ input_somalier-.->joint_somalier
 - [Samtools](https://github.com/samtools/samtools)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
 
-*[See the list of software and their versions used by this version of popface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_popface.config](./config/nextflow_popface.config) file is used).*
+*[See the list of software and their versions used by this version of popface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_popface.config](../../config/nextflow_popface.config) file is used).*
 
 ## Main input files
 
