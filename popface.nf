@@ -1,0 +1,509 @@
+nextflow.enable.dsl=2
+
+// tag popface version
+def popface_version = "dev"
+
+// create dummy NONE file for optional pipeface inputs
+new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
+
+// set defaults for optional undocumented params
+params.outdir2 = ""
+
+process scrape_settings {
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface_settings.txt'
+
+    input:
+        tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(somalier_files)
+        val popface_version
+        val in_data
+        val ref
+        val ref_index
+        val annotate
+        val outdir
+        val outdir2
+
+    output:
+        tuple val(pop_id), path('popface_settings.txt')
+
+    script:
+        """
+        F="popface_settings.txt"
+        echo "Popface version: $popface_version" >> \${F}
+        echo "Population ID: $pop_id" >> \${F}
+        echo "Sample ID's: $sample_ids" >> \${F}
+        echo "Input GVCF's: $gvcfs" >> \${F}
+        echo "Input BAM's: $bams" >> \${F}
+        echo "Input somalier files: $somalier_files" >> \${F}
+        echo "In data csv path: $in_data" >> \${F}
+        echo "Reference genome: $ref" >> \${F}
+        echo "Reference genome index: $ref_index" >> \${F}
+        echo "Annotate: $annotate" >> \${F}
+        echo "Outdir: $outdir" >> \${F}
+        """
+
+    stub:
+        """
+        touch popface_settings.txt
+        """
+
+}
+
+process glnexus {
+
+    input:
+        tuple val(pop_id), path(gvcfs)
+
+    output:
+        tuple val(pop_id), path('snp_indel.bcf')
+
+    script:
+        """
+        glnexus_cli --config DeepVariant $gvcfs > snp_indel.bcf
+        """
+
+    stub:
+        """
+        touch snp_indel.bcf
+        """
+
+}
+
+process glnexus_post_processing {
+
+    input:
+        tuple val(pop_id), path(joint_snp_indel_bcf)
+
+    output:
+        tuple val(pop_id), path('snp_indel.raw.vcf.gz'), path('snp_indel.raw.vcf.gz.tbi')
+
+    script:
+        """
+        bcftools view $joint_snp_indel_bcf | bgzip -@ ${task.cpus} -c > snp_indel.raw.vcf.gz
+        tabix snp_indel.raw.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.raw.vcf.gz
+        touch snp_indel.raw.vcf.gz.tbi
+        """
+
+}
+
+process split_multiallele {
+
+    input:
+        tuple val(pop_id), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(pop_id), path('snp_indel.split.vcf.gz'), path('snp_indel.split.vcf.gz.tbi')
+
+    script:
+        """
+        # run bcftools norm
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.vcf
+        # compress and index vcf
+        bgzip -@ ${task.cpus} snp_indel.split.vcf
+        tabix snp_indel.split.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.split.vcf.gz
+        touch snp_indel.split.vcf.gz.tbi
+        """
+
+}
+
+process split_vcf {
+
+    input:
+        tuple val(pop_id), val(sample_id), path(joint_snp_indel_vcf), path(joint_snp_indel_vcf_index)
+
+    output:
+        tuple val(pop_id), val(sample_id), path('*snp_indel.vcf.gz'), path('*snp_indel.vcf.gz.tbi')
+
+    script:
+        """
+        bcftools view -s $sample_id $joint_snp_indel_vcf -Oz -o "${sample_id}".snp_indel.vcf.gz
+        tabix "${sample_id}".snp_indel.vcf.gz
+        """
+
+    stub:
+        """
+        touch sample1.snp_indel.vcf.gz
+        touch sample1.snp_indel.vcf.gz.tbi
+        """
+
+}
+
+process whatshap_phase {
+
+    input:
+        tuple val(pop_id), val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(bam), path(bam_index)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(pop_id), path('*snp_indel.phased.vcf.gz'), path('*snp_indel.phased.vcf.gz.tbi')
+
+    script:
+        """
+        # get filename
+        FILENAME=\$(echo $snp_indel_vcf | sed 's/.vcf.gz//')
+        # run whatshap phase
+        whatshap phase --reference $ref --output \${FILENAME}.phased.vcf.gz $snp_indel_vcf $bam
+        # index vcf
+        tabix \${FILENAME}.phased.vcf.gz
+        """
+
+    stub:
+        """
+        touch sample1.snp_indel.phased.vcf.gz
+        touch sample1.snp_indel.phased.vcf.gz.tbi
+        """
+
+}
+
+process merge_vcf {
+
+    def snp_indel_caller = "deepvariant"
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+
+    input:
+        tuple val(pop_id), path(snp_indel_phased_vcfs), path(snp_indel_phased_vcf_indicies)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
+
+    script:
+        """
+        # merge vcf
+        bcftools merge -Oz -o snp_indel.phased.vcf.gz ./*.snp_indel.phased.vcf.gz --threads ${task.cpus}
+        # index vcf
+        tabix snp_indel.phased.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.vcf.gz
+        touch snp_indel.phased.vcf.gz.tbi
+        """
+
+
+}
+
+process somalier {
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$filename" }, pattern: 'somalier*'
+
+    input:
+        tuple val(pop_id), path(somalier_files)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), path('somalier.samples.tsv'), path('somalier.pairs.tsv'), path('somalier.html')
+
+    script:
+        """
+        # run somalier relate
+        somalier relate $somalier_files
+        """
+
+}
+
+process vep_snp_indel {
+
+    def snp_indel_caller = "deepvariant"
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename"}, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+
+    input:
+        tuple val(pop_id), path(joint_snp_indel_phased_vcf), path(joint_snp_indel_phased_vcf_index)
+        val ref
+        val ref_index
+        val vep_db
+        val revel_db
+        val gnomad_db
+        val clinvar_db
+        val cadd_snv_db
+        val cadd_indel_db
+        val spliceai_snv_db
+        val spliceai_indel_db
+        val alphamissense_db
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $joint_snp_indel_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
+        --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
+        --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
+        --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
+        --plugin AlphaMissense,file=$alphamissense_db
+        # index vcf
+        tabix snp_indel.phased.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.annotated.vcf.gz
+        touch snp_indel.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+workflow {
+
+    // grab parameters
+    in_data = "${params.in_data}".trim()
+    ref = "${params.ref}".trim()
+    ref_index = "${params.ref_index}".trim()
+    annotate = "${params.annotate}".trim()
+    outdir = "${params.outdir}".trim()
+    outdir2 = "${params.outdir2}".trim()
+    vep_db = "${params.vep_db}".trim()
+    revel_db = "${params.revel_db}".trim()
+    gnomad_db = "${params.gnomad_db}".trim()
+    clinvar_db = "${params.clinvar_db}".trim()
+    cadd_snv_db = "${params.cadd_snv_db}".trim()
+    cadd_indel_db = "${params.cadd_indel_db}".trim()
+    spliceai_snv_db = "${params.spliceai_snv_db}".trim()
+    spliceai_indel_db = "${params.spliceai_indel_db}".trim()
+    alphamissense_db = "${params.alphamissense_db}".trim()
+
+    // check user provided parameters
+    if (!in_data) {
+        exit 1, "No in data csv file (in_data) provided."
+    }
+    if (!ref) {
+        exit 1, "No reference genome file (ref) provided."
+    }
+    if (!ref_index) {
+        exit 1, "No reference genome index file (ref_index) provided."
+    }
+    if (!(annotate in ['yes', 'no'])) {
+        exit 1, "Choice to annotate should be either 'yes' or 'no', annotate = '${annotate}' provided."
+    }
+    if (!outdir) {
+        exit 1, "No output directory (outdir) provided."
+    }
+    if (!file(in_data).exists()) {
+        exit 1, "In data csv file does not exist, 'in_data = ${in_data}' provided."
+    }
+    if (!file(ref).exists()) {
+        exit 1, "Reference genome file does not exist, ref = '${ref}' provided."
+    }
+    if (!file(ref_index).exists()) {
+        exit 1, "Reference genome index file does not exist, ref_index = '${ref_index}' provided."
+    }
+    if (annotate == 'yes') {
+        if (!file(vep_db).exists()) {
+            exit 1, "VEP cache directory does not exist, vep_db = '${vep_db}' provided."
+        }
+        if (!file(revel_db).exists()) {
+            exit 1, "REVEL database file does not exist, revel_db = '${revel_db}' provided."
+        }
+        if (!file(gnomad_db).exists()) {
+            exit 1, "gnomAD database file does not exist, gnomad_db = '${gnomad_db}' provided."
+        }
+        if (!file(clinvar_db).exists()) {
+            exit 1, "ClinVar database file does not exist, clinvar_db = '${clinvar_db}' provided."
+        }
+        if (!file(cadd_snv_db).exists()) {
+            exit 1, "CADD SNV database file does not exist, cadd_snv_db = '${cadd_snv_db}' provided."
+        }
+        if (!file(cadd_indel_db).exists()) {
+            exit 1, "CADD indel database file does not exist, cadd_indel_db = '${cadd_indel_db}' provided."
+        }
+        if (!file(spliceai_snv_db).exists()) {
+            exit 1, "SpliceAI SNV database file does not exist, spliceai_snv_db = '${spliceai_snv_db}' provided."
+        }
+        if (!file(spliceai_indel_db).exists()) {
+            exit 1, "SpliceAI indel database file does not exist, spliceai_indel_db = '${spliceai_indel_db}' provided."
+        }
+        if (!file(alphamissense_db).exists()) {
+            exit 1, "AlphaMissense database file does not exist, alphamissense_db = '${alphamissense_db}' provided."
+        }
+        if (!ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes') {
+            exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
+        }
+    }
+    
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row -> row.sample_id }
+        .collect()
+        .map { sample_ids ->
+            def duplicates = sample_ids.findAll { id -> sample_ids.count(id) > 1 }.toSet()
+            if (duplicates) {
+                exit 1, "Entries in the 'sample_id' column of '$in_data' should all be unique values, duplicates: '$duplicates'."
+            }
+        }
+
+    // build variable
+    ref_name = file(ref).getSimpleName()
+
+    // build input tuple
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row ->
+            def pop_id = row.pop_id
+            def sample_ids = row.sample_id
+            def gvcfs = row.gvcf
+            def bams = row.bam
+            def somalier_files = row.somalier_file
+            return tuple(pop_id, sample_ids, gvcfs, bams, somalier_files)
+        }
+        .groupTuple(by: 0)
+        .set { in_data_tuple }
+
+    // build channels from in_data.csv file for describing each metadata associated with populations
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .filter { row -> row.gvcf != 'NONE' }
+        .map { row -> tuple(row.pop_id, row.sample_id) }
+        .set { id_tuple }
+
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .filter { row -> row.gvcf != 'NONE' }
+        .map { row -> tuple(row.pop_id, row.gvcf) }
+        .groupTuple(by: 0)
+        .set { gvcfs_tuple }
+
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .filter { row -> row.gvcf != 'NONE' }
+        .map { row -> tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai") }
+        .set { bams_tuple }
+
+    Channel
+    .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .filter { row -> row.somalier_file != 'NONE' }
+        .map { row -> tuple(row.pop_id, row.somalier_file) }
+        .groupTuple(by: 0)
+        .set { somalier_files_tuple }
+
+    // check user provided parameters in in_data.csv file
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row ->
+            def pop_id = row.pop_id
+            def sample_id = row.sample_id
+            def gvcf = row.gvcf
+            def bam = row.bam
+            def somalier_file = row.somalier_file
+
+            if (pop_id.isEmpty()) {
+                exit 1, "There is an empty entry in the 'pop_id' column of '${in_data}'."
+            }
+            if (sample_id.isEmpty()) {
+                exit 1, "There is an empty entry in the 'sample_id' column of '${in_data}'."
+            }
+            if (gvcf.isEmpty()) {
+                exit 1, "There is an empty entry in the 'gvcf' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            if (!file(gvcf).exists()) {
+                exit 1, "There is an entry in the 'gvcf' column of '${in_data}' which doesn't exist. Check file '${gvcf}'."
+            }
+            if (bam.isEmpty()) {
+                exit 1, "There is an empty entry in the 'bam' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            if (!file(bam).exists()) {
+                exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't exist. Check file '${bam}'."
+            }
+            if (gvcf != 'NONE' && bam == 'NONE') {
+                exit 1, "When a GVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
+            }
+            if (bam != 'NONE') {
+                if (!file("${bam}.bai").exists()) {
+                    exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai'."
+                }
+            }
+            if (somalier_file.isEmpty()) {
+                exit 1, "There is an empty entry in the 'somalier_file' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            if (!file(somalier_file).exists()) {
+                exit 1, "There is an entry in the 'somalier_file' column of '${in_data}' which doesn't exist. Check file '${somalier_file}'."
+            }
+        }
+
+    // check user provided parameters relating in in_data.csv file relating to populations
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row -> tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.somalier_file) }
+        .groupTuple(by: 0)
+        .map { pop_ids, sample_ids, gvcfs, bams, somalier_files ->
+            def gvcfs_any_none = gvcfs.any { it == 'NONE' }
+            def gvcfs_all_none = gvcfs.every { it == 'NONE' }
+            def bams_any_none = bams.any { it == 'NONE' }
+            def bams_all_none = bams.every { it == 'NONE' }
+            def somalier_files_any_none = somalier_files.any { it == 'NONE' }
+            def somalier_files_all_none = somalier_files.every { it == 'NONE' }
+            if (sample_ids.unique().size() < 2) {
+                exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 2 or more unique values for every 'pop_id', '$sample_ids' provided for population '$pop_ids'."
+            }
+            if (gvcfs_any_none && !gvcfs_all_none) {
+                exit 1, "Entries in the 'gvcf' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$gvcfs' provided for population '$pop_ids'."
+            }
+            if (bams_any_none && !bams_all_none) {
+                exit 1, "Entries in the 'bam' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$bams' provided for population '$pop_ids'."
+            }
+            if (somalier_files_any_none && !somalier_files_all_none) {
+                exit 1, "Entries in the 'somalier_file' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$somalier_files' provided for population '$pop_ids'."
+            }
+        }
+
+        // workflow
+        // pre-process
+        scrape_settings(in_data_tuple, popface_version, in_data, ref, ref_index, annotate, outdir, outdir2)
+        // gvcf merging
+        joint_snp_indel_bcf = glnexus(gvcfs_tuple)
+        joint_snp_indel_vcf = glnexus_post_processing(joint_snp_indel_bcf)
+        // split multiallelic variants
+        joint_snp_indel_split_vcf = split_multiallele(joint_snp_indel_vcf, ref, ref_index)
+        // joint phasing
+        joint_snp_indel_vcf_id = joint_snp_indel_split_vcf
+            .combine(id_tuple)
+            .map { pop_id, joint_vcf, joint_vcf_index, pop_id2, sample_id ->
+                if (pop_id != pop_id2) {
+                    return null
+                }
+                tuple(pop_id, sample_id, joint_vcf, joint_vcf_index)
+            }
+        snp_indel_vcf = split_vcf(joint_snp_indel_vcf_id)
+        snp_indel_phased_vcfs = whatshap_phase(snp_indel_vcf.join(bams_tuple, by: [0,1]), ref, ref_index) | groupTuple(by: 0)
+        joint_snp_indel_phased_vcf = merge_vcf(snp_indel_phased_vcfs, outdir, outdir2, ref_name)
+        // joint somalier
+        somalier(somalier_files_tuple, outdir, outdir2, ref_name)
+        if (annotate == 'yes') {
+            // joint snp/indel annotation
+            vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name)
+        }
+
+}
+

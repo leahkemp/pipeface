@@ -1,20 +1,20 @@
-# Run on NCI
+# Run popface on NCI
 
-- [Run on NCI](#run-on-nci)
+- [Run popface on NCI](#run-popface-on-nci)
   - [Assumptions](#assumptions)
-  - [1. Modify nextflow\_pipeface.config](#1-modify-nextflow_pipefaceconfig)
+  - [1. Modify nextflow\_popface.config](#1-modify-nextflow_popfaceconfig)
   - [2. Start persistent session (optional)](#2-start-persistent-session-optional)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
-  - [4. Run pipeface](#4-run-pipeface)
+  - [4. Run popface](#4-run-popface)
   - [Information](#information)
 
 ## Assumptions
 
 - Running pipeline on Australia's [National Computational Infrastructure (NCI)](https://nci.org.au/)
-- Access to if89 project (to access software installs used by pipeface)
-- Access to xy86 project (to access variant databases used by pipeface, only required if running variant annotation)
+- Access to if89 project (to access software installs used by popface)
+- Access to xy86 project (to access variant databases used by popface, only required if running variant annotation)
 
-## 1. Modify nextflow_pipeface.config
+## 1. Modify nextflow_popface.config
 
 Modify the NCI project to which to charge the analysis. Eg:
 
@@ -39,13 +39,13 @@ Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow dependency. Eg:
 
 ```bash
-module load nextflow/24.04.5
+module load nextflow/25.04.6
 ```
 
-## 4. Run pipeface
+## 4. Run popface
 
 ```bash
-nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
+nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 ## Information

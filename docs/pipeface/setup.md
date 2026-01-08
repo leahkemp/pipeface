@@ -1,6 +1,6 @@
-# Setup
+# Pipeface setup
 
-- [Setup](#setup)
+- [Pipeface setup](#pipeface-setup)
   - [1. Get pipeline](#1-get-pipeline)
   - [2. Get pipeline inputs](#2-get-pipeline-inputs)
     - [Reference genome](#reference-genome)
@@ -13,7 +13,7 @@
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
-  - [3. Modify in\_data.csv](#3-modify-in_datacsv)
+  - [3. Modify in\_data\_pipeface.csv](#3-modify-in_data_pipefacecsv)
     - [Singleton mode](#singleton-mode)
     - [Duo/Trio mode](#duotrio-mode)
   - [4. Modify parameters\_pipeface.json](#4-modify-parameters_pipefacejson)
@@ -160,7 +160,7 @@ Untar
 tar -xvf hifi_revio.tar.gz
 ```
 
-## 3. Modify in_data.csv
+## 3. Modify in_data_pipeface.csv
 
 ### Singleton mode
 
@@ -215,10 +215,10 @@ Requirements:
 
 ## 4. Modify parameters_pipeface.json
 
-Specify the path to `in_data.csv`. Eg:
+Specify the path to `in_data_pipeface.csv`. Eg:
 
 ```json
-    "in_data": "/path/to/in_data.csv",
+    "in_data": "/path/to/in_data_pipeface.csv",
 ```
 
 Specify the input data format ('ubam_fastq'). Eg:
@@ -340,4 +340,3 @@ Specify the directory in which to write the pipeline outputs (please provide a f
 ```json
     "outdir": "/path/to/results/"
 ```
-

@@ -1,6 +1,6 @@
-# Run on other HPC
+# Run pipeface on other HPC
 
-- [Run on other HPC](#run-on-other-hpc)
+- [Run pipeface on other HPC](#run-pipeface-on-other-hpc)
   - [Assumptions](#assumptions)
   - [1. Download variant databases (optional)](#1-download-variant-databases-optional)
     - [VEP cache](#vep-cache)

@@ -6,10 +6,8 @@ def pipeface_version = "0.10.0"
 // create dummy NONE file for optional pipeface inputs
 new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
 
-// set defaults for optional params (set default optional input files to dummy NONE file)
-// secret sauce second outdir
+// set defaults for optional undocumented params
 params.outdir2 = ""
-params.tandem_repeat = "NONE"
 params.annotate_override = ""
 params.in_data_format_override = ""
 
@@ -960,7 +958,7 @@ process glnexus_post_processing_duo {
 
     script:
         """
-        bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
+        bcftools view $snp_indel_bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
         """
 
@@ -982,7 +980,7 @@ process glnexus_post_processing_trio {
 
     script:
         """
-        bcftools view snp_indel.bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
+        bcftools view $snp_indel_bcf | bgzip -@ ${task.cpus} -c > snp_indel.vcf.gz
         tabix snp_indel.vcf.gz
         """
 
@@ -1007,7 +1005,7 @@ process split_multiallele_duo {
     script:
         """
         # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} snp_indel.split.vcf
         tabix snp_indel.split.vcf.gz
@@ -1034,7 +1032,7 @@ process split_multiallele_trio {
     script:
         """
         # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref snp_indel.vcf.gz > snp_indel.split.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} snp_indel.split.vcf
         tabix snp_indel.split.vcf.gz
@@ -1540,7 +1538,7 @@ process jasmine_sniffles_duo {
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
-        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/\t[0-9]_/\t/g' >> sv.phased.vcf
         grep -v '#' sv.phased.tmp.vcf >> sv.phased.vcf
         bcftools sort sv.phased.vcf -o sv.phased.vcf
         # compress and index vcf
@@ -1599,7 +1597,7 @@ process jasmine_cutesv_duo {
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' sv.tmp.vcf > sv.vcf
-        grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' >> sv.vcf
+        grep '#CHROM' sv.tmp.vcf | sed 's/\t[0-9]_/\t/g' >> sv.vcf
         grep -v '#' sv.tmp.vcf >> sv.vcf
         bcftools sort sv.vcf -o sv.vcf
         # compress and index vcf
@@ -1662,7 +1660,7 @@ process jasmine_sniffles_trio {
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' sv.phased.tmp.vcf > sv.phased.vcf
-        grep '#CHROM' sv.phased.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.phased.vcf
+        grep '#CHROM' sv.phased.tmp.vcf | sed 's/\t[0-9]_/\t/g' >> sv.phased.vcf
         grep -v '#' sv.phased.tmp.vcf >> sv.phased.vcf
         bcftools sort sv.phased.vcf -o sv.phased.vcf
         # compress and index vcf
@@ -1725,7 +1723,7 @@ process jasmine_cutesv_trio {
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' sv.tmp.vcf > sv.vcf
-        grep '#CHROM' sv.tmp.vcf | sed 's/0_//g' | sed 's/1_//g' | sed 's/2_//g' >> sv.vcf
+        grep '#CHROM' sv.tmp.vcf | sed 's/\t[0-9]_/\t/g' >> sv.vcf
         grep -v '#' sv.tmp.vcf >> sv.vcf
         bcftools sort sv.vcf -o sv.vcf
         # compress and index vcf
@@ -1878,20 +1876,50 @@ workflow {
     alphamissense_db = "${params.alphamissense_db}".trim()
 
     // check user provided parameters
-    if (!file(in_data).exists()) {
-        exit 1, "In data csv file does not exist, 'in_data = ${in_data}' provided."
+    if (!in_data) {
+        exit 1, "No in data csv file (in_data) provided."
     }
     if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
         exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
+    }
+    if (!ref) {
+        exit 1, "No reference genome file (ref) provided."
+    }
+    if (!ref_index) {
+           exit 1, "No reference genome index file (ref_index) provided."
+    }
+    if (!(haploidaware in ['yes', 'no'])) {
+        exit 1, "haploidaware must be either 'yes' or 'no', haploidaware = '${haploidaware}' provided."
+    }
+    if (!tandem_repeat) {
+           exit 1, "No tandem repeat file (tandem_repeat) provided. Set to 'NONE' if not required."
+    }
+    if (!(annotate in ['yes', 'no'])) {
+        exit 1, "Choice to annotate should be either 'yes' or 'no', annotate = '${annotate}' provided."
+    }
+    if (!(calculate_depth in ['yes', 'no'])) {
+        exit 1, "Choice to calculate depth should be either 'yes', or 'no', calculate_depth = '${calculate_depth}' provided."
+    }
+    if (!(analyse_base_mods in ['yes', 'no'])) {
+        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', analyse_base_mods = '${analyse_base_mods}' provided."
+    }
+    if (!(tr_calling in ['yes', 'no'])) {
+        exit 1, "Choice to call tandem repeats should be either 'yes', or 'no', tr_calling = '${tr_calling}' provided."
+    }
+    if (!(check_relatedness in ['yes', 'no'])) {
+        exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
+    }
+    if (!outdir) {
+        exit 1, "No output directory (outdir) provided."
+    }
+    if (!file(in_data).exists()) {
+        exit 1, "In data csv file does not exist, 'in_data = ${in_data}' provided."
     }
     if (!file(ref).exists()) {
         exit 1, "Reference genome file does not exist, ref = '${ref}' provided."
     }
     if (!file(ref_index).exists()) {
         exit 1, "Reference genome index file does not exist, ref_index = '${ref_index}' provided."
-    }
-    if (!(haploidaware in ['yes', 'no'])) {
-        exit 1, "haploidaware must be either 'yes' or 'no', haploidaware = '${haploidaware}' provided."
     }
     if (haploidaware == "yes") {
         if (sex != "XY") {
@@ -1911,7 +1939,7 @@ workflow {
         }
     }
     if (!file(tandem_repeat).exists()) {
-        exit 1, "Tandem repeat bed file does not exist, tandem_repeat = '${tandem_repeat}' provided. Set to 'NONE' if not required."
+        exit 1, "Tandem repeat bed file does not exist, tandem_repeat = '${tandem_repeat}' provided."
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (!(mode in ['singleton', 'duo', 'trio'])) {
@@ -1929,9 +1957,6 @@ workflow {
         if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
             exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
         }
-    }
-    if (!(annotate in ['yes', 'no'])) {
-        exit 1, "Choice to annotate should be either 'yes' or 'no', annotate = '${annotate}' provided."
     }
     if (annotate == 'yes') {
         if (!file(vep_db).exists()) {
@@ -1968,15 +1993,6 @@ workflow {
             exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
         }
     }
-    if (!(calculate_depth in ['yes', 'no'])) {
-        exit 1, "Choice to calculate depth should be either 'yes', or 'no', calculate_depth = '${calculate_depth}' provided."
-    }
-    if (!(analyse_base_mods in ['yes', 'no'])) {
-        exit 1, "Choice to analyse base modifications should be either 'yes', or 'no', analyse_base_mods = '${analyse_base_mods}' provided."
-    }
-    if (!(tr_calling in ['yes', 'no'])) {
-        exit 1, "Choice to call tandem repeats should be either 'yes', or 'no', tr_calling = '${tr_calling}' provided."
-    }
     if (!file(tr_call_regions).exists()) {
         exit 1, "tandem repeat call regions file does not exist, tr_call_regions = '${tr_call_regions}' provided. Set to 'NONE' if not required."
     }
@@ -1989,9 +2005,6 @@ workflow {
         if (tr_call_regions != 'NONE') {
             exit 1, "When not calling tandem repeats, set tandem repeat call regions file to 'NONE', tr_calling = '${tr_calling}' and tr_call_regions = '${tr_call_regions}' provided."
         }
-    }
-    if (!(check_relatedness in ['yes', 'no'])) {
-        exit 1, "Choice to check relatedness should be either 'yes', or 'no', check_relatedness = '${check_relatedness}' provided."
     }
     if (check_relatedness == 'yes') {
         if (!(mode in ['duo', 'trio'])) {
@@ -2008,9 +2021,6 @@ workflow {
         if (sites != 'NONE') {
             exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
         }
-    }
-    if (!outdir) {
-        exit 1, "No output directory (outdir) provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
         if (mode != 'NONE') {
@@ -2082,7 +2092,6 @@ workflow {
         .set { in_data_tuple }
 
     // build channels from in_data.csv file for describing each metadata associated with samples/families
-    // I can use these downstream to join to input tuples throughout the pipeline as needed to avoid needing to have all sample metadata in all process input/output tuples
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)

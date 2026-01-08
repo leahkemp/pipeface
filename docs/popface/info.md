@@ -1,0 +1,58 @@
+# Popface information
+
+## Workflow
+
+### Singleton
+
+```mermaid
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+
+input_gvcf("Input data: <br><br> DeepVariant gVCF's")
+gvcf_merging{{"gVCF merging"}}
+joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
+split_vcf{{"Split joint VCF"}}
+snp_indel_phasing{{"SNP/indel phasing"}}
+merge_vcf{{"Merge VCF"}}
+joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
+
+input_somalier("Input data: <br><br> Somalier sites files")
+joint_somalier{{"Joint somalier relatedness check"}}
+
+input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
+input_somalier-.->joint_somalier
+
+```
+
+## Main analyses
+
+- Quads to populations
+
+## Main tools
+
+- [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
+- [WhatsHap](https://github.com/whatshap/whatshap)
+- [somalier](https://github.com/brentp/somalier)
+- [Samtools](https://github.com/samtools/samtools)
+- [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
+
+*[See the list of software and their versions used by this version of popface](./docs/software_versions.txt) as well as the [list of variant databases and their versions](./docs/database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_popface.config](./config/nextflow_popface.config) file is used).*
+
+## Main input files
+
+### Required
+
+- Indexed reference genome
+
+### Optional
+
+- DeepVariant gVCF files
+- Aligned BAM files
+- Somalier sites files
+
+## Main output files
+
+- Joint phased DeepVariant SNP/indel VCF file
+- Joint phased and annotated DeepVariant SNP/indel VCF file (hg38 only)
+- Joint relatedness and quality control somalier TSV and HTML files
+
