@@ -2,8 +2,6 @@
 
 ## Workflow
 
-### Singleton
-
 ```mermaid
 %%{init: {'theme':'dark'}}%%
 flowchart LR
