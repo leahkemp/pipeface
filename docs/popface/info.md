@@ -14,8 +14,8 @@ snp_indel_phasing{{"SNP/indel phasing"}}
 merge_vcf{{"Merge VCF"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
 
-input_somalier("Input data: <br><br> Somalier sites files")
-joint_somalier{{"Joint somalier relatedness check"}}
+input_somalier("Input data: <br><br> Somalier extracted files")
+joint_somalier{{"Joint somalier relatedness/quality control check"}}
 
 input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
 input_somalier-.->joint_somalier
@@ -46,7 +46,7 @@ input_somalier-.->joint_somalier
 
 - DeepVariant gVCF files
 - Aligned BAM files
-- Somalier sites files
+- Somalier extracted files
 
 ## Main output files
 

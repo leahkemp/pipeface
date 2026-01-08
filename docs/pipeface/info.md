@@ -44,7 +44,7 @@ depth{{"Calculate alignment depth"}}
 snp_indel_calling{{"SNP/indel variant calling"}}
 split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
-joint_somalier{{"Joint somalier relatedness check"}}
+joint_somalier{{"Joint somalier relatedness/quality control check"}}
 gvcf_merging{{"gVCF merging"}}
 joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
@@ -83,7 +83,7 @@ snp_indel_calling{{"SNP/indel variant calling"}}
 split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
-joint_somalier{{"Joint somalier relatedness check"}}
+joint_somalier{{"Joint somalier relatedness/quality control check"}}
 gvcf_merging{{"gVCF merging"}}
 joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
 joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}

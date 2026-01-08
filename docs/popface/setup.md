@@ -14,7 +14,7 @@ cd pipeface
 
 ## 2. Modify in_data_popface.csv
 
-Specify the population ID, sample ID, file path to the gVCF file, file path to the aligned BAM file and file path to the somalier file for each data to be processed. Eg:
+Specify the population ID, sample ID, file path to the gVCF file, file path to the aligned BAM file and file path to the somalier extracted file for each data to be processed. Eg:
 
 ```csv
 pop_id,sample_id,gvcf,bam,somalier_file
@@ -34,7 +34,7 @@ pop_02,sample_13,/path/to/sample_13.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to
 pop_02,sample_14,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_14.hg38.minimap2.whatshap.sorted.haplotagged.bam,NONE
 ```
 
-> **_Note:_** `pop_id` is used to define the SNP/indel gVCF and somalier merging
+> **_Note:_** `pop_id` is used to define the SNP/indel gVCF merging and somalier relatedness/quality control checks
 
 > **_Note:_** `gvcf`, `bam` and `somalier_file` are all optional (provide 'NONE' if not required)
 
