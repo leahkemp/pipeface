@@ -11,7 +11,7 @@ params.outdir2 = ""
 
 process scrape_settings {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface_settings.txt'
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface*'
 
     input:
         tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(somalier_files)
@@ -24,27 +24,31 @@ process scrape_settings {
         val outdir2
 
     output:
-        tuple val(pop_id), path('popface_settings.txt')
+        tuple val(pop_id), path('popface_settings.txt'), path('popface_input_files.tsv')
 
     script:
         """
-        F="popface_settings.txt"
-        echo "Popface version: $popface_version" >> \${F}
-        echo "Population ID: $pop_id" >> \${F}
-        echo "Sample ID's: $sample_ids" >> \${F}
-        echo "Input GVCF's: $gvcfs" >> \${F}
-        echo "Input BAM's: $bams" >> \${F}
-        echo "Input somalier files: $somalier_files" >> \${F}
-        echo "In data csv path: $in_data" >> \${F}
-        echo "Reference genome: $ref" >> \${F}
-        echo "Reference genome index: $ref_index" >> \${F}
-        echo "Annotate: $annotate" >> \${F}
-        echo "Outdir: $outdir" >> \${F}
+        F1="popface_settings.txt"
+        F2="popface_input_files.tsv"
+        echo "Popface version: $popface_version" >> \${F1}
+        echo "Population ID: $pop_id" >> \${F1}
+        echo "In data csv path: $in_data" >> \${F1}
+        echo "Reference genome: $ref" >> \${F1}
+        echo "Reference genome index: $ref_index" >> \${F1}
+        echo "Annotate: $annotate" >> \${F1}
+        echo "Outdir: $outdir" >> \${F1}
+        printf "sample_id\tgvcf\tbam\tsomalier_file\n" > \${F2}
+        printf "%s\n" "$sample_ids" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > sample_ids.txt
+        printf "%s\n" "$gvcfs" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > gvcfs.txt
+        printf "%s\n" "$bams" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > bams.txt
+        printf "%s\n" "$somalier_files" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > somalier_files.txt
+        paste sample_ids.txt gvcfs.txt bams.txt somalier_files.txt >> \${F2}
         """
 
     stub:
         """
         touch popface_settings.txt
+        touch popface_input_files.tsv
         """
 
 }
