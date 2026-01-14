@@ -5,6 +5,8 @@
     "ref": "",
     "ref_index": "",
     "annotate": "",
+    "tr_calling": "",
+    "tr_call_regions": "",
     "outdir": ""
 
 }

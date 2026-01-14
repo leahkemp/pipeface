@@ -14,12 +14,15 @@ split_vcf{{"Split joint VCF"}}
 snp_indel_phasing{{"SNP/indel phasing"}}
 merge_vcf{{"Merge VCF"}}
 joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
+tr_calling{{"TR calling"}}
+concat_vcf{{"Concatenate TR VCF's"}}
 
 input_somalier("Input data: <br><br> Somalier extracted files")
 joint_somalier{{"Joint somalier relatedness/quality control check"}}
 
 input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
 input_bam-.->snp_indel_phasing
+input_bam-.->tr_calling-.->concat_vcf
 input_somalier-.->joint_somalier
 
 ```

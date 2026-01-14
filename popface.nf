@@ -14,11 +14,13 @@ process scrape_settings {
     publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface*'
 
     input:
-        tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(somalier_files)
+        tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(somalier_files), val(data_type)
         val popface_version
         val in_data
         val ref
         val ref_index
+        val tr_calling
+        val tr_call_regions
         val annotate
         val outdir
         val outdir2
@@ -35,6 +37,9 @@ process scrape_settings {
         echo "In data csv path: $in_data" >> \${F1}
         echo "Reference genome: $ref" >> \${F1}
         echo "Reference genome index: $ref_index" >> \${F1}
+        echo "Tandem repeat calling: $tr_calling" >> \${F1}
+        echo "Tandem repeat call regions: $tr_call_regions" >> \${F1}
+        echo "Data type: $data_type" >> \${F1}
         echo "Annotate: $annotate" >> \${F1}
         echo "Outdir: $outdir" >> \${F1}
         printf "sample_id\tgvcf\tbam\tsomalier_file\n" > \${F2}
@@ -225,6 +230,102 @@ process somalier {
 
 }
 
+process longtr_pre_processing {
+
+    input:
+        val tr_call_regions
+
+    output:
+        path('split.*.bed')
+
+    script:
+        """
+        # split up bed
+        split -l 10000 $tr_call_regions split. --additional-suffix=.bed
+        """
+
+    stub:
+        """
+        touch split.aa.bed
+        """
+
+}
+
+process longtr {
+
+    def software = "longtr"
+
+    input:
+        tuple val(pop_id), val(sample_ids), path(bams), path(bam_indices), val(data_type), path(split_bed)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(pop_id), path('tr.*.vcf.gz'), path('tr.*.vcf.gz.tbi')
+
+    script:
+        // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
+        """
+        # comma seperate list of bams
+        BAMS=\$(echo $bams | tr ' ' ',')
+        SAMPLE_IDS=\$(echo $sample_ids | tr -d '[ ]')
+        # run longtr
+        ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
+        LongTR --bams \${BAMS} --bam-samps \${SAMPLE_IDS} --bam-libs \${SAMPLE_IDS} --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
+        # index vcf
+        tabix tr.\${ID}.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.aa.vcf.gz
+        touch tr.aa.vcf.gz.tbi
+        """
+
+}
+
+process concat_vcf {
+
+    def software = "longtr"
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+
+    input:
+        tuple val(pop_id), path(tr_vcfs), path(tr_vcf_indicies)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
+
+    script:
+        """
+        # get list of vcfs to concat
+        for VCF in tr.*.vcf.gz; do
+            # skip missing or empty vcfs
+            [[ ! -s \${VCF} ]] && continue
+            VCFS+=( \${VCF} )
+        done
+        # concat vcfs, or symlink if only one vcf
+        if [[ "\${#VCFS[@]}" -eq 1 ]]; then
+            ln -s "\${VCFS[0]}" tr.vcf.gz
+        elif [[ "\${#VCFS[@]}" -gt 1 ]]; then
+            bcftools concat -a -Oz -o tr.vcf.gz "\${VCFS[@]}" --threads ${task.cpus}
+        fi
+        # index vcf
+        tabix tr.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.vcf.gz
+        touch tr.vcf.gz.tbi
+        """
+
+}
+
 process vep_snp_indel {
 
     def snp_indel_caller = "deepvariant"
@@ -278,6 +379,8 @@ workflow {
     in_data = "${params.in_data}".trim()
     ref = "${params.ref}".trim()
     ref_index = "${params.ref_index}".trim()
+    tr_calling = "${params.tr_calling}".trim()
+    tr_call_regions = "${params.tr_call_regions}".trim()
     annotate = "${params.annotate}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
@@ -316,6 +419,9 @@ workflow {
     if (!file(ref_index).exists()) {
         exit 1, "Reference genome index file does not exist, ref_index = '${ref_index}' provided."
     }
+    if (!(tr_calling in ['yes', 'no'])) {
+        exit 1, "Choice to call tandem repeats should be either 'yes', or 'no', tr_calling = '${tr_calling}' provided."
+    }
     if (annotate == 'yes') {
         if (!file(vep_db).exists()) {
             exit 1, "VEP cache directory does not exist, vep_db = '${vep_db}' provided."
@@ -348,18 +454,19 @@ workflow {
             exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
         }
     }
-    
-    Channel
-        .fromPath(in_data)
-        .splitCsv(header: true, sep: ',', strip: true)
-        .map { row -> row.sample_id }
-        .collect()
-        .map { sample_ids ->
-            def duplicates = sample_ids.findAll { id -> sample_ids.count(id) > 1 }.toSet()
-            if (duplicates) {
-                exit 1, "Entries in the 'sample_id' column of '$in_data' should all be unique values, duplicates: '$duplicates'."
-            }
+    if (!file(tr_call_regions).exists()) {
+        exit 1, "tandem repeat call regions file does not exist, tr_call_regions = '${tr_call_regions}' provided. Set to 'NONE' if not required."
+    }
+    if (tr_calling == 'yes') {
+        if (tr_call_regions == "NONE") {
+            exit 1, "When calling tandem repeats, provide a valid tandem repeat call regions file, tr_calling = '${tr_calling}' and tr_call_regions = 'NONE' provided."
         }
+    }
+    else if (tr_calling == 'no') {
+        if (tr_call_regions != 'NONE') {
+            exit 1, "When not calling tandem repeats, set tandem repeat call regions file to 'NONE', tr_calling = '${tr_calling}' and tr_call_regions = '${tr_call_regions}' provided."
+        }
+    }
 
     // build variable
     ref_name = file(ref).getSimpleName()
@@ -374,9 +481,10 @@ workflow {
             def gvcfs = row.gvcf
             def bams = row.bam
             def somalier_files = row.somalier_file
-            return tuple(pop_id, sample_ids, gvcfs, bams, somalier_files)
+            def data_type = row.data_type
+            return tuple(pop_id, sample_ids, gvcfs, bams, somalier_files, data_type)
         }
-        .groupTuple(by: 0)
+        .groupTuple(by: [0,5])
         .set { in_data_tuple }
 
     // build channels from in_data.csv file for describing each metadata associated with populations
@@ -410,6 +518,14 @@ workflow {
         .groupTuple(by: 0)
         .set { somalier_files_tuple }
 
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .filter { row -> row.bam != 'NONE' }
+        .map { row -> tuple(row.pop_id, row.sample_id, file(row.bam), file("${row.bam}.bai"), row.data_type) }
+        .groupTuple(by: [0,4])
+        .set { bams_data_type_tuple }
+
     // check user provided parameters in in_data.csv file
     Channel
         .fromPath(in_data)
@@ -420,6 +536,7 @@ workflow {
             def gvcf = row.gvcf
             def bam = row.bam
             def somalier_file = row.somalier_file
+            def data_type = row.data_type
 
             if (pop_id.isEmpty()) {
                 exit 1, "There is an empty entry in the 'pop_id' column of '${in_data}'."
@@ -453,15 +570,21 @@ workflow {
             if (!file(somalier_file).exists()) {
                 exit 1, "There is an entry in the 'somalier_file' column of '${in_data}' which doesn't exist. Check file '${somalier_file}'."
             }
+            if (data_type.isEmpty()) {
+                exit 1, "There is an empty entry in the 'data_type' column of '${in_data}'."
+            }
+            if (!(data_type in ['ont', 'pacbio'])) {
+                exit 1, "Entries in the 'data_type' column of '${in_data}' should be 'ont' or 'pacbio', '${data_type}' provided."
+            }
         }
 
     // check user provided parameters relating in in_data.csv file relating to populations
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row -> tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.somalier_file) }
+        .map { row -> tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.somalier_file, row.data_type) }
         .groupTuple(by: 0)
-        .map { pop_ids, sample_ids, gvcfs, bams, somalier_files ->
+        .map { pop_id, sample_ids, gvcfs, bams, somalier_files, data_types ->
             def gvcfs_any_none = gvcfs.any { it == 'NONE' }
             def gvcfs_all_none = gvcfs.every { it == 'NONE' }
             def bams_any_none = bams.any { it == 'NONE' }
@@ -469,22 +592,51 @@ workflow {
             def somalier_files_any_none = somalier_files.any { it == 'NONE' }
             def somalier_files_all_none = somalier_files.every { it == 'NONE' }
             if (sample_ids.unique().size() < 2) {
-                exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 2 or more unique values for every 'pop_id', '$sample_ids' provided for population '$pop_ids'."
+                exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 2 or more unique values for every 'pop_id', '$sample_ids' provided for population '$pop_id'."
             }
             if (gvcfs_any_none && !gvcfs_all_none) {
-                exit 1, "Entries in the 'gvcf' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$gvcfs' provided for population '$pop_ids'."
+                exit 1, "Entries in the 'gvcf' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$gvcfs' provided for population '$pop_id'."
             }
             if (bams_any_none && !bams_all_none) {
-                exit 1, "Entries in the 'bam' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$bams' provided for population '$pop_ids'."
+                exit 1, "Entries in the 'bam' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$bams' provided for population '$pop_id'."
             }
             if (somalier_files_any_none && !somalier_files_all_none) {
-                exit 1, "Entries in the 'somalier_file' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$somalier_files' provided for population '$pop_ids'."
+                exit 1, "Entries in the 'somalier_file' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$somalier_files' provided for population '$pop_id'."
+            }
+            if (data_types.unique().size() != 1) {
+                exit 1, "Entries in the 'data_type' column of '$in_data' must be identical for a given 'pop_id'. '$data_types' provided for population '$pop_id'."
             }
         }
 
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .map { row -> row.sample_id }
+        .collect()
+        .map { sample_ids ->
+            def duplicates = sample_ids.findAll { id -> sample_ids.count(id) > 1 }.toSet()
+            if (duplicates) {
+                exit 1, "Entries in the 'sample_id' column of '$in_data' should all be unique values, duplicates: '$duplicates'."
+            }
+        }
+
+    if (tr_calling == 'yes') {
+        Channel
+            .fromPath(in_data)
+            .splitCsv(header: true, sep: ',', strip: true)
+            .map { row -> row.bam }
+            .collect()
+            .map { bams ->
+                def any_real_bam = bams.any { it != 'NONE' }
+                if (!any_real_bam) {
+                    exit 1, "When tandem repeat calling is turned on, relevant BAM files need to be provided in 'bam' column of '${in_data}', tr_calling = '${tr_calling}' and '${bams}' provided."
+                }
+            }
+    }
+
         // workflow
         // pre-process
-        scrape_settings(in_data_tuple, popface_version, in_data, ref, ref_index, annotate, outdir, outdir2)
+        scrape_settings(in_data_tuple, popface_version, in_data, ref, ref_index, tr_calling, tr_call_regions, annotate, outdir, outdir2)
         // gvcf merging
         joint_snp_indel_bcf = glnexus(gvcfs_tuple)
         joint_snp_indel_vcf = glnexus_post_processing(joint_snp_indel_bcf)
@@ -504,8 +656,19 @@ workflow {
         joint_snp_indel_phased_vcf = merge_vcf(snp_indel_phased_vcfs, outdir, outdir2, ref_name)
         // joint somalier
         somalier(somalier_files_tuple, outdir, outdir2, ref_name)
+        // joint tr calling
+        if (tr_calling == 'yes') {
+            split_bed = longtr_pre_processing(tr_call_regions).flatten()
+            longtr_input = bams_data_type_tuple
+                .combine(split_bed)
+                .map { pop_id, sample_ids, bams, bam_indices, data_type, split_bed ->
+                    tuple(pop_id, sample_ids, bams, bam_indices, data_type, split_bed)
+                }
+            tr_vcfs = longtr(longtr_input, ref, ref_index)
+            concat_vcf(tr_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name)
+        }
+        // joint snp/indel annotation
         if (annotate == 'yes') {
-            // joint snp/indel annotation
             vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name)
         }
 
