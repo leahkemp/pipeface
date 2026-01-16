@@ -102,7 +102,8 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py39_25.9.1-3-Linux-x86_
     conda config --add channels conda-forge && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda install -c conda-forge -c bioconda longtr
+    conda install -c conda-forge -c bioconda longtr && \
+    cp /root/miniconda3/bin/LongTR /usr/local/bin/LongTR
 
 # GNU parallel
 RUN wget https://ftp.gnu.org/gnu/parallel/parallel-20191022.tar.bz2 && \
@@ -113,11 +114,10 @@ RUN wget https://ftp.gnu.org/gnu/parallel/parallel-20191022.tar.bz2 && \
     make install
 
 ## deploy env ##
-
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
 LABEL description="docker image containing most software required for pipeface"
-LABEL version="0.0.2"
+LABEL version="0.0.3"
 LABEL maintainer.name="Leah Kemp"
 LABEL maintainer.email="leahmhkemp@gmail.com"
 
@@ -147,6 +147,7 @@ COPY --from=build \
     /Jasmine/jasmine.jar \
     /Jasmine/jasmine_iris.jar \
     /usr/local/bin/parallel \
+    /usr/local/bin/LongTR \
     /usr/local/bin/
 
 COPY --from=build \
@@ -156,10 +157,3 @@ COPY --from=build \
 COPY --from=build \
     /usr/local/lib/ \
     /usr/local/lib/
-
-COPY --from=build \
-    /root/miniconda3 \
-    /root/miniconda3
-
-# add conda to path
-ENV PATH="/root/miniconda3/bin:${PATH}"
