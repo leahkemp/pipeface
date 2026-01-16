@@ -138,7 +138,6 @@ COPY --from=build \
     /Jasmine/jasmine \
     /Jasmine/jasmine.jar \
     /Jasmine/jasmine_iris.jar \
-    /usr/local/bin/parallel \
     /usr/local/bin/LongTR \
     /usr/local/bin/
 
