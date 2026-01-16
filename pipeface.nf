@@ -1273,19 +1273,16 @@ process longtr_pre_processing {
         val tr_call_regions
 
     output:
-        path('split_beds.txt')
         path('split.*.bed')
 
     script:
         """
         # split up bed
         split -l 10000 $tr_call_regions split. --additional-suffix=.bed
-        realpath --relative-to=./ split.*.bed > split_beds.txt
         """
 
     stub:
         """
-        touch split_beds.txt
         touch split.aa.bed
         """
 
@@ -1295,17 +1292,10 @@ process longtr {
 
     def software = "longtr"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
-
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
-        path split_beds_list
-        path split_beds
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), path(split_bed)
         val ref
         val ref_index
-        val outdir
-        val outdir2
-        val ref_name
 
     output:
         tuple val(sample_id), val(family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
@@ -1314,25 +1304,17 @@ process longtr {
         // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
-        # run longtr and index vcfs
-        parallel -j ${task.cpus} '
-            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
-            tabix tr.{/.}.vcf.gz
-        ' < $split_beds_list
-        # merge vcfs
-        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
-            ln -s tr.split.*.vcf.gz tr.vcf.gz
-        else
-            bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
-        fi
+        # run longtr
+        ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
+        LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
         # index vcf
-        tabix tr.vcf.gz
+        tabix tr.\${ID}.vcf.gz
         """
 
     stub:
         """
-        touch tr.vcf.gz
-        touch tr.vcf.gz.tbi
+        touch tr.aa.vcf.gz
+        touch tr.aa.vcf.gz.tbi
         """
 
 }
@@ -1341,18 +1323,11 @@ process longtr_duo {
 
     def software = "longtr"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
-
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type), path(split_bed)
         tuple val(parent_sample_id), val(parent_family_id), val(parent_family_position), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), val(data_type)
-        path split_beds_list
-        path split_beds
         val ref
         val ref_index
-        val outdir
-        val outdir2
-        val ref_name
 
     output:
         tuple val(proband_sample_id), val(proband_family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
@@ -1361,25 +1336,17 @@ process longtr_duo {
         // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
-        # run longtr and index vcfs
-        parallel -j ${task.cpus} '
-            LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
-            tabix tr.{/.}.vcf.gz
-        ' < $split_beds_list
-        # merge vcfs
-        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
-            ln -s tr.split.*.vcf.gz tr.vcf.gz
-        else
-            bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
-        fi
+        # run longtr
+        ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
+        LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
         # index vcf
-        tabix tr.vcf.gz
+        tabix tr.\${ID}.vcf.gz
         """
 
     stub:
         """
-        touch tr.vcf.gz
-        touch tr.vcf.gz.tbi
+        touch tr.aa.vcf.gz
+        touch tr.aa.vcf.gz.tbi
         """
 
 }
@@ -1388,19 +1355,12 @@ process longtr_trio {
 
     def software = "longtr"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
-
     input:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type)
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(data_type), path(split_bed)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(data_type)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(data_type)
-        path split_beds_list
-        path split_beds
         val ref
         val ref_index
-        val outdir
-        val outdir2
-        val ref_name
 
     output:
         tuple val(proband_sample_id), val(proband_family_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
@@ -1409,16 +1369,49 @@ process longtr_trio {
         // define a string to define non-default alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
-        # run longtr and index vcfs
-        parallel -j ${task.cpus} '
-            LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
-            tabix tr.{/.}.vcf.gz
-        ' < $split_beds_list
-        # merge vcfs
-        if [ \$(wc -l < $split_beds_list) -eq 1 ]; then
-            ln -s tr.split.*.vcf.gz tr.vcf.gz
-        else
-            bcftools concat -a -Oz -o tr.vcf.gz tr.split.*.vcf.gz
+        # run longtr
+        ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
+        LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
+        # index vcf
+        tabix tr.\${ID}.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.aa.vcf.gz
+        touch tr.aa.vcf.gz.tbi
+        """
+
+}
+
+process concat_vcf {
+
+    def software = "longtr"
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(tr_vcf), path(tr_vcf_index)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), path('tr.vcf.gz'), path('tr.vcf.gz.tbi')
+
+    script:
+        """
+        # get list of vcfs to concat
+        for VCF in tr.*.vcf.gz; do
+            # skip missing or empty vcfs
+            [[ ! -s \${VCF} ]] && continue
+            VCFS+=( \${VCF} )
+        done
+        # concat vcfs, or symlink if only one vcf
+        if [[ "\${#VCFS[@]}" -eq 1 ]]; then
+            ln -s "\${VCFS[0]}" tr.vcf.gz
+        elif [[ "\${#VCFS[@]}" -gt 1 ]]; then
+            bcftools concat -a -Oz -o tr.vcf.gz "\${VCFS[@]}" --threads ${task.cpus}
         fi
         # index vcf
         tabix tr.vcf.gz

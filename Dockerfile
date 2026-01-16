@@ -105,19 +105,11 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py39_25.9.1-3-Linux-x86_
     conda install -c conda-forge -c bioconda longtr && \
     cp /root/miniconda3/bin/LongTR /usr/local/bin/LongTR
 
-# GNU parallel
-RUN wget https://ftp.gnu.org/gnu/parallel/parallel-20191022.tar.bz2 && \
-    tar -xjf parallel-20191022.tar.bz2 && \
-    cd parallel-20191022 && \
-    ./configure && \
-    make && \
-    make install
-
 ## deploy env ##
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
-LABEL description="docker image containing most software required for pipeface"
-LABEL version="0.0.3"
+LABEL description="docker image containing most software required for pipeface/popface"
+LABEL version="0.0.4"
 LABEL maintainer.name="Leah Kemp"
 LABEL maintainer.email="leahmhkemp@gmail.com"
 
