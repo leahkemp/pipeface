@@ -4,6 +4,8 @@
     "in_data": "",
     "ref": "",
     "ref_index": "",
+    "snp_indel_caller": "",
+    "clair3_config": "",
     "annotate": "",
     "tr_calling": "",
     "tr_call_regions": "",

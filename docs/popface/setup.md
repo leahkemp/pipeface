@@ -2,8 +2,10 @@
 
 - [Popface setup](#popface-setup)
   - [1. Get pipeline](#1-get-pipeline)
-  - [2. Modify in\_data\_popface.csv](#2-modify-in_data_popfacecsv)
-  - [3. Modify parameters\_popface.json](#3-modify-parameters_popfacejson)
+  - [2. Get pipeline inputs](#2-get-pipeline-inputs)
+    - [Clair3 GLnexus configuration file (if providing Clair3 gVCF files)](#clair3-glnexus-configuration-file-if-providing-clair3-gvcf-files)
+  - [3. Modify in\_data\_popface.csv](#3-modify-in_data_popfacecsv)
+  - [4. Modify parameters\_popface.json](#4-modify-parameters_popfacejson)
 
 ## 1. Get pipeline
 
@@ -12,7 +14,17 @@ git clone https://github.com/leahkemp/pipeface.git
 cd pipeface
 ```
 
-## 2. Modify in_data_popface.csv
+## 2. Get pipeline inputs
+
+### Clair3 GLnexus configuration file (if providing Clair3 gVCF files)
+
+Get a copy of the Clair3 GLnexus configuration file
+
+```bash
+curl -O https://www.bio8.cs.hku.hk/clair3_trio/config/clair3.yml
+```
+
+## 3. Modify in_data_popface.csv
 
 Specify the population ID, sample ID, file path to the gVCF file, file path to the aligned BAM file, file path to the somalier extracted file and the data type for each data to be processed. Eg:
 
@@ -38,15 +50,18 @@ pop_02,sample_14,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to
 
 > **_Note:_** `gvcf`, `bam` and `somalier_file` are all optional (provide 'NONE' if not required)
 
+> **_Note:_** `gvcf` and `bam` required to generate joint phased DeepVariant SNP/indel VCF file
+
+> **_Note:_** `bam` required to generate joint phased tandem repeat VCF file
+
 Requirements:
 
 - all entries in the `sample_id` column must be unique
 - all entries in the `sample_id` column must match the sample ID's reocrded in the headers of the associated gVCF's and aligned BAM files
 - all entries in the `gvcf`, `bam` and `somalier_file` columns for a given `pop_id` must be either all real files or all set to 'NONE'
-- an aligned BAM file must be provided in the `bam` column if a gVCF file is provided in the `gvcf` column
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
-## 3. Modify parameters_popface.json
+## 4. Modify parameters_popface.json
 
 Specify the path to `in_data_popface.csv`. Eg:
 
@@ -59,6 +74,20 @@ Specify the path to the reference genome and it's index. Eg:
 ```json
     "ref": "/path/to/hg38.fa",
     "ref_index": "/path/to/hg38.fa.fai",
+```
+
+Specify the SNP/indel caller used to generate the gVCF files ('clair3' or 'deepvariant'). If clair3 selected, specify the path to the clair3 GLnexus configuration file. Eg:
+
+```json
+    "snp_indel_caller": "deepvariant",
+    "clair3_config": "NONE",
+```
+
+*OR*
+
+```json
+    "snp_indel_caller": "clair3",
+    "clair3_config": "/path/to/clair3.yml",
 ```
 
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:

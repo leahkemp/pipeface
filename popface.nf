@@ -58,15 +58,52 @@ process scrape_settings {
 
 }
 
+process glnexus_pre_processing {
+
+    input:
+        tuple val(pop_id), val(sample_id), path(gvcf)
+        val (ref_index)
+
+    output:
+        tuple val(pop_id), val(sample_id), path("*.ammended.g.vcf.gz")
+
+    script:
+        """
+        # reheader to include all contigs in gvcf header even if no variants were called in a contig to avoid this issue: https://github.com/HKU-BAL/Clair3/issues/371
+        {
+            bcftools view -h "$gvcf" | grep -v -E '^##contig=|^#CHROM'
+            awk '{ printf "##contig=<ID=%s,length=%s>\\n", \$1, \$2 }' "$ref_index"
+            bcftools view -h "$gvcf" | grep '#CHROM'
+        } > ${sample_id}.ammended.g.vcf
+        # convert lower cases of soft-masked sequences to upper case to avoid this issue: https://github.com/HKU-BAL/Clair3/issues/359
+        zgrep -v '#' $gvcf | awk -F'\\t' -v OFS='\\t' '{ if(\$0 !~ /^#/) { \$4=toupper(\$4); \$5=toupper(\$5) } print }' >> ${sample_id}.ammended.g.vcf
+        # compress vcf
+        bgzip -@ ${task.cpus} ${sample_id}.ammended.g.vcf
+        """
+
+    stub:
+        """
+        touch sample1.ammended.g.vcf.gz
+        """
+
+}
+
 process glnexus {
 
     input:
-        tuple val(pop_id), path(gvcfs)
+        tuple val(pop_id), val(sample_ids), path(gvcfs)
+        val snp_indel_caller
+        val clair3_config
 
     output:
         tuple val(pop_id), path('snp_indel.bcf')
 
     script:
+        if (snp_indel_caller == 'clair3')
+        """
+        glnexus_cli --config $clair3_config $gvcfs > snp_indel.bcf
+        """
+        else if (snp_indel_caller == 'deepvariant')
         """
         glnexus_cli --config DeepVariant $gvcfs > snp_indel.bcf
         """
@@ -179,8 +216,6 @@ process whatshap_phase {
 
 process merge_vcf {
 
-    def snp_indel_caller = "deepvariant"
-
     publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
@@ -188,6 +223,7 @@ process merge_vcf {
         val outdir
         val outdir2
         val ref_name
+        val snp_indel_caller
 
     output:
         tuple val(pop_id), path('snp_indel.phased.vcf.gz'), path('snp_indel.phased.vcf.gz.tbi')
@@ -272,7 +308,7 @@ process longtr {
         SAMPLE_IDS=\$(echo $sample_ids | tr -d '[ ]')
         # run longtr
         ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
-        LongTR --bams \${BAMS} --bam-samps \${SAMPLE_IDS} --bam-libs \${SAMPLE_IDS} --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
+        LongTR --bams \${BAMS} --bam-samps \${SAMPLE_IDS} --bam-libs \${SAMPLE_IDS} --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
         # index vcf
         tabix tr.\${ID}.vcf.gz
         """
@@ -302,17 +338,13 @@ process concat_vcf {
 
     script:
         """
-        # get list of vcfs to concat
-        for VCF in tr.*.vcf.gz; do
-            # skip missing or empty vcfs
-            [[ ! -s \${VCF} ]] && continue
-            VCFS+=( \${VCF} )
-        done
+        # get list of vcfs
+        VCFS=(tr.*.vcf.gz)
         # concat vcfs, or symlink if only one vcf
-        if [[ "\${#VCFS[@]}" -eq 1 ]]; then
-            ln -s "\${VCFS[0]}" tr.vcf.gz
-        elif [[ "\${#VCFS[@]}" -gt 1 ]]; then
-            bcftools concat -a -Oz -o tr.vcf.gz "\${VCFS[@]}" --threads ${task.cpus}
+        if [[ \${#VCFS[@]} -eq 1 ]]; then
+            ln -s \${VCFS[0]} tr.vcf.gz
+        else
+            bcftools concat -a -Oz -o tr.vcf.gz \${VCFS[@]} --threads ${task.cpus}
         fi
         # index vcf
         tabix tr.vcf.gz
@@ -327,8 +359,6 @@ process concat_vcf {
 }
 
 process vep_snp_indel {
-
-    def snp_indel_caller = "deepvariant"
 
     publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename"}, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
@@ -348,6 +378,7 @@ process vep_snp_indel {
         val outdir
         val outdir2
         val ref_name
+        val snp_indel_caller
 
     output:
         tuple val(pop_id), path('snp_indel.phased.annotated.vcf.gz'), path('snp_indel.phased.annotated.vcf.gz.tbi')
@@ -381,6 +412,8 @@ workflow {
     ref_index = "${params.ref_index}".trim()
     tr_calling = "${params.tr_calling}".trim()
     tr_call_regions = "${params.tr_call_regions}".trim()
+    snp_indel_caller = "${params.snp_indel_caller}".trim()
+    clair3_config = "${params.clair3_config}".trim()
     annotate = "${params.annotate}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
@@ -418,6 +451,24 @@ workflow {
     }
     if (!file(ref_index).exists()) {
         exit 1, "Reference genome index file does not exist, ref_index = '${ref_index}' provided."
+    }
+    if (!snp_indel_caller) {
+        exit 1, "No SNP/indel caller (snp_indel_caller) provided."
+    }
+    if (!(snp_indel_caller in ['clair3', 'deepvariant'])) {
+        exit 1, "SNP/indel caller should be either 'clair3' or 'deepvariant', snp_indel_caller = '${snp_indel_caller}' provided."
+    }
+    if (!clair3_config) {
+        exit 1, "No clair3 config file (clair3_config) provided."
+    }
+    if (!file(clair3_config).exists()) {
+        exit 1, "Clair3 config file does not exist, 'clair3_config = ${clair3_config}' provided."
+    }
+    if (snp_indel_caller == 'clair3' && clair3_config == 'NONE') {
+        exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 config file for GLnexus, snp_indel_caller = '${snp_indel_caller}' and clair3_config = '${clair3_config}' provided."
+    }
+    if (snp_indel_caller == 'deepvariant' && clair3_config != 'NONE') {
+        exit 1, "When deepvariant is selected as the SNP/indel calling software, set the clair3 config file for GLnexus to 'NONE', snp_indel_caller = '${snp_indel_caller}' and clair3_config = '${clair3_config}' provided."
     }
     if (!(tr_calling in ['yes', 'no'])) {
         exit 1, "Choice to call tandem repeats should be either 'yes', or 'no', tr_calling = '${tr_calling}' provided."
@@ -499,8 +550,7 @@ workflow {
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.gvcf != 'NONE' }
-        .map { row -> tuple(row.pop_id, row.gvcf) }
-        .groupTuple(by: 0)
+        .map { row -> tuple(row.pop_id, row.sample_id, row.gvcf) }
         .set { gvcfs_tuple }
 
     Channel
@@ -638,7 +688,13 @@ workflow {
         // pre-process
         scrape_settings(in_data_tuple, popface_version, in_data, ref, ref_index, tr_calling, tr_call_regions, annotate, outdir, outdir2)
         // gvcf merging
-        joint_snp_indel_bcf = glnexus(gvcfs_tuple)
+        if (snp_indel_caller == 'clair3') {
+            gvcfs = glnexus_pre_processing(gvcfs_tuple, ref_index).groupTuple(by: 0)
+        }
+        if (snp_indel_caller == 'deepvariant') {
+            gvcfs = gvcfs_tuple.groupTuple(by: 0)
+        }
+        joint_snp_indel_bcf = glnexus(gvcfs, snp_indel_caller, clair3_config)
         joint_snp_indel_vcf = glnexus_post_processing(joint_snp_indel_bcf)
         // split multiallelic variants
         joint_snp_indel_split_vcf = split_multiallele(joint_snp_indel_vcf, ref, ref_index)
@@ -653,7 +709,7 @@ workflow {
             }
         snp_indel_vcf = split_vcf(joint_snp_indel_vcf_id)
         snp_indel_phased_vcfs = whatshap_phase(snp_indel_vcf.join(bams_tuple, by: [0,1]), ref, ref_index) | groupTuple(by: 0)
-        joint_snp_indel_phased_vcf = merge_vcf(snp_indel_phased_vcfs, outdir, outdir2, ref_name)
+        joint_snp_indel_phased_vcf = merge_vcf(snp_indel_phased_vcfs, outdir, outdir2, ref_name, snp_indel_caller)
         // joint somalier
         somalier(somalier_files_tuple, outdir, outdir2, ref_name)
         // joint tr calling
@@ -669,7 +725,7 @@ workflow {
         }
         // joint snp/indel annotation
         if (annotate == 'yes') {
-            vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name)
+            vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
 
 }

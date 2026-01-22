@@ -49,12 +49,13 @@ input_somalier-.->joint_somalier
 
 ### Optional
 
-- DeepVariant gVCF files and aligned BAM files
+- Clair3 or DeepVariant gVCF files and aligned BAM files
 - Somalier extracted files
 
 ## Main output files
 
-- Joint phased DeepVariant SNP/indel VCF file
-- Joint phased and annotated DeepVariant SNP/indel VCF file (hg38 only)
+- Joint phased Clair3 or DeepVariant SNP/indel VCF file
+- Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
+- Joint phased tandem repeat VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 

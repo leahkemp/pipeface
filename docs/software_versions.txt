@@ -19,6 +19,5 @@ HTSlib: 1.20
 bcftools: 1.21
 bedtools: 2.31.0
 GNU Awk: 4.2.1
-GNU parallel: 20191022
 GNU sed: 4.5
 GNU grep: 3.1
