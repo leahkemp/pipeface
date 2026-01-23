@@ -111,7 +111,7 @@ d50345a1967c507bcdd3cf35c4db27d0  variation_clusters_and_isolated_TRs_v1.0.2.hg3
 Prepare file for LongTR
 
 ```bash
-cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
+cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
 ```
 
 ### Somalier sites file (if running relatedness check)
