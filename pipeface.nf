@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.10.1"
+def pipeface_version = "0.10.2"
 
 // create dummy NONE file for optional pipeface inputs
 new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
@@ -1294,7 +1294,7 @@ process longtr {
         """
         # run longtr and index vcfs
         parallel -j ${task.cpus} '
-            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
+            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
             tabix tr.{/.}.vcf.gz
         ' < $split_beds_list
         # merge vcfs
@@ -1341,7 +1341,7 @@ process longtr_duo {
         """
         # run longtr and index vcfs
         parallel -j ${task.cpus} '
-            LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
+            LongTR --bams $proband_haplotagged_bam,$parent_haplotagged_bam --bam-samps $proband_sample_id,$parent_sample_id --bam-libs $proband_sample_id,$parent_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
             tabix tr.{/.}.vcf.gz
         ' < $split_beds_list
         # merge vcfs
@@ -1389,7 +1389,7 @@ process longtr_trio {
         """
         # run longtr and index vcfs
         parallel -j ${task.cpus} '
-            LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --max-tr-len 20000 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
+            LongTR --bams $proband_haplotagged_bam,$father_haplotagged_bam,$mother_haplotagged_bam --bam-samps $proband_sample_id,$father_sample_id,$mother_sample_id --bam-libs $proband_sample_id,$father_sample_id,$mother_sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --min-reads 5 --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log {/.}.log
             tabix tr.{/.}.vcf.gz
         ' < $split_beds_list
         # merge vcfs
