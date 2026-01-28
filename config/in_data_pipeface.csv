@@ -1,3 +1,1 @@
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample01,fam01,proband,/g/data/kr68/flints/test_data/HG002.chr20.10_10p1mb.bam,ont,NONE,NONE
-sample02,fam01,mother,/g/data/kr68/flints/test_data/HG003.chr20.10_10p1mb.bam,ont,NONE,NONE
