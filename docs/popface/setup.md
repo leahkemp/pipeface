@@ -57,7 +57,7 @@ pop_02,sample_14,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to
 Requirements:
 
 - all entries in the `sample_id` column must be unique
-- all entries in the `sample_id` column must match the sample ID's reocrded in the headers of the associated gVCF's and aligned BAM files
+- all entries in the `sample_id` column must match the sample ID's recorded in the headers of the associated gVCF's and aligned BAM files
 - all entries in the `gvcf`, `bam` and `somalier_file` columns for a given `pop_id` must be either all real files or all set to 'NONE'
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 
