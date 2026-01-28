@@ -50,9 +50,9 @@ pop_02,sample_14,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to
 
 > **_Note:_** `gvcf`, `bam` and `somalier_file` are all optional (provide 'NONE' if not required)
 
-> **_Note:_** `gvcf` and `bam` required to generate joint phased DeepVariant SNP/indel VCF file
+> **_Note:_** `gvcf` and `bam` required to generate joint SNP/indel VCF file
 
-> **_Note:_** `bam` required to generate joint phased tandem repeat VCF file
+> **_Note:_** `bam` required to generate joint tandem repeat VCF file
 
 Requirements:
 
