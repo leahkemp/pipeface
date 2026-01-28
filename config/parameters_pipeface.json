@@ -1,25 +1,25 @@
 
 {
 
-    "in_data": "./config/in_data_pipeface.csv",
-    "in_data_format": "ubam_fastq",
-    "ref": "/g/data/kr68/genome/hg38.analysisSet.fa",
-    "ref_index": "/g/data/kr68/genome/hg38.analysisSet.fa.fai",
-    "haploidaware": "no",
-    "sex": "NONE",
-    "parbed": "NONE",
-    "tandem_repeat": "NONE",
-    "mode": "duo",
-    "snp_indel_caller": "deepvariant",
-    "sv_caller": "both",
-    "annotate": "no",
-    "calculate_depth": "no",
-    "analyse_base_mods": "no",
-    "tr_calling": "no",
-    "tr_call_regions": "NONE",
-    "check_relatedness": "yes",
-    "sites": "/g/data/kr68/genome/sites.hg38.v0.2.19.vcf.gz",
-    "outdir": "results"
+    "in_data": "",
+    "in_data_format": "",
+    "ref": "",
+    "ref_index": "",
+    "haploidaware": "",
+    "sex": "",
+    "parbed": "",
+    "tandem_repeat": "",
+    "mode": "",
+    "snp_indel_caller": "",
+    "sv_caller": "",
+    "annotate": "",
+    "calculate_depth": "",
+    "analyse_base_mods": "",
+    "tr_calling": "",
+    "tr_call_regions": "",
+    "check_relatedness": "",
+    "sites": "",
+    "outdir": ""
 
 }
 
