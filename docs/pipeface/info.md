@@ -5,22 +5,22 @@
 ### Singleton
 
 ```mermaid
-%%{init: {'theme':'dark'}}%%
+%%{init: {'theme':'dark', 'themeVariables': {'fontSize': '30px'}}}%%
 flowchart LR
 
 input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging{{"Merge runs (if needed)"}}
-alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
-depth{{"Calculate alignment depth"}}
-snp_indel_calling{{"SNP/indel variant calling"}}
-split_multiallele{{"Split multiallelic variants into biallelic variants"}}
-snp_indel_phasing{{"SNP/indel phasing"}}
-snp_indel_annotation{{"SNP/indel annotation (hg38 only)"}}
-haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
-tr_calling{{"TR calling"}}
-sv_calling{{"Structural variant calling"}}
-sv_annotation{{"Structural variant annotation (hg38 only)"}}
+merging("Merge runs (if needed)")
+alignment("bam to fastq conversion (if needed), alignment, sorting")
+depth("Calculate alignment depth")
+snp_indel_calling("SNP/indel variant calling")
+split_multiallele("Split multiallelic variants into biallelic variants")
+snp_indel_phasing("SNP/indel phasing")
+snp_indel_annotation("SNP/indel annotation (hg38 only)")
+haplotagging("Haplotagging bams")
+calculate_base_mod_freqs("Calculate base modificiation frequencies (uBAM's containing base modifications only)")
+tr_calling("TR calling")
+sv_calling("Structural variant calling")
+sv_annotation("Structural variant annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -34,28 +34,28 @@ sv_calling-.->sv_annotation
 ### Duo
 
 ```mermaid
-%%{init: {'theme':'dark'}}%%
+%%{init: {'theme':'dark', 'themeVariables': {'fontSize': '30px'}}}%%
 flowchart LR
 
 input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging{{"Merge runs (if needed)"}}
-alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
-depth{{"Calculate alignment depth"}}
-snp_indel_calling{{"SNP/indel variant calling"}}
-split_multiallele{{"Split multiallelic variants into biallelic variants"}}
-snp_indel_phasing{{"SNP/indel phasing"}}
-joint_somalier{{"Joint somalier relatedness/quality control check"}}
-gvcf_merging{{"gVCF merging"}}
-joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
-joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
-joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
-haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
-tr_calling{{"TR calling"}}
-joint_tr_calling{{"Joint TR calling"}}
-sv_calling{{"Structural variant calling"}}
-sv_vcf_merging{{"Structural variant VCF merging"}}
-joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
+merging("Merge runs (if needed)")
+alignment("bam to fastq conversion (if needed), alignment, sorting")
+depth("Calculate alignment depth")
+snp_indel_calling("SNP/indel variant calling")
+split_multiallele("Split multiallelic variants into biallelic variants")
+snp_indel_phasing("SNP/indel phasing")
+joint_somalier("Joint somalier relatedness/quality control check")
+gvcf_merging("gVCF merging")
+joint_split_multiallele("Split multiallelic variants into biallelic variants")
+joint_snp_indel_phasing("Joint SNP/indel phasing")
+joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
+haplotagging("Haplotagging bams")
+calculate_base_mod_freqs("Calculate base modificiation frequencies (uBAM's containing base modifications only)")
+tr_calling("TR calling")
+joint_tr_calling("Joint TR calling")
+sv_calling("Structural variant calling")
+sv_vcf_merging("Structural variant VCF merging")
+joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -72,29 +72,29 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 ### Trio
 
 ```mermaid
-%%{init: {'theme':'dark'}}%%
+%%{init: {'theme':'dark', 'themeVariables': {'fontSize': '30px'}}}%%
 flowchart LR
 
 input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging{{"Merge runs (if needed)"}}
-alignment{{"bam to fastq conversion (if needed), alignment, sorting"}}
-depth{{"Calculate alignment depth"}}
-snp_indel_calling{{"SNP/indel variant calling"}}
-split_multiallele{{"Split multiallelic variants into biallelic variants"}}
-snp_indel_phasing{{"SNP/indel phasing"}}
-joint_snp_indel_calling{{"Joint SNP/indel variant calling"}}
-joint_somalier{{"Joint somalier relatedness/quality control check"}}
-gvcf_merging{{"gVCF merging"}}
-joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
-joint_snp_indel_phasing{{"Joint SNP/indel phasing"}}
-joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
-haplotagging{{"Haplotagging bams"}}
-calculate_base_mod_freqs{{"Calculate base modificiation frequencies (uBAM's containing base modifications only)"}}
-tr_calling{{"TR calling"}}
-joint_tr_calling{{"Joint TR calling"}}
-sv_calling{{"Structural variant calling"}}
-sv_vcf_merging{{"Structural variant VCF merging"}}
-joint_sv_annotation{{"Joint structural variant annotation (hg38 only)"}}
+merging("Merge runs (if needed)")
+alignment("bam to fastq conversion (if needed), alignment, sorting")
+depth("Calculate alignment depth")
+snp_indel_calling("SNP/indel variant calling")
+split_multiallele("Split multiallelic variants into biallelic variants")
+snp_indel_phasing("SNP/indel phasing")
+joint_snp_indel_calling("Joint SNP/indel variant calling")
+joint_somalier("Joint somalier relatedness/quality control check")
+gvcf_merging("gVCF merging")
+joint_split_multiallele("Split multiallelic variants into biallelic variants")
+joint_snp_indel_phasing("Joint SNP/indel phasing")
+joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
+haplotagging("Haplotagging bams")
+calculate_base_mod_freqs("Calculate base modificiation frequencies (uBAM's containing base modifications only)")
+tr_calling("TR calling")
+joint_tr_calling("Joint TR calling")
+sv_calling("Structural variant calling")
+sv_vcf_merging("Structural variant VCF merging")
+joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth

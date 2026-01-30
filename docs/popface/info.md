@@ -3,22 +3,22 @@
 ## Workflow
 
 ```mermaid
-%%{init: {'theme':'dark'}}%%
+%%{init: {'theme':'dark', 'themeVariables': {'fontSize': '30px'}}}%%
 flowchart LR
 
 input_gvcf("Input data: <br><br> DeepVariant gVCF's")
 input_bam("Input data: <br><br> Aligned BAM's")
-gvcf_merging{{"gVCF merging"}}
-joint_split_multiallele{{"Split multiallelic variants into biallelic variants"}}
-split_vcf{{"Split joint VCF"}}
-snp_indel_phasing{{"SNP/indel phasing"}}
-merge_vcf{{"Merge VCF"}}
-joint_snp_indel_annotation{{"Joint SNP/indel annotation (hg38 only)"}}
-tr_calling{{"TR calling"}}
-concat_vcf{{"Concatenate TR VCF's"}}
+gvcf_merging("gVCF merging")
+joint_split_multiallele("Split multiallelic variants into biallelic variants")
+split_vcf("Split joint VCF")
+snp_indel_phasing("SNP/indel phasing")
+merge_vcf("Merge VCF")
+joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
+tr_calling("TR calling")
+concat_vcf("Concatenate TR VCF's")
 
 input_somalier("Input data: <br><br> Somalier extracted files")
-joint_somalier{{"Joint somalier relatedness/quality control check"}}
+joint_somalier("Joint somalier relatedness/quality control check")
 
 input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
 input_bam-.->snp_indel_phasing
