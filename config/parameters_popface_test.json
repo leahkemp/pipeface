@@ -1,0 +1,15 @@
+
+{
+
+    "in_data": "config/in_data_popface_test.csv",
+    "ref": "/g/data/kr68/genome/hg38.analysisSet.fa",
+    "ref_index": "/g/data/kr68/genome/hg38.analysisSet.fa.fai",
+    "snp_indel_caller": "deepvariant",
+    "clair3_config": "NONE",
+    "annotate": "yes",
+    "tr_calling": "no",
+    "tr_call_regions": "NONE",
+    "outdir": "results"
+
+}
+
