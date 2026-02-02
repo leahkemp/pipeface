@@ -18,7 +18,7 @@ params.chrYseq = "chrY"
 
 process scrape_settings {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
 
     input:
         tuple val(sample_id), val(family_id), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
@@ -218,7 +218,7 @@ process mosdepth {
 
     def depth_software = "mosdepth"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$depth_software.$filename" }, pattern: 'depth.txt'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(regions_of_interest)
@@ -248,7 +248,7 @@ process mosdepth {
 
 process clair3 {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type), val(regions_of_interest), val(clair3_model)
@@ -335,7 +335,7 @@ process clair3_pre_processing {
 
 process clair3_haploid_aware {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(diploid_bed), path(haploid_bed), val(data_type), val(clair3_model)
@@ -385,7 +385,7 @@ process clair3_haploid_aware {
 
 process clair3_post_processing {
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(haploid_snp_indel_vcf), path(haploid_snp_indel_vcf_index), path(diploid_snp_indel_vcf), path(diploid_snp_indel_vcf_index), path(haploid_snp_indel_gvcf), path(haploid_snp_indel_gvcf_index), path(diploid_snp_indel_gvcf), path(diploid_snp_indel_gvcf_index)
@@ -528,7 +528,7 @@ process deepvariant_post_processing {
     // for when deeptrio selected as the snp/indel caller
     def reported_snp_indel_caller = "deepvariant"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename ->
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
@@ -630,7 +630,7 @@ process whatshap_phase {
     // for when deeptrio selected as the snp/indel caller
     def reported_snp_indel_caller = "deepvariant"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename ->
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (params.snp_indel_caller != 'deeptrio') {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
@@ -679,7 +679,7 @@ process whatshap_haplotag {
 
     def mapper_phaser = "minimap2.whatshap"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index), val(family_position)
@@ -849,7 +849,7 @@ process deeptrio_postprocessing {
 
 process somalier_duo {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename ->
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         def clean = filename.replaceFirst(/^.*\.somalier$/, 'somalier')
         if( filename.contains(proband_sample_id) ) {
             return "$proband_sample_id/$proband_sample_id.$ref_name.$clean"
@@ -887,7 +887,7 @@ process somalier_duo {
 
 process somalier_trio {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename ->
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         def clean = filename.replaceFirst(/^.*\.somalier$/, 'somalier')
         if( filename.contains(proband_sample_id) ) {
             return "$proband_sample_id/$proband_sample_id.$ref_name.$clean"
@@ -900,7 +900,7 @@ process somalier_trio {
         }
     } , pattern: '*somalier*'
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$filename" }, pattern: 'somalier*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(proband_gvcf)
@@ -1072,7 +1072,7 @@ process split_multiallele_trio {
 
 process whatshap_phase_duo {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
         tuple val(proband_sample_id), val(parent_sample_id), val(proband_family_id), val(parent_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(parent_haplotagged_bam), path(parent_haplotagged_bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
@@ -1120,7 +1120,7 @@ process whatshap_phase_duo {
 
 process whatshap_phase_trio {
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
         tuple val(proband_sample_id), val(father_sample_id), val(mother_sample_id), val(proband_family_id), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
@@ -1167,7 +1167,7 @@ process vep_snp_indel {
         } else {
             return "$outdir/$family_id/$outdir2"
         }
-    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (mode in ['singleton', 'NONE']) {
             return "$sample_id.$ref_name.$snp_indel_caller.$filename"
         } else {
@@ -1222,7 +1222,7 @@ process minimod {
 
     def software = "minimod"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs_*.b*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$software.$filename" }, pattern: 'modfreqs_*.b*'
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
@@ -1388,7 +1388,7 @@ process concat_vcf {
 
     def software = "longtr"
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(tr_vcf), path(tr_vcf_index)
@@ -1429,7 +1429,7 @@ process sniffles {
 
     def sv_caller = "sniffles"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.phased.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position)
@@ -1469,7 +1469,7 @@ process cutesv {
 
     def sv_caller = "cutesv"
 
-    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
+    publishDir "$outdir/$family_id/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$sv_caller.$filename" }, pattern: 'sv.vcf.gz*'
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
@@ -1516,7 +1516,7 @@ process jasmine_sniffles_duo {
 
     def sv_caller_merger = "sniffles.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
@@ -1575,7 +1575,7 @@ process jasmine_cutesv_duo {
 
     def sv_caller_merger = "cutesv.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam), val(proband_data_type)
@@ -1634,7 +1634,7 @@ process jasmine_sniffles_trio {
 
     def sv_caller_merger = "sniffles.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.phased.vcf*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_phased_vcf), path(proband_haplotagged_bam), val(proband_data_type)
@@ -1697,7 +1697,7 @@ process jasmine_cutesv_trio {
 
     def sv_caller_merger = "cutesv.jasmine"
 
-    publishDir "$outdir/$proband_family_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
+    publishDir "$outdir/$proband_family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$proband_family_id.$ref_name.$sv_caller_merger.$filename" }, pattern: 'sv.vcf*'
 
     input:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_sv_vcf), path(proband_haplotagged_bam), val(proband_data_type)
@@ -1767,7 +1767,7 @@ process vep_sniffles_sv {
         } else {
             return "$outdir/$family_id/$outdir2"
         }
-    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (mode in ['singleton', 'NONE']) {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
@@ -1817,7 +1817,7 @@ process vep_cutesv_sv {
         } else {
             return "$outdir/$family_id/$outdir2"
         }
-    }, mode: 'copy', overwrite: true, saveAs: { filename ->
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (mode in ['singleton', 'NONE']) {
             return "$sample_id.$ref_name.$sv_caller.$filename"
         } else {
@@ -2074,6 +2074,9 @@ workflow {
         if (sv_caller == 'NONE') {
             exit 1, "When the input data format is SV VCF, please pass the SV calling software which was used to generate the input data (not 'NONE'), sv_caller = '${sv_caller}' provided."
         }
+    }
+    if (!(params.publish_mode in ['copy', 'copyNoFollow', 'link', 'move', 'rellink', 'symlink'])) {
+        exit 1, "Choice of publishing mode should be 'copy', 'copyNoFollow', 'link', 'move', 'rellink' or 'symlink', publish_mode = '$params.publish_mode' provided."
     }
 
     // build variable

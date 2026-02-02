@@ -11,7 +11,7 @@ params.outdir2 = ""
 
 process scrape_settings {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface*'
 
     input:
         tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(somalier_files), val(data_type)
@@ -216,7 +216,7 @@ process whatshap_phase {
 
 process merge_vcf {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
         tuple val(pop_id), path(snp_indel_phased_vcfs), path(snp_indel_phased_vcf_indicies)
@@ -247,7 +247,7 @@ process merge_vcf {
 
 process somalier {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$filename" }, pattern: 'somalier*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$filename" }, pattern: 'somalier*'
 
     input:
         tuple val(pop_id), path(somalier_files)
@@ -325,7 +325,7 @@ process concat_vcf {
 
     def software = "longtr"
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$software.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
         tuple val(pop_id), path(tr_vcfs), path(tr_vcf_indicies)
@@ -360,7 +360,7 @@ process concat_vcf {
 
 process vep_snp_indel {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: 'copy', overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename"}, pattern: 'snp_indel.phased.annotated.vcf.gz*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename"}, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
         tuple val(pop_id), path(joint_snp_indel_phased_vcf), path(joint_snp_indel_phased_vcf_index)
@@ -517,6 +517,9 @@ workflow {
         if (tr_call_regions != 'NONE') {
             exit 1, "When not calling tandem repeats, set tandem repeat call regions file to 'NONE', tr_calling = '${tr_calling}' and tr_call_regions = '${tr_call_regions}' provided."
         }
+    }
+    if (!(params.publish_mode in ['copy', 'copyNoFollow', 'link', 'move', 'rellink', 'symlink'])) {
+        exit 1, "Choice of publishing mode should be 'copy', 'copyNoFollow', 'link', 'move', 'rellink' or 'symlink', publish_mode = '$params.publish_mode' provided."
     }
 
     // build variable
