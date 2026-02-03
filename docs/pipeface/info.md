@@ -8,7 +8,7 @@
 %%{init:{'theme':'dark','themeVariables':{'fontSize':'11'},'flowchart':{'nodeSpacing':20}}}%%
 flowchart TB
 
-input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
+input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
 merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
@@ -29,6 +29,7 @@ haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
 snp_indel_phasing-.->snp_indel_annotation
 sv_calling-.->sv_annotation
+
 ```
 
 ### Duo
@@ -37,7 +38,7 @@ sv_calling-.->sv_annotation
 %%{init:{'theme':'dark','themeVariables':{'fontSize':'11'},'flowchart':{'nodeSpacing':20}}}%%
 flowchart TB
 
-input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
+input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
 merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
@@ -75,7 +76,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 %%{init:{'theme':'dark','themeVariables':{'fontSize':'11'},'flowchart':{'nodeSpacing':20}}}%%
 flowchart TB
 
-input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
+input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
 merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
