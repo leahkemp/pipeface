@@ -5,8 +5,8 @@
 ### Singleton
 
 ```mermaid
-%%{init:{'theme':'dark','themeVariables':{'fontSize':'22px'},'flowchart':{'diagramPadding':200}}}%%
-flowchart LR
+%%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'},'flowchart':{'diagramPadding':200}}}%%
+flowchart TB
 
 input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
 merging("Merge runs (if needed)")
@@ -34,8 +34,8 @@ sv_calling-.->sv_annotation
 ### Duo
 
 ```mermaid
-%%{init:{'theme':'dark','themeVariables':{'fontSize':'22px'},'flowchart':{'diagramPadding':200}}}%%
-flowchart LR
+%%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'},'flowchart':{'diagramPadding':200}}}%%
+flowchart TB
 
 input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
 merging("Merge runs (if needed)")
@@ -72,8 +72,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 ### Trio
 
 ```mermaid
-%%{init:{'theme':'dark','themeVariables':{'fontSize':'22px'},'flowchart':{'diagramPadding':200}}}%%
-flowchart LR
+%%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'},'flowchart':{'diagramPadding':200}}}%%
+flowchart TB
 
 input_data("Input data: <br><br> ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
 merging("Merge runs (if needed)")

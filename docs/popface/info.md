@@ -3,8 +3,8 @@
 ## Workflow
 
 ```mermaid
-%%{init:{'theme':'dark','themeVariables':{'fontSize':'22px'},'flowchart':{'diagramPadding':200}}}%%
-flowchart LR
+%%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'},'flowchart':{'diagramPadding':200}}}%%
+flowchart TB
 
 input_gvcf("Input data: <br><br> DeepVariant gVCF's")
 input_bam("Input data: <br><br> Aligned BAM's")
