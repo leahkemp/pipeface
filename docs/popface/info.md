@@ -3,7 +3,7 @@
 ## Workflow
 
 ```mermaid
-%%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'},'flowchart':{'diagramPadding':200}}}%%
+%%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'}}}%%
 flowchart TB
 
 input_gvcf("Input data: <br><br> DeepVariant gVCF's")
