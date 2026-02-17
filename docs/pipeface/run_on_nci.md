@@ -39,7 +39,7 @@ Pipeface can be run within a [persistent session](https://opus.nci.org.au/spaces
 You may use the centrally installed nextflow environmental module available on NCI to access the nextflow dependency. Eg:
 
 ```bash
-module load nextflow/25.04.6
+module load nextflow/25.10.3
 ```
 
 ## 4. Run pipeface

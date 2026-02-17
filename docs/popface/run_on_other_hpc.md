@@ -256,7 +256,7 @@ Modify the rest of the `nextflow_popface_container.config` for your specific HPC
 
 You'll need access to nextflow and singularity. Tested on:
 
-- nextflow version 24.04.5
+- nextflow version 25.10.3
 - singularity version 3.11.3
 
 ## 4. Run popface
