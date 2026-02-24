@@ -14,7 +14,7 @@ process scrape_settings {
     publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$filename" }, pattern: '*popface*'
 
     input:
-        tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(somalier_files), val(data_type)
+        tuple val(pop_id), val(sample_ids), val(gvcfs), val(bams), val(sniffles), val(cutesv), val(somaliers), val(data_type)
         val popface_version
         val in_data
         val ref
@@ -42,12 +42,14 @@ process scrape_settings {
         echo "Data type: $data_type" >> \${F1}
         echo "Annotate: $annotate" >> \${F1}
         echo "Outdir: $outdir" >> \${F1}
-        printf "sample_id\tgvcf\tbam\tsomalier_file\n" > \${F2}
+        printf "sample_id\tgvcf\tbam\tsniffles\tcutesv\tsomalier\n" > \${F2}
         printf "%s\n" "$sample_ids" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > sample_ids.txt
         printf "%s\n" "$gvcfs" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > gvcfs.txt
         printf "%s\n" "$bams" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > bams.txt
-        printf "%s\n" "$somalier_files" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > somalier_files.txt
-        paste sample_ids.txt gvcfs.txt bams.txt somalier_files.txt >> \${F2}
+        printf "%s\n" "$sniffles" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > sniffles.txt
+        printf "%s\n" "$cutesv" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > cutesv.txt
+        printf "%s\n" "$somaliers" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > somaliers.txt
+        paste sample_ids.txt gvcfs.txt bams.txt sniffles.txt cutesv.txt somaliers.txt >> \${F2}
         """
 
     stub:
@@ -188,22 +190,33 @@ process split_vcf {
 
 process whatshap_phase {
 
+    publishDir "$outdir/$pop_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.read_list.txt'
+    publishDir "$outdir/$pop_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.stats.gtf'
+
     input:
         tuple val(pop_id), val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(bam), path(bam_index)
         val ref
         val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
 
     output:
-        tuple val(pop_id), path('*snp_indel.phased.vcf.gz'), path('*snp_indel.phased.vcf.gz.tbi')
+        tuple val(pop_id), path("${sample_id}.snp_indel.phased.vcf.gz"), path("${sample_id}.snp_indel.phased.vcf.gz.tbi")
+        tuple val(pop_id), path('snp_indel.phased.read_list.txt'), path('snp_indel.phased.stats.gtf')
 
     script:
         """
-        # get filename
-        FILENAME=\$(echo $snp_indel_vcf | sed 's/.vcf.gz//')
         # run whatshap phase
-        whatshap phase --reference $ref --output \${FILENAME}.phased.vcf.gz $snp_indel_vcf $bam
+        whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --sample $sample_id --ignore-read-groups $snp_indel_vcf $bam
         # index vcf
-        tabix \${FILENAME}.phased.vcf.gz
+        tabix snp_indel.phased.vcf.gz
+        # run whatshap stats
+        whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf --sample $sample_id
+        # tag vcf with sample_id for downstream vcf merge
+        ln -s snp_indel.phased.vcf.gz ${sample_id}.snp_indel.phased.vcf.gz
+        ln -s snp_indel.phased.vcf.gz.tbi ${sample_id}.snp_indel.phased.vcf.gz.tbi
         """
 
     stub:
@@ -245,12 +258,132 @@ process merge_vcf {
 
 }
 
+process split_sv_vcf {
+
+    input:
+        tuple val(pop_id), val(sample_id), val(sv_caller), path(sv_vcf), path(sv_vcf_index)
+        path ref_index
+
+    output:
+        tuple val(pop_id), val(sv_caller), path("${sample_id}.${sv_caller}.*.vcf")
+
+    script:
+        """
+        # extract BND variants (they can span multiple chromosomes)
+        bcftools view -i 'TYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.BND.vcf
+        # split rest of variants per chromosome
+        cut -f1 $ref_index | while read CHR; do
+            bcftools view -r \${CHR} -e 'TYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}.vcf
+        done
+        """
+
+    stub:
+        """
+        echo chr1 | while read CHR; do
+            touch ${sample_id}.${sv_caller}.\${CHR}.vcf
+        done
+        """
+
+}
+
+process jasmine {
+
+    input:
+        tuple val(pop_id), val(chr), val(sv_caller), path(split_sv_vcfs), path(bams), val(data_type)
+        val ref
+        val ref_index
+
+    output:
+        tuple val(pop_id), val(sv_caller), path("${chr}.sv.vcf.gz"), path("${chr}.sv.vcf.gz.tbi"), optional: true
+
+    script:
+        // conditionally define iris arguments
+        // as default, iris will pass minimap -x map-ont
+        // the --pacbio flag passed to iris will pass minimap -x map-pb
+        // these are the only two options iris makes available for minimaps -x argument, so I can't use lr:hq and map-hifi boo
+        def iris_args = ''
+        if (data_type == 'ont') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants'
+        }
+        else if (data_type == 'pacbio') {
+            iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants,--pacbio'
+        }
+        """
+        # create file lists
+        for VCF in ${split_sv_vcfs}; do realpath \${VCF} >> vcfs.txt; done
+        for BAM in ${bams}; do realpath \${BAM} >> bams.txt; done
+        # run jasmine
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=sv.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
+        # post process vcf if non-empty
+        if [ \$(bcftools view -H sv.tmp.vcf | wc -l) -gt 0 ]; then
+            # fix vcf header (remove prefix to sample names that jasmine adds)
+            grep '##' sv.tmp.vcf > sv.vcf
+            grep '#CHROM' sv.tmp.vcf | sed -E 's/\\b[0-9]+_//g' >> sv.vcf
+            grep -v '#' sv.tmp.vcf >> sv.vcf
+            bcftools sort sv.vcf -o sorted_sv.vcf
+            # compress and index vcf
+            bgzip -c sorted_sv.vcf > ${chr}.sv.vcf.gz
+            tabix ${chr}.sv.vcf.gz
+        fi
+        """
+
+    stub:
+        """
+        touch sv.vcf.gz
+        touch sv.vcf.gz.tbi
+        """
+
+}
+
+process concat_sv_vcf {
+
+    merger = "jasmine"
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$sv_caller.$merger.$filename"}, pattern: 'sv.*vcf.gz*'
+
+    input:
+        tuple val(pop_id), val(sv_caller), path(sv_vcfs), path(sv_vcf_indicies)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), val(sv_caller), path('sv.*vcf.gz')
+        tuple val(pop_id), path('sv.*vcf.gz'), path('sv.*vcf.gz.tbi')
+
+    script:
+        """
+        # get list of vcfs
+        VCFS=(*sv*.vcf.gz)
+        # concat vcfs, or symlink if only one vcf
+        if [[ \${#VCFS[@]} -eq 1 ]]; then
+            ln -s \${VCFS[0]} sv.vcf.gz
+        else
+            bcftools concat -a -Oz -o sv.vcf.gz \${VCFS[@]} --threads ${task.cpus}
+        fi
+        # index vcf
+        tabix sv.vcf.gz
+        # rename file for publishing purposes
+        if [ $sv_caller == "sniffles" ]; then
+            mv sv.vcf.gz sv.phased.vcf.gz
+            mv sv.vcf.gz.tbi sv.phased.vcf.gz.tbi
+        fi
+        """
+
+    stub:
+        """
+        touch sv.vcf.gz
+        touch sv.vcf.gz.tbi
+        """
+
+}
+
 process somalier {
 
     publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$filename" }, pattern: 'somalier*'
 
     input:
-        tuple val(pop_id), path(somalier_files)
+        tuple val(pop_id), path(somaliers)
         val outdir
         val outdir2
         val ref_name
@@ -261,7 +394,7 @@ process somalier {
     script:
         """
         # run somalier relate
-        somalier relate $somalier_files
+        somalier relate $somaliers
         """
 
 }
@@ -321,7 +454,7 @@ process longtr {
 
 }
 
-process concat_vcf {
+process concat_tr_vcf {
 
     def software = "longtr"
 
@@ -404,6 +537,47 @@ process vep_snp_indel {
 
 }
 
+process vep_sv {
+
+    merger = "jasmine"
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$sv_caller.$merger.$filename"}, pattern: 'sv.*annotated.vcf.gz*'
+
+    input:
+        tuple val(pop_id), val(sv_caller), path(sv_vcf)
+        val ref
+        val ref_index
+        val vep_db
+        val gnomad_db
+        val cadd_sv_db
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(pop_id), path('sv.*annotated.vcf.gz'), path('sv.*annotated.vcf.gz.tbi')
+
+    script:
+        """
+        # run vep
+        vep -i $sv_vcf -o sv.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
+        # index vcf
+        tabix sv.annotated.vcf.gz
+        # rename file for publishing purposes
+        if [ $sv_caller == "sniffles" ]; then
+            mv sv.annotated.vcf.gz sv.phased.annotated.vcf.gz
+            mv sv.annotated.vcf.gz.tbi sv.phased.annotated.vcf.gz.tbi
+        fi
+        """
+
+    stub:
+        """
+        touch sv.annotated.vcf.gz
+        touch sv.annotated.vcf.gz.tbi
+        """
+
+}
+
 workflow {
 
     // grab parameters
@@ -423,6 +597,7 @@ workflow {
     clinvar_db = "${params.clinvar_db}".trim()
     cadd_snv_db = "${params.cadd_snv_db}".trim()
     cadd_indel_db = "${params.cadd_indel_db}".trim()
+    cadd_sv_db = "${params.cadd_sv_db}".trim()
     spliceai_snv_db = "${params.spliceai_snv_db}".trim()
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
@@ -534,11 +709,13 @@ workflow {
             def sample_ids = row.sample_id
             def gvcfs = row.gvcf
             def bams = row.bam
-            def somalier_files = row.somalier_file
+            def sniffless = row.sniffles
+            def cutesvs = row.cutesv
+            def somaliers = row.somalier
             def data_type = row.data_type
-            return tuple(pop_id, sample_ids, gvcfs, bams, somalier_files, data_type)
+            return tuple(pop_id, sample_ids, gvcfs, bams, sniffless, cutesvs, somaliers, data_type)
         }
-        .groupTuple(by: [0,5])
+        .groupTuple(by: [0,7])
         .set { in_data_tuple }
 
     // build channels from in_data.csv file for describing each metadata associated with populations
@@ -564,12 +741,23 @@ workflow {
         .set { bams_tuple }
 
     Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .flatMap { row ->
+            def tuples = []
+            if (row.sniffles != 'NONE') tuples << tuple(row.pop_id, row.sample_id, 'sniffles', row.sniffles, "${row.sniffles}.tbi")
+            if (row.cutesv != 'NONE') tuples << tuple(row.pop_id, row.sample_id, 'cutesv', row.cutesv, "${row.cutesv}.tbi")
+            return tuples
+        }
+        .set { svs_tuple }
+
+    Channel
     .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .filter { row -> row.somalier_file != 'NONE' }
-        .map { row -> tuple(row.pop_id, row.somalier_file) }
+        .filter { row -> row.somalier != 'NONE' }
+        .map { row -> tuple(row.pop_id, row.somalier) }
         .groupTuple(by: 0)
-        .set { somalier_files_tuple }
+        .set { somaliers_tuple }
 
     Channel
         .fromPath(in_data)
@@ -578,6 +766,14 @@ workflow {
         .map { row -> tuple(row.pop_id, row.sample_id, file(row.bam), file("${row.bam}.bai"), row.data_type) }
         .groupTuple(by: [0,4])
         .set { bams_data_type_tuple }
+
+    Channel
+        .fromPath(in_data)
+        .splitCsv(header: true, sep: ',', strip: true)
+        .filter { row -> row.bam != 'NONE' }
+        .map { row -> tuple(row.pop_id, file(row.bam), row.data_type) }
+        .groupTuple(by: [0,2])
+        .set { bams_data_type_tuple2 }
 
     // check user provided parameters in in_data.csv file
     Channel
@@ -588,7 +784,9 @@ workflow {
             def sample_id = row.sample_id
             def gvcf = row.gvcf
             def bam = row.bam
-            def somalier_file = row.somalier_file
+            def sniffles = row.sniffles
+            def cutesv = row.cutesv
+            def somalier = row.somalier
             def data_type = row.data_type
 
             if (pop_id.isEmpty()) {
@@ -613,15 +811,45 @@ workflow {
                 exit 1, "When a GVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
             }
             if (bam != 'NONE') {
-                if (!file("${bam}.bai").exists()) {
-                    exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai'."
+                def bai_exists = file("${bam}.bai").exists()
+                def crai_exists = file("${bam}.crai").exists()
+                if (!bai_exists && !crai_exists) {
+                    exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai' or '${bam}.crai'."
                 }
             }
-            if (somalier_file.isEmpty()) {
-                exit 1, "There is an empty entry in the 'somalier_file' column of '${in_data}'. Set to 'NONE' if not required."
+            if (sniffles.isEmpty()) {
+                exit 1, "There is an empty entry in the 'sniffles' column of '${in_data}'. Set to 'NONE' if not required."
             }
-            if (!file(somalier_file).exists()) {
-                exit 1, "There is an entry in the 'somalier_file' column of '${in_data}' which doesn't exist. Check file '${somalier_file}'."
+            if (!file(sniffles).exists()) {
+                exit 1, "There is an entry in the 'sniffles' column of '${in_data}' which doesn't exist. Check file '${sniffles}'."
+            }
+            if (sniffles != 'NONE' && bam == 'NONE') {
+                exit 1, "When a Sniffles SV VCF is provided in the 'sniffles' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. sniffles = '${sniffles}' and bam = '${bam}' provided."
+            }
+            if (sniffles != 'NONE') {
+                if (!file("${sniffles}.tbi").exists()) {
+                    exit 1, "There is an entry in the 'sniffles' column of '${in_data}' which doesn't look to have an associated index. Expecting '${sniffles}.tbi'."
+                }
+            }
+            if (cutesv.isEmpty()) {
+                exit 1, "There is an empty entry in the 'cutesv' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            if (!file(cutesv).exists()) {
+                exit 1, "There is an entry in the 'cutesv' column of '${in_data}' which doesn't exist. Check file '${cutesv}'."
+            }
+            if (cutesv != 'NONE' && bam == 'NONE') {
+                exit 1, "When a cuteSV VCF is provided in the 'cutesv' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. cutesv = '${cutesv}' and bam = '${bam}' provided."
+            }
+            if (cutesv != 'NONE') {
+                if (!file("${cutesv}.tbi").exists()) {
+                    exit 1, "There is an entry in the 'cutesv' column of '${in_data}' which doesn't look to have an associated index. Expecting '${cutesv}.tbi'."
+                }
+            }
+            if (somalier.isEmpty()) {
+                exit 1, "There is an empty entry in the 'somalier' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            if (!file(somalier).exists()) {
+                exit 1, "There is an entry in the 'somalier' column of '${in_data}' which doesn't exist. Check file '${somalier}'."
             }
             if (data_type.isEmpty()) {
                 exit 1, "There is an empty entry in the 'data_type' column of '${in_data}'."
@@ -635,15 +863,19 @@ workflow {
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
-        .map { row -> tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.somalier_file, row.data_type) }
+        .map { row -> tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type) }
         .groupTuple(by: 0)
-        .map { pop_id, sample_ids, gvcfs, bams, somalier_files, data_types ->
+        .map { pop_id, sample_ids, gvcfs, bams, sniffless, cutesvs, somaliers, data_types ->
             def gvcfs_any_none = gvcfs.any { it == 'NONE' }
             def gvcfs_all_none = gvcfs.every { it == 'NONE' }
             def bams_any_none = bams.any { it == 'NONE' }
             def bams_all_none = bams.every { it == 'NONE' }
-            def somalier_files_any_none = somalier_files.any { it == 'NONE' }
-            def somalier_files_all_none = somalier_files.every { it == 'NONE' }
+            def sniffless_any_none = sniffless.any { it == 'NONE' }
+            def sniffless_all_none = sniffless.every { it == 'NONE' }
+            def cutesvs_any_none = cutesvs.any { it == 'NONE' }
+            def cutesvs_all_none = cutesvs.every { it == 'NONE' }
+            def somaliers_any_none = somaliers.any { it == 'NONE' }
+            def somaliers_all_none = somaliers.every { it == 'NONE' }
             if (sample_ids.unique().size() < 2) {
                 exit 1, "Entries in the 'sample_id' column of '$in_data' should contain 2 or more unique values for every 'pop_id', '$sample_ids' provided for population '$pop_id'."
             }
@@ -653,8 +885,14 @@ workflow {
             if (bams_any_none && !bams_all_none) {
                 exit 1, "Entries in the 'bam' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$bams' provided for population '$pop_id'."
             }
-            if (somalier_files_any_none && !somalier_files_all_none) {
-                exit 1, "Entries in the 'somalier_file' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$somalier_files' provided for population '$pop_id'."
+            if (sniffless_any_none && !sniffless_all_none) {
+                exit 1, "Entries in the 'sniffles' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$sniffless' provided for population '$pop_id'."
+            }
+            if (cutesvs_any_none && !cutesvs_all_none) {
+                exit 1, "Entries in the 'cutesv' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$cutesvs' provided for population '$pop_id'."
+            }
+            if (somaliers_any_none && !somaliers_all_none) {
+                exit 1, "Entries in the 'somalier' column of '$in_data' must be either all 'NONE' or all real files for a given 'pop_id', '$somaliers' provided for population '$pop_id'."
             }
             if (data_types.unique().size() != 1) {
                 exit 1, "Entries in the 'data_type' column of '$in_data' must be identical for a given 'pop_id'. '$data_types' provided for population '$pop_id'."
@@ -711,10 +949,24 @@ workflow {
                 tuple(pop_id, sample_id, joint_vcf, joint_vcf_index)
             }
         snp_indel_vcf = split_vcf(joint_snp_indel_vcf_id)
-        snp_indel_phased_vcfs = whatshap_phase(snp_indel_vcf.join(bams_tuple, by: [0,1]), ref, ref_index) | groupTuple(by: 0)
-        joint_snp_indel_phased_vcf = merge_vcf(snp_indel_phased_vcfs, outdir, outdir2, ref_name, snp_indel_caller)
+        (snp_indel_phased_vcfs, stats) = whatshap_phase(snp_indel_vcf.join(bams_tuple, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        vcfs = snp_indel_phased_vcfs.groupTuple(by: 0)
+        joint_snp_indel_phased_vcf = merge_vcf(vcfs, outdir, outdir2, ref_name, snp_indel_caller)
+        // sv vcf merging
+        split_sv_vcfs = split_sv_vcf(svs_tuple, ref_index)
+        jasmine_input = split_sv_vcfs
+            .flatMap { pop_id, sv_caller, vcfs ->
+                vcfs.collectMany { vcf ->
+                    def chr = vcf.baseName.tokenize('.')[-1]
+                    [ tuple(pop_id, chr, sv_caller, vcf) ]
+                }
+            }
+            .groupTuple(by: [0,1,2])
+            .combine(bams_data_type_tuple2, by: 0)
+        merged_sv_vcfs = jasmine(jasmine_input, ref, ref_index)
+        (joint_sv_vcf, joint_sv_vcf_indexed) = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
         // joint somalier
-        somalier(somalier_files_tuple, outdir, outdir2, ref_name)
+        somalier(somaliers_tuple, outdir, outdir2, ref_name)
         // joint tr calling
         if (tr_calling == 'yes') {
             split_bed = longtr_pre_processing(tr_call_regions).flatten()
@@ -724,12 +976,12 @@ workflow {
                     tuple(pop_id, sample_ids, bams, bam_indices, data_type, split_bed)
                 }
             tr_vcfs = longtr(longtr_input, ref, ref_index)
-            concat_vcf(tr_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name)
+            concat_tr_vcf(tr_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name)
         }
-        // joint snp/indel annotation
+        // joint annotation
         if (annotate == 'yes') {
             vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            vep_sv(joint_sv_vcf, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
         }
 
 }
-

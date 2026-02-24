@@ -1450,8 +1450,7 @@ process sniffles {
         def tandem_repeat_optional = file(tandem_repeat).name != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
         """
         # run sniffles
-        sniffles \
-        --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
+        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
         # tag vcf and bam with family_position for downstream jasmine
         ln -s sv.phased.vcf.gz ${family_position}.sv.phased.vcf.gz
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
