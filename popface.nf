@@ -270,10 +270,10 @@ process split_sv_vcf {
     script:
         """
         # extract BND variants (they can span multiple chromosomes)
-        bcftools view -i 'TYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.BND.vcf
+        bcftools view -i 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.BND.vcf
         # split rest of variants per chromosome
         cut -f1 $ref_index | while read CHR; do
-            bcftools view -r \${CHR} -e 'TYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}.vcf
+            bcftools view -r \${CHR} -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}.vcf
         done
         """
 
@@ -602,6 +602,9 @@ workflow {
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
 
+    // build variable
+    ref_name = file(ref).getSimpleName()
+
     // check user provided parameters
     if (!in_data) {
         exit 1, "No in data csv file (in_data) provided."
@@ -697,10 +700,7 @@ workflow {
         exit 1, "Choice of publishing mode should be 'copy', 'copyNoFollow', 'link', 'move', 'rellink' or 'symlink', publish_mode = '$params.publish_mode' provided."
     }
 
-    // build variable
-    ref_name = file(ref).getSimpleName()
-
-    // build input tuple
+    // build channels
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
@@ -718,7 +718,6 @@ workflow {
         .groupTuple(by: [0,7])
         .set { in_data_tuple }
 
-    // build channels from in_data.csv file for describing each metadata associated with populations
     Channel
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
@@ -737,7 +736,12 @@ workflow {
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.gvcf != 'NONE' }
-        .map { row -> tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai") }
+        .map { row ->
+                // handle .bai or .crai index
+                def index_ext = row.bam.endsWith('.cram') ? '.crai' : '.bai'
+                def index_file = "${row.bam}${index_ext}"
+                tuple(row.pop_id, row.sample_id, row.bam, index_file)
+        }
         .set { bams_tuple }
 
     Channel
@@ -763,7 +767,12 @@ workflow {
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.bam != 'NONE' }
-        .map { row -> tuple(row.pop_id, row.sample_id, file(row.bam), file("${row.bam}.bai"), row.data_type) }
+        .map { row ->
+                // handle .bai or .crai index
+                def index_ext = row.bam.endsWith('.cram') ? '.crai' : '.bai'
+                def index_file = "${row.bam}${index_ext}"
+                tuple(row.pop_id, row.sample_id, row.bam, index_file, row.data_type)
+        }
         .groupTuple(by: [0,4])
         .set { bams_data_type_tuple }
 
