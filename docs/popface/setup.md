@@ -26,7 +26,7 @@ curl -O https://www.bio8.cs.hku.hk/clair3_trio/config/clair3.yml
 
 ## 3. Modify in_data_popface.csv
 
-Specify the population ID, sample ID, file path to the gVCF file, file path to the aligned BAM (or CRAM) file, file path to the somalier extracted file and the data type for each data to be processed. Eg:
+Specify the population ID, sample ID, file path to the gVCF file, file path to the aligned BAM file, file path to the somalier extracted file and the data type for each data to be processed. Eg:
 
 ```csv
 pop_id,sample_id,gvcf,bam,sniffles,cutesv,somalier,data_type
@@ -59,7 +59,7 @@ pop_02,sample_14,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to
 Requirements:
 
 - all entries in the `sample_id` column must be unique
-- all entries in the `sample_id` column must match the sample ID's recorded in the headers of the associated gVCF's and aligned BAM/CRAM files
+- all entries in the `sample_id` column must match the sample ID's recorded in the headers of the associated gVCF's and aligned BAM files
 - all entries in the `gvcf`, `bam` and `somalier_file` columns for a given `pop_id` must be either all real files or all set to 'NONE'
 - all entries in the `data_type` column for a given `pop_id` must be either 'ont' or 'pacbio' (as appropriate)
 
