@@ -190,8 +190,8 @@ process split_vcf {
 
 process whatshap_phase {
 
-    publishDir "$outdir/$pop_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.read_list.txt'
-    publishDir "$outdir/$pop_id/$outdir2/$sample_id", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.stats.gtf'
+    publishDir "$outdir/$pop_id/$outdir2/phasing", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.read_list.txt'
+    publishDir "$outdir/$pop_id/$outdir2/phasing", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.stats.gtf'
 
     input:
         tuple val(pop_id), val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(bam), path(bam_index)
@@ -258,11 +258,36 @@ process merge_vcf {
 
 }
 
+process split_sv_vcf_pre_processing {
+
+    input:
+        path ref_index
+
+    output:
+        path('small_contigs.txt')
+        path('large_contigs.txt')
+
+    script:
+        """
+        awk '{ if (\$2 < 1000000) print \$1 > "small_contigs.txt"; else print \$1 > "large_contigs.txt" }' $ref_index
+        """
+
+    stub:
+        """
+        touch small_contigs.txt
+        touch large_contigs.txt
+        """
+
+}
+
 process split_sv_vcf {
 
     input:
         tuple val(pop_id), val(sample_id), val(sv_caller), path(sv_vcf), path(sv_vcf_index)
         path ref_index
+        path small_contigs
+        path large_contigs
+        path centromeres_bed
 
     output:
         tuple val(pop_id), val(sv_caller), path("${sample_id}.${sv_caller}.*.vcf")
@@ -271,9 +296,17 @@ process split_sv_vcf {
         """
         # extract BND variants (they can span multiple chromosomes)
         bcftools view -i 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.BND.vcf
-        # split rest of variants per chromosome
-        cut -f1 $ref_index | while read CHR; do
-            bcftools view -r \${CHR} -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}.vcf
+        # pool small contigs
+        bcftools view -r \$(cat $small_contigs | paste -sd, -) -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.SMALL_CONTIGS.vcf
+        # split large contigs by chromosome and centromere if available
+        cat $large_contigs | while read CHR; do
+            CENT_POS=\$(awk -v chr="\${CHR}" '\$1 == chr {print \$2}' $centromeres_bed)
+            if [ -n "\${CENT_POS}" ]; then
+                bcftools view -r \${CHR}:1-\${CENT_POS} -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}_p.vcf
+                bcftools view -r \${CHR}:\$((CENT_POS + 1))- -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}_q.vcf
+            else
+                bcftools view -r \${CHR} -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}.vcf
+            fi
         done
         """
 
@@ -289,12 +322,12 @@ process split_sv_vcf {
 process jasmine {
 
     input:
-        tuple val(pop_id), val(chr), val(sv_caller), path(split_sv_vcfs), path(bams), val(data_type)
+        tuple val(pop_id), val(partition), val(sv_caller), path(split_sv_vcfs), path(bams), path(bams_indicies), val(data_type)
         val ref
         val ref_index
 
     output:
-        tuple val(pop_id), val(sv_caller), path("${chr}.sv.vcf.gz"), path("${chr}.sv.vcf.gz.tbi"), optional: true
+        tuple val(pop_id), val(sv_caller), path("${partition}.sv.vcf.gz"), path("${partition}.sv.vcf.gz.tbi"), optional: true
 
     script:
         // conditionally define iris arguments
@@ -322,8 +355,8 @@ process jasmine {
             grep -v '#' sv.tmp.vcf >> sv.vcf
             bcftools sort sv.vcf -o sorted_sv.vcf
             # compress and index vcf
-            bgzip -c sorted_sv.vcf > ${chr}.sv.vcf.gz
-            tabix ${chr}.sv.vcf.gz
+            bgzip -c sorted_sv.vcf > ${partition}.sv.vcf.gz
+            tabix ${partition}.sv.vcf.gz
         fi
         """
 
@@ -589,6 +622,7 @@ workflow {
     snp_indel_caller = "${params.snp_indel_caller}".trim()
     clair3_config = "${params.clair3_config}".trim()
     annotate = "${params.annotate}".trim()
+    centromeres_bed = "${params.centromeres_bed}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
     vep_db = "${params.vep_db}".trim()
@@ -737,10 +771,7 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.gvcf != 'NONE' }
         .map { row ->
-                // handle .bai or .crai index
-                def index_ext = row.bam.endsWith('.cram') ? '.crai' : '.bai'
-                def index_file = "${row.bam}${index_ext}"
-                tuple(row.pop_id, row.sample_id, row.bam, index_file)
+                tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai")
         }
         .set { bams_tuple }
 
@@ -768,10 +799,7 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.bam != 'NONE' }
         .map { row ->
-                // handle .bai or .crai index
-                def index_ext = row.bam.endsWith('.cram') ? '.crai' : '.bai'
-                def index_file = "${row.bam}${index_ext}"
-                tuple(row.pop_id, row.sample_id, row.bam, index_file, row.data_type)
+                tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai", row.data_type)
         }
         .groupTuple(by: [0,4])
         .set { bams_data_type_tuple }
@@ -780,8 +808,10 @@ workflow {
         .fromPath(in_data)
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.bam != 'NONE' }
-        .map { row -> tuple(row.pop_id, file(row.bam), row.data_type) }
-        .groupTuple(by: [0,2])
+        .map { row ->
+                tuple(row.pop_id, row.bam, "${row.bam}.bai", row.data_type)
+        }
+        .groupTuple(by: [0,3])
         .set { bams_data_type_tuple2 }
 
     // check user provided parameters in in_data.csv file
@@ -820,10 +850,8 @@ workflow {
                 exit 1, "When a GVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
             }
             if (bam != 'NONE') {
-                def bai_exists = file("${bam}.bai").exists()
-                def crai_exists = file("${bam}.crai").exists()
-                if (!bai_exists && !crai_exists) {
-                    exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai' or '${bam}.crai'."
+                if (!file("${bam}.bai").exists()) {
+                    exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai'."
                 }
             }
             if (sniffles.isEmpty()) {
@@ -962,12 +990,13 @@ workflow {
         vcfs = snp_indel_phased_vcfs.groupTuple(by: 0)
         joint_snp_indel_phased_vcf = merge_vcf(vcfs, outdir, outdir2, ref_name, snp_indel_caller)
         // sv vcf merging
-        split_sv_vcfs = split_sv_vcf(svs_tuple, ref_index)
+        (small_contigs, large_contigs) = split_sv_vcf_pre_processing(ref_index)
+        split_sv_vcfs = split_sv_vcf(svs_tuple, ref_index, small_contigs, large_contigs, centromeres_bed)
         jasmine_input = split_sv_vcfs
             .flatMap { pop_id, sv_caller, vcfs ->
                 vcfs.collectMany { vcf ->
-                    def chr = vcf.baseName.tokenize('.')[-1]
-                    [ tuple(pop_id, chr, sv_caller, vcf) ]
+                    def partition = vcf.baseName.tokenize('.')[-1]
+                    [ tuple(pop_id, partition, sv_caller, vcf) ]
                 }
             }
             .groupTuple(by: [0,1,2])
