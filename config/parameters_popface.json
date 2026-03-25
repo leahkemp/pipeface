@@ -9,6 +9,7 @@
     "annotate": "",
     "tr_calling": "",
     "tr_call_regions": "",
+    "centromeres_bed": "",
     "outdir": ""
 
 }
