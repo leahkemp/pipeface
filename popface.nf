@@ -3,9 +3,6 @@ nextflow.enable.dsl=2
 // tag popface version
 def popface_version = "dev"
 
-// create dummy NONE file for optional pipeface inputs
-new File("NONE").text = "Dummy file for optional pipeface inputs. Don't delete during a pipeline run unless you want a bad time.\n"
-
 // set defaults for optional undocumented params
 params.outdir2 = ""
 
@@ -254,7 +251,6 @@ process merge_vcf {
         touch snp_indel.phased.vcf.gz
         touch snp_indel.phased.vcf.gz.tbi
         """
-
 
 }
 
@@ -673,7 +669,7 @@ workflow {
     if (!clair3_config) {
         exit 1, "No clair3 config file (clair3_config) provided."
     }
-    if (!file(clair3_config).exists()) {
+    if (clair3_config != 'NONE' && !file(clair3_config).exists()) {
         exit 1, "Clair3 config file does not exist, 'clair3_config = ${clair3_config}' provided."
     }
     if (snp_indel_caller == 'clair3' && clair3_config == 'NONE') {
@@ -717,7 +713,7 @@ workflow {
             exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
         }
     }
-    if (!file(tr_call_regions).exists()) {
+    if (tr_call_regions != 'NONE' && !file(tr_call_regions).exists()) {
         exit 1, "tandem repeat call regions file does not exist, tr_call_regions = '${tr_call_regions}' provided. Set to 'NONE' if not required."
     }
     if (tr_calling == 'yes') {
@@ -771,7 +767,7 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.gvcf != 'NONE' }
         .map { row ->
-                tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai")
+            tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai")
         }
         .set { bams_tuple }
 
@@ -799,9 +795,9 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.bam != 'NONE' }
         .map { row ->
-                tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai", row.data_type)
+            tuple(row.pop_id, row.sample_id, row.bam, "${row.bam}.bai")
         }
-        .groupTuple(by: [0,4])
+        .groupTuple(by: 0)
         .set { bams_data_type_tuple }
 
     Channel
@@ -809,7 +805,7 @@ workflow {
         .splitCsv(header: true, sep: ',', strip: true)
         .filter { row -> row.bam != 'NONE' }
         .map { row ->
-                tuple(row.pop_id, row.bam, "${row.bam}.bai", row.data_type)
+            tuple(row.pop_id, row.bam, "${row.bam}.bai", row.data_type)
         }
         .groupTuple(by: [0,3])
         .set { bams_data_type_tuple2 }
@@ -837,27 +833,25 @@ workflow {
             if (gvcf.isEmpty()) {
                 exit 1, "There is an empty entry in the 'gvcf' column of '${in_data}'. Set to 'NONE' if not required."
             }
-            if (!file(gvcf).exists()) {
+            if (gvcf != 'NONE' && !file(gvcf).exists()) {
                 exit 1, "There is an entry in the 'gvcf' column of '${in_data}' which doesn't exist. Check file '${gvcf}'."
             }
             if (bam.isEmpty()) {
                 exit 1, "There is an empty entry in the 'bam' column of '${in_data}'. Set to 'NONE' if not required."
             }
-            if (!file(bam).exists()) {
+            if (bam != 'NONE' && !file(bam).exists()) {
                 exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't exist. Check file '${bam}'."
             }
             if (gvcf != 'NONE' && bam == 'NONE') {
                 exit 1, "When a GVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
             }
-            if (bam != 'NONE') {
-                if (!file("${bam}.bai").exists()) {
-                    exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai'."
-                }
+            if (bam != 'NONE' && !file("${bam}.bai").exists()) {
+                exit 1, "There is an entry in the 'bam' column of '${in_data}' which doesn't look to have an associated index. Expecting '${bam}.bai'."
             }
             if (sniffles.isEmpty()) {
                 exit 1, "There is an empty entry in the 'sniffles' column of '${in_data}'. Set to 'NONE' if not required."
             }
-            if (!file(sniffles).exists()) {
+            if (sniffles != 'NONE' && !file(sniffles).exists()) {
                 exit 1, "There is an entry in the 'sniffles' column of '${in_data}' which doesn't exist. Check file '${sniffles}'."
             }
             if (sniffles != 'NONE' && bam == 'NONE') {
@@ -871,7 +865,7 @@ workflow {
             if (cutesv.isEmpty()) {
                 exit 1, "There is an empty entry in the 'cutesv' column of '${in_data}'. Set to 'NONE' if not required."
             }
-            if (!file(cutesv).exists()) {
+            if (cutesv != 'NONE' && !file(cutesv).exists()) {
                 exit 1, "There is an entry in the 'cutesv' column of '${in_data}' which doesn't exist. Check file '${cutesv}'."
             }
             if (cutesv != 'NONE' && bam == 'NONE') {
@@ -885,7 +879,7 @@ workflow {
             if (somalier.isEmpty()) {
                 exit 1, "There is an empty entry in the 'somalier' column of '${in_data}'. Set to 'NONE' if not required."
             }
-            if (!file(somalier).exists()) {
+            if (somalier != 'NONE' && !file(somalier).exists()) {
                 exit 1, "There is an entry in the 'somalier' column of '${in_data}' which doesn't exist. Check file '${somalier}'."
             }
             if (data_type.isEmpty()) {
@@ -1021,5 +1015,4 @@ workflow {
             vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
             vep_sv(joint_sv_vcf, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
         }
-
 }
