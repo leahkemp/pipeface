@@ -135,10 +135,10 @@ a5288ced0c2fe893fcfae4d2022b9cd9  gnomad.joint.v4.1.sites.chrX.vcf.bgz
 Merge into a single file
 
 ```bash
-zcat gnomad.joint.v4.1.sites.chr1.vcf.bgz | head -n1000 | grep '#' > gnomad.joint.v4.1.sites.chrall.vcf
-for i in {1..22} X Y; do zgrep -v '#' gnomad.joint.v4.1.sites.chr${i}.vcf.gz >> gnomad.joint.v4.1.sites.chrall.vcf; done
-bgzip gnomad.joint.v4.1.sites.chrall.vcf
-tabix gnomad.joint.v4.1.sites.chrall.vcf.gz
+for chr in {1..22} X Y; do
+    echo gnomad.joint.v4.1.sites.chr${chr}.vcf.bgz
+done > vcf_list.txt
+bcftools concat --naive --file-list vcf_list.txt --output-type z --threads 24 --output gnomad.joint.v4.1.sites.chrall.vcf.gz
 ```
 
 ### ClinVar
@@ -203,7 +203,7 @@ Expected md5sums
 
 Get a local copy of the spliceAI database
 
-Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP spliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail).
+Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP spliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail.
 
 ### AlphaMissense
 
@@ -248,7 +248,7 @@ params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.vcf.gz'
 params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 ```
 
-Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job sheduler.
+Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job scheduler.
 
 > **_Note:_** the 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPU's
 
@@ -261,10 +261,22 @@ You'll need access to nextflow and singularity. Tested on:
 
 ## 4. Run pipeface
 
-For example:
+Run the pipeline. Eg:
 
 ```bash
 nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface_container.config
+```
+
+Or run a dry run to validate parameters without executing processes. Eg:
+
+```bash
+nextflow run pipeface.nf -stub -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface_container.config
+```
+
+If you need to resume a pipeline run, use the `-resume` flag. Eg:
+
+```bash
+nextflow run pipeface.nf -resume -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface_container.config
 ```
 
 ## Information

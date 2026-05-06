@@ -203,7 +203,7 @@ Expected md5sums
 
 Get a local copy of the spliceAI database
 
-Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP spliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail).
+Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP spliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail.
 
 ### AlphaMissense
 
@@ -248,7 +248,7 @@ params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.vcf.gz'
 params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 ```
 
-Modify the rest of the `nextflow_popface_container.config` for your specific HPC/job sheduler.
+Modify the rest of the `nextflow_popface_container.config` for your specific HPC/job scheduler.
 
 > **_Note:_** the 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPU's
 
@@ -261,10 +261,22 @@ You'll need access to nextflow and singularity. Tested on:
 
 ## 4. Run popface
 
-For example:
+Run the pipeline. Eg:
 
 ```bash
 nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+```
+
+Or run a dry run to validate parameters without executing processes. Eg:
+
+```bash
+nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+```
+
+If you need to resume a pipeline run, use the `-resume` flag. Eg:
+
+```bash
+nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
 ```
 
 ## Information

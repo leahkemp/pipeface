@@ -7,9 +7,11 @@
       - [hg38](#hg38)
       - [hs1](#hs1)
     - [Tandem repeat call regions file (if running tandem repeat calling)](#tandem-repeat-call-regions-file-if-running-tandem-repeat-calling)
-    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
       - [hg38](#hg38-1)
       - [hs1](#hs1-1)
+    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
+      - [hg38](#hg38-2)
+      - [hs1](#hs1-2)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
@@ -29,7 +31,7 @@ cd pipeface
 
 ### Reference genome
 
-> **_Note:_** Variant annotation is only available for hg38
+> **_Note:_** Variant annotation is only available for hg38.
 
 #### hg38
 
@@ -87,13 +89,14 @@ samtools faidx hs1.fa
 
 ### Tandem repeat call regions file (if running tandem repeat calling)
 
-> **_Note:_** You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catelog below.
+> **_Note:_** You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catalogs below.
+
+#### hg38
 
 Get a copy of the Broad Institute tandem repeat catalog
 
 ```bash
 wget https://github.com/broadinstitute/tandem-repeat-catalog/releases/download/v1.0.2/variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
-gunzip variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
 ```
 
 Check download was successful by checking md5sum
@@ -108,15 +111,51 @@ Expected md5sum
 d50345a1967c507bcdd3cf35c4db27d0  variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
 ```
 
+gunzip
+
+```bash
+gunzip variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
+```
+
 Prepare file for LongTR
 
 ```bash
-cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
+cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
+```
+
+#### hs1
+
+Get a copy of the Broad Institute tandem repeat catalog
+
+```bash
+curl https://zenodo.org/records/14597629/files/chm13.v2.bed.gz?download=1 -o chm13.v2.bed.gz
+```
+
+Check download was successful by checking md5sum
+
+```bash
+md5sum chm13.v2.bed.gz
+```
+
+Expected md5sum
+
+```txt
+51d118a5c70b63692f560077cbc0fa10  chm13.v2.bed.gz
+```
+
+gunzip
+
+```bash
+gunzip chm13.v2.bed.gz
+```
+
+Prepare file for LongTR
+
+```bash
+cut -f1-4 chm13.v2.bed | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > chm13.v2.longtr.bed
 ```
 
 ### Somalier sites file (if running relatedness check)
-
-> **_Note:_** checking relatedness is only available for duo/trio mode
 
 #### hg38
 
@@ -164,54 +203,64 @@ tar -xvf hifi_revio.tar.gz
 
 ### Singleton mode
 
-Specify the sample ID, family ID (optional), file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be processed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each data to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,,,/path/to/PGXXXX240090.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_01,,,/path/to/PGXXXX240091.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_02,,,/path/to/PGXXXX240092.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_03,,,/path/to/PGXXOX240065.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_04,,,/path/to/m84088_240403_023825_s1.hifi_reads.bc2034.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
-sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
+sample_01,NONE,NONE,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_01,NONE,NONE,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_02,NONE,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_03,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
+sample_04,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
+sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
 ```
 
-> **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
+> **_Note:_** In singleton mode, `family_id` is only used to define the output directory structure.
 
-### Duo/Trio mode
-
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be processed. Eg:
-
-```csv
-sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,family01,proband,/path/to/PGXXOX240065.bam,ont,NONE,NONE
-sample_01,family01,proband,/path/to/PGXXOX240066.bam,ont,NONE,NONE
-sample_02,family01,father,/path/to/PGXXOX240067.bam,ont,NONE,NONE
-sample_03,family01,mother,/path/to/PGXXOX240068.bam,ont,NONE,NONE
-sample_04,family02,proband,/path/to/PGXXOX240069.bam,ont,NONE,NONE
-sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
-sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
-```
-
-> **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
-
-> **_Note:_** In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
-
-> **_Note:_** In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
-
-> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample
+> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
-- leave `family_id` and `family_position` empty if not required
-- please provide all entries for a given `sample_id` the same `family_id` (this is currently not error checked)
-- set `regions_of_interest` to 'NONE' if not required
-- similarly, set `clair3_model` to 'NONE' if not required (ie. if you have not selected clair3 as the SNP/indel caller)
-- provide full file paths
-- multiple entries for a given `sample_id` are required to have the same file extension in the `file` column (eg. '.bam', '.fastq.gz' or '.fastq')
-- for entries in the `file` column, the file extension must be either '.bam', '.fastq.gz' or '.fastq' (as appropriate)
-- for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
+- if `in_data_format` is `ubam_fastq`, entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
+- if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
+- for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
+- set `family_id` to 'NONE' if not required
+- `family_position` can be any value (set to 'NONE' if not required)
+- set `regions_of_interest` to 'NONE' if not required
+- set `clair3_model` to the path of an appropriate Clair3 model when clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
+
+### Duo/Trio mode
+
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each data to be processed. Eg:
+
+```csv
+sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
+sample_01,family01,proband,/path/to/sample_01_1.bam,ont,NONE,NONE
+sample_01,family01,proband,/path/to/sample_01_2.bam,ont,NONE,NONE
+sample_02,family01,father,/path/to/sample_02.bam,ont,NONE,NONE
+sample_03,family01,mother,/path/to/sample_03.bam,ont,NONE,NONE
+sample_04,family02,proband,/path/to/sample_04.bam,ont,NONE,NONE
+sample_05,family02,father,/path/to/sample_05.bam,ont,NONE,NONE
+sample_06,family02,mother,/path/to/sample_06.bam,ont,NONE,NONE
+```
+
+> **_Note:_** In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
+
+> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+
+Requirements:
+
+- `family_id` must not be 'NONE'
+- entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate) and must be the same for a given `family_id`
+- if `in_data_format` is `ubam_fastq`, entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
+- if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
+- for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
+- provide all entries for a given `sample_id` the same `family_id`
+- in duo mode, exactly 2 unique `sample_id` values are required per `family_id`, with a `proband` and either a `father` or `mother` in the `family_position` column
+- in trio mode, exactly 3 unique `sample_id` values are required per `family_id`, with a `proband`, `father` and `mother` in the `family_position` column
+- set `regions_of_interest` to 'NONE' if not required
+- set `clair3_model` to the path of an appropriate Clair3 model when clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
 
 ## 4. Modify parameters_pipeface.json
 
@@ -221,20 +270,26 @@ Specify the path to `in_data_pipeface.csv`. Eg:
     "in_data": "/path/to/in_data_pipeface.csv",
 ```
 
-Specify the input data format ('ubam_fastq'). Eg:
+Specify the input data format ('ubam_fastq' or 'aligned_bam'). Eg:
 
 ```json
     "in_data_format": "ubam_fastq",
 ```
 
-Specify the path to the reference genome and it's index. Eg:
+> **_Note:_** If you provide an aligned BAM and set `in_data_format` to `aligned_bam`, the pipeline will start from post-alignment processes.
+
+> **_Note:_** If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
+
+> **_Note:_** Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
+
+Specify the path to the reference genome and its index. Eg:
 
 ```json
     "ref": "/path/to/hg38.fa",
     "ref_index": "/path/to/hg38.fa.fai",
 ```
 
-Optionally turn on haploid-aware mode (for XY samples only). Eg:
+Optionally turn on haploid-aware mode. Eg:
 
 ```json
     "haploidaware": "yes",
@@ -247,35 +302,72 @@ Optionally turn on haploid-aware mode (for XY samples only). Eg:
 ```json
     "haploidaware": "no",
     "sex": "NONE",
-    "parbed": "NONE"
+    "parbed": "NONE",
 ```
 
-Optionally specify the path to the tandem repeat bed file. Set to 'NONE' if not required. Eg:
+> **_Note:_** Haploid-aware mode is only available for singleton XY samples.
+
+> **_Note:_** Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
+
+Optionally specify the path to the tandem repeat bed file (used by the SV caller to improve SV calling in tandem repeat regions). Set to 'NONE' if not required. Eg:
 
 ```json
     "tandem_repeat": "/path/to/tandem_repeat.bed",
 ```
 
-Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio'). Eg:
+*OR*
 
+```json
+    "tandem_repeat": "NONE",
+```
+
+Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
 ```json
     "mode": "singleton",
-```
-
-Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
-
-```json
     "snp_indel_caller": "deepvariant",
 ```
 
-> **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
+*OR*
 
-> **_Note:_** In singleton mode, Clair3 and DeepVariant is available
+```json
+    "mode": "singleton",
+    "snp_indel_caller": "clair3",
+```
 
-> **_Note:_** In duo mode, only DeepVariant is available
+*OR*
 
-> **_Note:_** In trio mode, only DeepTrio is available
+```json
+    "mode": "duo",
+    "snp_indel_caller": "deepvariant",
+```
+
+*OR*
+
+```json
+    "mode": "duo",
+    "snp_indel_caller": "clair3",
+```
+
+*OR*
+
+```json
+    "mode": "trio",
+    "snp_indel_caller": "deeptrio",
+```
+
+*OR*
+
+```json
+    "mode": "trio",
+    "snp_indel_caller": "clair3",
+```
+
+> **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data.
+
+> **_Note:_** In singleton and duo mode, the SNP/indel caller must be 'clair3' or 'deepvariant'.
+
+> **_Note:_** In trio mode, the SNP/indel caller must be 'clair3' or 'deeptrio'.
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -289,12 +381,24 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-> **_Note:_** variant annotation is only available for hg38
+*OR*
+
+```json
+    "annotate": "no",
+```
+
+> **_Note:_** Variant annotation is only available for hg38.
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
 ```json
     "calculate_depth": "yes",
+```
+
+*OR*
+
+```json
+    "calculate_depth": "no",
 ```
 
 Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
@@ -303,9 +407,15 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
     "analyse_base_mods": "yes",
 ```
 
-> **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+*OR*
 
-Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
+```json
+    "analyse_base_mods": "no",
+```
+
+> **_Note:_** Processing base modifications assumes base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format.
+
+Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file (used by TRGT and LongTR to define the tandem repeat regions to genotype). Set to 'NONE' if not required. Eg:
 
 ```json
     "tr_calling": "yes",
@@ -316,7 +426,7 @@ Optionally run tandem repeat calling and specify the path to an appropriate tand
 
 ```json
     "tr_calling": "no",
-    "tr_call_regions": "NONE"
+    "tr_call_regions": "NONE",
 ```
 
 Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
@@ -330,12 +440,14 @@ Optionally run relatedness checks and specify the path to an appropriate somalie
 
 ```json
     "check_relatedness": "no",
-    "sites": "NONE"
+    "sites": "NONE",
 ```
 
-> **_Note:_** checking relatedness is only available for duo/trio mode
+> **_Note:_** In singleton mode, checking relatedness will produce a somalier extracted file.
 
-Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
+> **_Note:_** In duo/trio mode, checking relatedness will additionally run joint relatedness and quality control checks.
+
+Specify the directory in which to write the pipeline outputs. Eg:
 
 ```json
     "outdir": "/path/to/results/"
