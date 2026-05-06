@@ -8,21 +8,26 @@ flowchart TB
 
 input_gvcf("DeepVariant gVCFs")
 input_bam("Aligned BAMs")
+input_svs("Structural Variant VCF's")
 gvcf_merging("gVCF merging")
 joint_split_multiallele("Split multiallelic variants into biallelic variants")
 split_vcf("Split joint VCF")
 snp_indel_phasing("SNP/indel phasing")
 merge_vcf("Merge VCF")
 joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
-tr_calling("TR calling")
-concat_vcf("Concatenate TR VCFs")
-
+split_sv_vcf("Split SV VCF")
+sv_vcf_merging("Structural variant VCF merging")
+joint_sv_annotation("Joint structural variant annotation (hg38 only)")
+joint_tr_calling("Joint TR calling")
+concat_tr_vcf("Concatenate TR VCFs")
 input_somalier("Somalier extracted files")
 joint_somalier("Joint somalier relatedness/quality control check")
 
 input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
 input_bam-.->snp_indel_phasing
-input_bam-.->tr_calling-.->concat_vcf
+input_svs-.->split_sv_vcf-.->sv_vcf_merging-.->joint_sv_annotation
+input_bam-.->sv_vcf_merging
+input_bam-.->joint_tr_calling-.->concat_tr_vcf
 input_somalier-.->joint_somalier
 
 ```
