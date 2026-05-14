@@ -34,7 +34,7 @@ input_somalier-.->joint_somalier
 
 ## Main analyses
 
-- Quads to populations
+- Quads to populations (up to 1000 individuals)
 
 ## Main tools
 
