@@ -3,9 +3,11 @@ nextflow.enable.dsl=2
 // tag popface version
 def popface_version = "dev"
 
-// set defaults for optional undocumented params
+// set defaults for undocumented params
 params.outdir2 = ""
 params.annotate_override = ""
+params.min_gap = 100000
+params.chunks = 5
 
 process scrape_settings {
 
@@ -262,55 +264,103 @@ process merge_vcf {
 
 }
 
-process split_sv_vcf_pre_processing {
+process split_sv_vcfs {
 
     input:
-        path ref_index
+        tuple val(pop_id), val(sv_caller), val(sample_ids), path(sv_vcfs), path(sv_vcf_indices)
+        val ref_index
+        val min_gap
+        val chunks
 
     output:
-        path("small_contigs.txt")
-        path("large_contigs.txt")
+        tuple val(pop_id), val(sv_caller), path("*.vcf")
 
     script:
         """
-        awk '{ if (\$2 < 1000000) print \$1 > "small_contigs.txt"; else print \$1 > "large_contigs.txt" }' $ref_index
-        """
+        # write sample/vcf mapping (sample_ids paired with staged vcf paths, in input order)
+        paste <(printf '%s\\n' ${sample_ids.join(' ')}) <(printf '%s\\n' ${sv_vcfs.join(' ')}) > sample_vcfs.tsv
 
-    stub:
-        """
-        touch small_contigs.txt
-        touch large_contigs.txt
-        """
+        # get chromosome lengths
+        cut -f1,2 $ref_index > chrom_lengths.txt
 
-}
+        # extract DEL, DUP and INS positions
+        while IFS=\$'\t' read -r sample vcf; do
+            bcftools view -i 'SVTYPE="DEL"' \$vcf | bcftools query -f '%CHROM\\t%POS\\t%INFO/END\\n' >> all_del_pos.bed
+            bcftools view -i 'SVTYPE="DUP"' \$vcf | bcftools query -f '%CHROM\\t%POS\\t%INFO/END\\n' >> all_dup_pos.bed
+            bcftools view -i 'SVTYPE="INS"' \$vcf | bcftools query -f '%CHROM\\t%POS\\t%POS\\n' >> all_ins_pos.bed
+        done < sample_vcfs.tsv
 
-process split_sv_vcf {
-
-    input:
-        tuple val(pop_id), val(sample_id), val(sv_caller), path(sv_vcf), path(sv_vcf_index)
-        path ref_index
-        path small_contigs
-        path large_contigs
-
-    output:
-        tuple val(pop_id), val(sv_caller), path("${sample_id}.${sv_caller}.*.vcf")
-
-    script:
-        """
-        # extract BND variants (they can span multiple chromosomes)
-        bcftools view -i 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.BND.vcf
-        # pool small contigs
-        bcftools view -r \$(cat $small_contigs | paste -sd, -) -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.SMALL_CONTIGS.vcf
-        # split large contigs by chromosome
-        cat $large_contigs | while read CHR; do
-            bcftools view -r \${CHR} -e 'INFO/SVTYPE="BND"' $sv_vcf -o ${sample_id}.${sv_caller}.\${CHR}.vcf
+        # extract DEL and DUP gaps (complement of union)
+        for i in del dup; do
+            bedtools sort -i all_\${i}_pos.bed -g chrom_lengths.txt | bedtools merge -i - > \${i}_union.bed
+            bedtools complement -i \${i}_union.bed -g chrom_lengths.txt | awk -v min=$min_gap '(\$3 - \$2) >= min' | bedtools sort -i - -g chrom_lengths.txt | bgzip > \${i}_gaps.bed.gz
+            tabix -p bed \${i}_gaps.bed.gz
         done
+
+        # extract INS gaps (regions between consecutive INS positions exceeding min gap)
+        bedtools sort -i all_ins_pos.bed -g chrom_lengths.txt \
+            | awk -v min=$min_gap '
+                BEGIN { prev_chrom = ""; prev_end = 0 }
+                {
+                    chrom = \$1; start = \$2; end = \$3
+                    if (chrom == prev_chrom && (start - prev_end) >= min)
+                        print chrom "\t" prev_end "\t" start
+                    prev_chrom = chrom
+                    prev_end   = end
+                }
+            ' \
+            | bgzip > ins_gaps.bed.gz
+        tabix -p bed ins_gaps.bed.gz
+
+        # extract INS+DUP gaps
+        bedtools intersect -a <(zcat dup_gaps.bed.gz) -b <(zcat ins_gaps.bed.gz) | awk -v min=$min_gap '(\$3 - \$2) >= min' | bedtools sort -i - -g chrom_lengths.txt | bgzip > ins_dup_gaps.bed.gz
+        tabix -p bed ins_dup_gaps.bed.gz
+
+        # combine INS+DUP positions
+        cat all_ins_pos.bed all_dup_pos.bed > all_ins_dup_pos.bed
+
+        # extract chunk boundaries (pools small chunks)
+        for i in del ins_dup; do
+            compute_chunks.py --gaps \${i}_gaps.bed.gz --genome chrom_lengths.txt --positions all_\${i}_pos.bed --n-chunks $chunks --min-gap $min_gap --output chunk_boundaries_\${i}.bed
+        done
+
+        # extract BND and INV variants (they can span multiple chromosomes)
+        while IFS=\$'\t' read -r sample vcf; do
+            bcftools view -i 'INFO/SVTYPE="BND" || INFO/SVTYPE="INV"' \$vcf -o \$sample.${sv_caller}.BND_INV.vcf
+        done < sample_vcfs.tsv
+
+        # group chunk_boundaries rows by chunk name into per-chunk regions beds
+        for i in del ins_dup; do
+            mkdir -p chunk_regions_\${i}
+            awk -v outdir=chunk_regions_\${i} '{print \$1"\t"\$2"\t"\$3 > outdir"/"\$4".bed"}' chunk_boundaries_\${i}.bed
+        done
+
+        # split DEL variants by chunk
+        while IFS=\$'\t' read -r sample vcf; do
+            for chunk_bed in chunk_regions_del/*.bed; do
+                chunk_name=\$(basename "\$chunk_bed" .bed)
+                bcftools view -R "\$chunk_bed" -i 'INFO/SVTYPE="DEL"' \$vcf -o \$sample.${sv_caller}.DEL_\${chunk_name}.vcf
+            done
+        done < sample_vcfs.tsv
+
+        # split INS and DUP variants by chunk
+        while IFS=\$'\t' read -r sample vcf; do
+            for chunk_bed in chunk_regions_ins_dup/*.bed; do
+                chunk_name=\$(basename "\$chunk_bed" .bed)
+                bcftools view -R "\$chunk_bed" -i 'INFO/SVTYPE="INS" || INFO/SVTYPE="DUP"' \$vcf -o \$sample.${sv_caller}.INS_DUP_\${chunk_name}.vcf
+            done
+        done < sample_vcfs.tsv
+
         """
 
     stub:
         """
-        echo chr1 | while read CHR; do
-            touch ${sample_id}.${sv_caller}.\${CHR}.vcf
+        touch chunk_boundaries_del.bed
+        touch chunk_boundaries_ins_dup.bed
+        for sample in ${sample_ids.join(' ')}; do
+            touch \$sample.${sv_caller}.BND_INV.vcf
+            touch \$sample.${sv_caller}.DEL_chunk_chr1_1.vcf
+            touch \$sample.${sv_caller}.INS_DUP_chunk_chr1_1.vcf
         done
         """
 
@@ -324,21 +374,40 @@ process jasmine {
         val ref_index
 
     output:
-        tuple val(pop_id), val(sv_caller), path("${partition}.sv.vcf.gz"), path("${partition}.sv.vcf.gz.tbi"), optional: true
+        tuple val(pop_id), val(sv_caller), path("${partition}.*.vcf.gz"), path("${partition}.*.vcf.gz.tbi"), optional: true
 
     script:
+        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         // conditionally define iris arguments (by default, iris will pass minimap -x map-ont, the --pacbio flag passed to iris will pass minimap -x map-pb)
         def iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants' + (data_type == 'pacbio' ? ',--pacbio' : '')
         // conditionally define require first flag
         def require_first_sample_optional = related == 'yes' ? '--require_first_sample' : ''
         """
-
+        # create file lists in in_data_pipeface.csv row order (sample_ids and bams are pre-sorted by csv index)
+        SAMPLES=(${sample_ids.join(' ')})
+        BAMS=(${bams.join(' ')})
+        for i in \${!SAMPLES[@]}; do
+            realpath \${SAMPLES[\$i]}.${sv_caller}.${partition}.vcf >> vcfs.txt
+            realpath \${BAMS[\$i]} >> bams.txt
+        done
+        # run jasmine
+        # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
+        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
+        # fix vcf header (remove prefix to sample names that jasmine adds)
+        grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
+        grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
+        grep -v '#' ${partition}.${out_vcf}.tmp.vcf >> ${partition}.${out_vcf}.vcf
+        bcftools sort ${partition}.${out_vcf}.vcf -o ${partition}.${out_vcf}.vcf
+        # compress and index vcf
+        bgzip -@ ${task.cpus} ${partition}.${out_vcf}.vcf
+        tabix ${partition}.${out_vcf}.vcf.gz
         """
 
     stub:
+        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        touch ${partition}.sv.vcf.gz
-        touch ${partition}.sv.vcf.gz.tbi
+        touch ${partition}.${out_vcf}.vcf.gz
+        touch ${partition}.${out_vcf}.vcf.gz.tbi
         """
 
 }
@@ -363,11 +432,11 @@ process concat_sv_vcf {
         """
         # get list of vcfs
         VCFS=(*sv*.vcf.gz)
-        # concat vcfs, or symlink if only one vcf
+        # concat vcfs (or pass through if only one) and sort
         if [[ \${#VCFS[@]} -eq 1 ]]; then
-            ln -s \${VCFS[0]} ${out_vcf}.vcf.gz
+            bcftools sort -Oz -o ${out_vcf}.vcf.gz \${VCFS[0]}
         else
-            bcftools concat -a -Oz -o ${out_vcf}.vcf.gz \${VCFS[@]} --threads ${task.cpus}
+            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -Oz -o ${out_vcf}.vcf.gz -
         fi
         # index vcf
         tabix ${out_vcf}.vcf.gz
@@ -441,15 +510,14 @@ process longtr {
         tuple val(pop_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
 
     script:
+        def bams_csv = bams.join(',')
+        def samples_csv = sample_ids.join(',')
         // define alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
-        # comma separate list of bams
-        BAMS=\$(echo $bams | tr ' ' ',')
-        SAMPLE_IDS=\$(echo $sample_ids | tr -d '[ ]')
         # run longtr
         ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
-        LongTR --bams \${BAMS} --bam-samps \${SAMPLE_IDS} --bam-libs \${SAMPLE_IDS} --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
+        LongTR --bams $bams_csv --bam-samps $samples_csv --bam-libs $samples_csv --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
         # index vcf
         tabix tr.\${ID}.vcf.gz
         """
@@ -479,11 +547,11 @@ process concat_tr_vcf {
         """
         # get list of vcfs
         VCFS=(tr.*.vcf.gz)
-        # concat vcfs (or use single vcf), reorder since longtr sorts samples alphabetically
+        # concat vcfs (or use single vcf), reorder samples since longtr sorts samples alphabetically, then naturally sort variants
         if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools view -s ${sample_ids.join(',')} \${VCFS[0]} -Oz -o tr.vcf.gz
+            bcftools view -s ${sample_ids.join(',')} \${VCFS[0]} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         else
-            bcftools concat -a -Oz \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} -Oz -o tr.vcf.gz
+            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         fi
         # index vcf
         tabix tr.vcf.gz
@@ -598,6 +666,8 @@ workflow {
     annotate_override = "${params.annotate_override}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
+    min_gap = "${params.min_gap}".trim()
+    chunks = "${params.chunks}".trim()
     vep_db = "${params.vep_db}".trim()
     revel_db = "${params.revel_db}".trim()
     gnomad_db = "${params.gnomad_db}".trim()
@@ -689,7 +759,7 @@ workflow {
             gvcfs_bams:         tuple(row.pop_id, row.sample_id, row.gvcf, row.bam)
             svs:                tuple(row.pop_id, row.sample_id, row.sniffles, row.cutesv)
             somaliers:          tuple(row.pop_id, row.somalier)
-            bams_data_type:     tuple(row.pop_id, row.sample_id, row.bam, row.data_type)
+            bams_data_type:     tuple(row.pop_id, row.sample_id, row.bam, row.data_type, index)
             related:            tuple(row.pop_id, row.related)
             row_validation:     tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type, row.related, row.family_position)
             cohort_validation:  tuple(row.pop_id, row.sample_id, row.related, row.family_position, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type)
@@ -730,9 +800,13 @@ workflow {
         .set { somalier_files_ch }
 
     csv.bams_data_type
-        .filter { pop_id, sample_id, bam, data_type -> bam != 'NONE' }
-        .map { pop_id, sample_id, bam, data_type -> tuple(pop_id, sample_id, bam, "${bam}.bai", data_type) }
+        .filter { pop_id, sample_id, bam, data_type, index -> bam != 'NONE' }
+        .map { pop_id, sample_id, bam, data_type, index -> tuple(pop_id, sample_id, bam, "${bam}.bai", data_type, index) }
         .groupTuple(by: [0,4])
+        .map { pop_id, sample_ids, bams, bais, data_type, indices ->
+            def sorted = [indices, sample_ids, bams, bais].transpose().sort { a, b -> a[0] <=> b[0] }
+            tuple(pop_id, sorted.collect { it[1] }, sorted.collect { it[2] }, sorted.collect { it[3] }, data_type)
+        }
         .set { bams_data_type_ch }
 
     csv.related
@@ -895,9 +969,11 @@ workflow {
         joint_snp_indel_phased_vcf = merge_vcf(vcfs, outdir, outdir2, ref_name, snp_indel_caller)
     }
     // sv vcf merging
-    (small_contigs, large_contigs) = split_sv_vcf_pre_processing(ref_index)
-    split_sv_vcfs = split_sv_vcf(svs_ch, ref_index, small_contigs, large_contigs)
-    jasmine_input = split_sv_vcfs
+    sv_vcfs_grouped = svs_ch
+        .map { pop_id, sample_id, sv_caller, vcf, tbi -> tuple(pop_id, sv_caller, sample_id, vcf, tbi) }
+        .groupTuple(by: [0,1])
+    split_sv_vcfs_ch = split_sv_vcfs(sv_vcfs_grouped, ref_index, min_gap, chunks)
+    jasmine_input = split_sv_vcfs_ch
         .flatMap { pop_id, sv_caller, vcfs ->
             vcfs.collectMany { vcf ->
                 def partition = vcf.baseName.tokenize('.')[-1]

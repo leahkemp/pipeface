@@ -375,6 +375,32 @@ Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
     "sv_caller": "sniffles",
 ```
 
+*OR*
+
+```json
+    "sv_caller": "cutesv",
+```
+
+*OR*
+
+```json
+    "sv_caller": "both",
+```
+
+Optionally specify a threshold for the mapping quality (MAPQ) filter for structural variant calls. Set to 'NONE' to use default thresholds. Maximum value is 60. Eg:
+
+```json
+    "sv_mapq": "NONE",
+```
+
+*OR*
+
+```json
+    "sv_mapq": "60",
+```
+
+> **_Note:_** If you intend to merge the output SV VCF's with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
+
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json

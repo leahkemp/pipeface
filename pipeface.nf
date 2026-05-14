@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 // tag pipeface version
 def pipeface_version = "dev"
 
-// set defaults for optional undocumented params
+// set defaults for undocumented params
 params.outdir2 = ""
 params.annotate_override = ""
 params.in_data_format_override = ""
@@ -40,6 +40,7 @@ process scrape_settings {
         val haploidaware
         val sex
         val parbed
+        val sv_mapq
 
     output:
         tuple val(sample_id), val(family_id), path("pipeface_settings.txt")
@@ -70,6 +71,7 @@ process scrape_settings {
             echo "Mode: $mode"
             echo "SNP/indel caller: $snp_indel_caller"
             echo "SV caller: $reported_sv_caller"
+            echo "SV MAPQ filter threshold: $sv_mapq"
             echo "Annotate: $annotate"
             echo "Calculate depth: $calculate_depth"
             echo "Analyse base modifications: $analyse_base_mods"
@@ -618,9 +620,7 @@ process whatshap_phase {
 
 process whatshap_haplotag {
 
-    def mapper_phaser = "minimap2.whatshap"
-
-    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$mapper_phaser.$filename" }, pattern: 'sorted.haplotagged.*'
+    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.${ref_name}.minimap2.whatshap.$filename" }, pattern: 'sorted.haplotagged.*'
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index), val(family_position)
@@ -884,7 +884,7 @@ process glnexus_pre_processing {
 process glnexus {
 
     input:
-        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path(gvcfs)
+        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(gvcfs)
         val snp_indel_caller
         val clair3_config
 
@@ -911,7 +911,7 @@ process glnexus {
 process glnexus_post_processing {
 
     input:
-        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path(snp_indel_bcf)
+        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(snp_indel_bcf)
 
     output:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path("snp_indel.vcf.gz"), path("snp_indel.vcf.gz.tbi")
@@ -934,7 +934,7 @@ process glnexus_post_processing {
 process split_multiallele_family {
 
     input:
-        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path(snp_indel_vcf), path(snp_indel_vcf_index)
+        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(snp_indel_vcf), path(snp_indel_vcf_index)
         val ref
         val ref_index
 
@@ -965,7 +965,7 @@ process whatshap_phase_family {
     publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.phased.*'
 
     input:
-        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
+        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
         val ref
         val ref_index
         val outdir
@@ -1139,7 +1139,38 @@ process longtr_pre_processing {
 process longtr {
 
     input:
-        tuple val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type), path(split_bed)
+        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        path split_beds
+        val ref
+        val ref_index
+
+    output:
+        tuple val(sample_id), val(family_id), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
+
+    script:
+        // define alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
+        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
+        """
+        # run longtr and index vcfs in parallel for each split bed
+        parallel -j ${task.cpus} '
+            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.{/.}.log
+            tabix tr.{/.}.vcf.gz
+        ' ::: split.*.bed
+        """
+
+    stub:
+        """
+        touch tr.aa.vcf.gz
+        touch tr.aa.vcf.gz.tbi
+        """
+
+}
+
+process longtr_family {
+
+    input:
+        tuple val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type)
+        path split_beds
         val ref
         val ref_index
 
@@ -1147,17 +1178,16 @@ process longtr {
         tuple val(family_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
 
     script:
+        def bams_csv = bams.join(',')
+        def samples_csv = sample_ids.join(',')
         // define alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
-        # comma separate list of bams
-        BAMS=\$(echo $bams | tr ' ' ',')
-        SAMPLE_IDS=\$(echo $sample_ids | tr -d '[ ]')
-        # run longtr
-        ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
-        LongTR --bams \${BAMS} --bam-samps \${SAMPLE_IDS} --bam-libs \${SAMPLE_IDS} --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
-        # index vcf
-        tabix tr.\${ID}.vcf.gz
+        # run longtr and index vcfs in parallel for each split bed
+        parallel -j ${task.cpus} '
+            LongTR --bams $bams_csv --bam-samps $samples_csv --bam-libs $samples_csv --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.{/.}.log
+            tabix tr.{/.}.vcf.gz
+        ' ::: split.*.bed
         """
 
     stub:
@@ -1170,7 +1200,42 @@ process longtr {
 
 process concat_tr_vcf {
 
-    publishDir { params.mode == 'singleton' ? "$outdir/${family_id != 'NONE' ? family_id : sample_ids[0]}/$outdir2/${sample_ids[0]}" : "$outdir/$family_id/$outdir2" }, mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${params.mode == 'singleton' ? sample_ids[0] : family_id}.${ref_name}.longtr.$filename" }, pattern: 'tr.vcf.gz*'
+    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${sample_id}.${ref_name}.longtr.$filename" }, pattern: 'tr.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(tr_vcfs), path(tr_vcf_indices)
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path("tr.vcf.gz"), path("tr.vcf.gz.tbi")
+
+    script:
+        """
+        # get list of vcfs
+        VCFS=(tr.*.vcf.gz)
+        # concat vcfs (or use single vcf), then naturally sort variants
+        if [[ \${#VCFS[@]} -eq 1 ]]; then
+            bcftools sort -T ./ \${VCFS[0]} -Oz -o tr.vcf.gz
+        else
+            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o tr.vcf.gz
+        fi
+        # index vcf
+        tabix tr.vcf.gz
+        """
+
+    stub:
+        """
+        touch tr.vcf.gz
+        touch tr.vcf.gz.tbi
+        """
+
+}
+
+process concat_tr_vcf_family {
+
+    publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${family_id}.${ref_name}.longtr.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
         tuple val(family_id), val(sample_ids), path(tr_vcfs), path(tr_vcf_indices)
@@ -1185,11 +1250,11 @@ process concat_tr_vcf {
         """
         # get list of vcfs
         VCFS=(tr.*.vcf.gz)
-        # concat vcfs (or use single vcf), reorder since longtr sorts samples alphabetically
+        # concat vcfs (or use single vcf), reorder samples since longtr sorts samples alphabetically, then naturally sort variants
         if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools view -s ${sample_ids.join(',')} \${VCFS[0]} -Oz -o tr.vcf.gz
+            bcftools view -s ${sample_ids.join(',')} \${VCFS[0]} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         else
-            bcftools concat -a -Oz \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} -Oz -o tr.vcf.gz
+            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         fi
         # index vcf
         tabix tr.vcf.gz
@@ -1215,6 +1280,7 @@ process sniffles {
         val outdir
         val outdir2
         val ref_name
+        val sv_mapq
 
     output:
         tuple val(sample_id), val(family_id), path("sv.phased.vcf.gz")
@@ -1224,9 +1290,11 @@ process sniffles {
     script:
         // optionally pass tandem repeat bed file
         def tandem_repeat_optional = tandem_repeat != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
+        // optionally set mapq filter threshold
+        def mapq_optional = sv_mapq != 'NONE' ? "--mapq ${sv_mapq}" : ''
         """
         # run sniffles
-        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional
+        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional $mapq_optional
         """
 
     stub:
@@ -1249,6 +1317,7 @@ process cutesv {
         val outdir
         val outdir2
         val ref_name
+        val sv_mapq
 
     output:
         tuple val(sample_id), val(family_id), path("sv.vcf.gz")
@@ -1260,9 +1329,11 @@ process cutesv {
         def settings = data_type == 'ont'
             ? '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
             : '--max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5'
+        // optionally set mapq filter threshold
+        def mapq_optional = sv_mapq != 'NONE' ? "--min_mapq ${sv_mapq}" : ''
         """
         # run cuteSV
-        cuteSV $haplotagged_bam $ref sv.vcf ./ --sample ${sample_id} -t ${task.cpus} --genotype --report_readid --min_size 50 $settings
+        cuteSV $haplotagged_bam $ref sv.vcf ./ --sample ${sample_id} -t ${task.cpus} --genotype --report_readid --min_size 50 $settings $mapq_optional
         # compress and index vcf
         bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
@@ -1309,7 +1380,7 @@ process jasmine {
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' ${out_vcf}.tmp.vcf > ${out_vcf}.vcf
-        grep '#CHROM' ${out_vcf}.tmp.vcf | sed -E 's/\b[0-9]+_//g' >> ${out_vcf}.vcf
+        grep '#CHROM' ${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${out_vcf}.vcf
         grep -v '#' ${out_vcf}.tmp.vcf >> ${out_vcf}.vcf
         bcftools sort ${out_vcf}.vcf -o ${out_vcf}.vcf
         # compress and index vcf
@@ -1393,6 +1464,7 @@ workflow {
     snp_indel_caller = "${params.snp_indel_caller}".trim()
     clair3_config = "${params.clair3_config}".trim()
     sv_caller = "${params.sv_caller}".trim()
+    sv_mapq = "${params.sv_mapq}".trim()
     annotate = "${params.annotate}".trim()
     haploidaware = "${params.haploidaware}".trim()
     annotate_override = "${params.annotate_override}".trim()
@@ -1493,6 +1565,9 @@ workflow {
         }
         if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
             exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
+        }
+        if (sv_mapq != 'NONE' && !(sv_mapq.isInteger() && sv_mapq.toInteger() <= 60)) {
+            exit 1, "sv_mapq should be a positive integer (maximum 60) or 'NONE', sv_mapq = '${sv_mapq}' provided."
         }
     }
     if (annotate == 'yes') {
@@ -1780,12 +1855,10 @@ workflow {
                 tuple(proband_sample_id, family_id, sample_ids, family_positions, sv_vcfs, bams, data_type, sv_caller_val)
             }
     }
-    // sort bams proband first (then father, then mother) for longtr, handles singleton (no sorting needed)
+    // sort bams proband first (then father, then mother) for joint longtr
     def sort_longtr_family = { family_id, sample_ids, bams, bam_indices, data_types, family_positions ->
         def position_order = ['proband', 'father', 'mother']
-        def ordered_indices = sample_ids.size() > 1
-            ? position_order.findAll { family_positions.contains(it) }.collect { family_positions.indexOf(it) }
-            : [0]
+        def ordered_indices = position_order.findAll { family_positions.contains(it) }.collect { family_positions.indexOf(it) }
         tuple(family_id,
             ordered_indices.collect { sample_ids[it] },
             ordered_indices.collect { bams[it] },
@@ -1799,7 +1872,7 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
@@ -1903,25 +1976,29 @@ workflow {
         }
         // sv calling
         if (sv_caller in ['sniffles', 'both']) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name, sv_mapq)
         }
         if (sv_caller in ['cutesv', 'both']) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name, sv_mapq)
         }
-        // tr calling
         if (tr_calling == 'yes') {
-            longtr_bam_input = haplotagged_bam
-                .join(data_type_ch, by: [0,1])
-                .join(family_position_ch, by: [0,1])
-                .map { sample_id, family_id, bam, bam_index, data_type, family_position ->
-                    tuple(family_id, sample_id, bam, bam_index, data_type, family_position)
-                }
-                .groupTuple(by: 0)
-                .map(sort_longtr_family)
-            split_bed = longtr_pre_processing(tr_call_regions).flatten()
-            longtr_input = longtr_bam_input.combine(split_bed)
-            tr_vcfs = longtr(longtr_input, ref, ref_index)
-            concat_tr_vcf(tr_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
+            split_beds = longtr_pre_processing(tr_call_regions)
+            // tr calling
+            tr_vcfs = longtr(haplotagged_bam.join(data_type_ch, by: [0,1]), split_beds, ref, ref_index)
+            concat_tr_vcf(tr_vcfs, outdir, outdir2, ref_name)
+            // joint tr calling
+            if (mode in ['duo', 'trio']) {
+                family_input = haplotagged_bam
+                    .join(data_type_ch, by: [0,1])
+                    .join(family_position_ch, by: [0,1])
+                    .map { sample_id, family_id, bam, bam_index, data_type, family_position ->
+                        tuple(family_id, sample_id, bam, bam_index, data_type, family_position)
+                    }
+                    .groupTuple(by: 0)
+                    .map(sort_longtr_family)
+                tr_vcfs_family = longtr_family(family_input, split_beds, ref, ref_index)
+                concat_tr_vcf_family(tr_vcfs_family, outdir, outdir2, ref_name)
+            }
         }
     }
     if (in_data_format == 'snp_indel_vcf') {
