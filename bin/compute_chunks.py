@@ -19,7 +19,7 @@ import gzip
 import sys
 from bisect import bisect_left
 
-MIN_VARIANTS = 20
+MIN_VARIANTS = 50
 
 def parse_args():
     p = argparse.ArgumentParser(description="Compute genomic chunk boundaries from gap regions.")
