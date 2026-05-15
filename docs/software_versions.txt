@@ -17,4 +17,5 @@ kentUtils: 0.0
 HTSlib: 1.20
 bcftools: 1.21
 bedtools: 2.31.0
+GNU parallel: 20191022
 python3: 3.12.1
