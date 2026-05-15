@@ -3,7 +3,7 @@ FROM ubuntu:24.04 AS build
 
 # get necessary libs
 RUN apt-get update && \
-    apt install -y make wget gcc bzip2 libz-dev libbz2-dev liblzma-dev libcurl4-openssl-dev build-essential python3-dev pip libtool cmake git zlib1g-dev openjdk-11-jdk bash
+    apt install -y make wget gcc bzip2 libz-dev libbz2-dev liblzma-dev libcurl4-openssl-dev build-essential python3-dev pip libtool cmake git zlib1g-dev openjdk-11-jdk bash libssl-dev libffi-dev libsqlite3-dev libreadline-dev libncurses-dev
 
 # samtools
 RUN wget -O- "https://github.com/samtools/samtools/releases/download/1.21/samtools-1.21.tar.bz2" | tar -xj && \
@@ -105,6 +105,22 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py39_25.9.1-3-Linux-x86_
     conda install -c conda-forge -c bioconda longtr && \
     cp /root/miniconda3/bin/LongTR /usr/local/bin/LongTR
 
+# GNU parallel
+RUN wget https://ftp.gnu.org/gnu/parallel/parallel-20191022.tar.bz2 && \
+    tar -xjf parallel-20191022.tar.bz2 && \
+    cd parallel-20191022 && \
+    ./configure && \
+    make && \
+    make install
+
+# python
+RUN wget -O- "https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz" | tar -xz && \
+    cd Python-3.12.1 && \
+    ./configure --enable-shared --prefix=/usr/local && \
+    make -j"$(nproc)" && \
+    make altinstall && \
+    ldconfig
+
 ## deploy env ##
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
@@ -138,7 +154,9 @@ COPY --from=build \
     /Jasmine/jasmine \
     /Jasmine/jasmine.jar \
     /Jasmine/jasmine_iris.jar \
+    /usr/local/bin/parallel \
     /usr/local/bin/LongTR \
+    /usr/local/bin/python3.12 \
     /usr/local/bin/
 
 COPY --from=build \
@@ -148,3 +166,8 @@ COPY --from=build \
 COPY --from=build \
     /usr/local/lib/ \
     /usr/local/lib/
+
+# make python 3.12.1 the default python
+RUN ln -sf /usr/local/bin/python3.12 /usr/local/bin/python3 && \
+    ln -sf /usr/local/bin/python3.12 /usr/local/bin/python && \
+    ldconfig
