@@ -28,7 +28,8 @@ Modify access to project specific directories. Eg:
     storage = 'gdata/if89+gdata/xy86+scratch/kr68+gdata/kr68'
 ```
 
-> **_Note:_** Don't remove access to if89 gdata (`gdata/if89`). This is required to access software installs used in the pipeline. `gdata/xy86` is only required if running variant annotation and can be omitted from `storage` if not.
+> [!NOTE]
+> Don't remove access to if89 gdata (`gdata/if89`). This is required to access software installs used in the pipeline. `gdata/xy86` is only required if running variant annotation and can be omitted from `storage` if not.
 
 ## 2. Start persistent session (optional)
 

@@ -34,9 +34,11 @@ pop_02,sample_13,no,NONE,/path/to/sample_13.hg38.deepvariant.snp_indel.g.vcf.gz,
 pop_02,sample_14,no,NONE,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_14.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_14.hg38.sniffles.sv.phased.vcf.gz,/path/to/sample_14.hg38.cutesv.sv.vcf.gz,NONE,pacbio
 ```
 
-> **_Note:_** `pop_id` is used to define the SNP/indel gVCF merging, the SV VCF merging and the somalier relatedness/quality control checks.
+> [!NOTE]
+> `pop_id` is used to define the SNP/indel gVCF merging, the SV VCF merging and the somalier relatedness/quality control checks.
 
-> **_Note:_** `gvcf`, `bam`, `sniffles`, `cutesv`, and `somalier` are all optional (provide 'NONE' if not required).
+> [!NOTE]
+> `gvcf`, `bam`, `sniffles`, `cutesv`, and `somalier` are all optional (provide 'NONE' if not required).
 
 Requirements:
 
@@ -106,7 +108,8 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "no",
 ```
 
-> **_Note:_** Variant annotation is only available for hg38.
+> [!NOTE]
+> Variant annotation is only available for hg38.
 
 Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
 

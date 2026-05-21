@@ -29,7 +29,8 @@ cd pipeface
 
 ### Reference genome
 
-> **_Note:_** Variant annotation is only available for hg38
+> [!NOTE]
+> Variant annotation is only available for hg38
 
 #### hg38
 
@@ -87,7 +88,8 @@ samtools faidx hs1.fa
 
 ### Tandem repeat call regions file (if running tandem repeat calling)
 
-> **_Note:_** You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catelog below.
+> [!NOTE]
+> You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catelog below.
 
 Get a copy of the Broad Institute tandem repeat catalog
 
@@ -116,7 +118,8 @@ cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS
 
 ### Somalier sites file (if running relatedness check)
 
-> **_Note:_** checking relatedness is only available for duo/trio mode
+> [!NOTE]
+> checking relatedness is only available for duo/trio mode
 
 #### hg38
 
@@ -176,7 +179,8 @@ sample_04,,,/path/to/m84088_240403_023825_s1.hifi_reads.bc2034.bam,pacbio,NONE,/
 sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
 ```
 
-> **_Note:_** In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
+> [!NOTE]
+> In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
 
 ### Duo/Trio mode
 
@@ -193,13 +197,17 @@ sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
 sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
-> **_Note:_** In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
+> [!NOTE]
+> In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
 
-> **_Note:_** In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
+> [!NOTE]
+> In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
 
-> **_Note:_** In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+> [!NOTE]
+> In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
 
-> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample
+> [!NOTE]
+> Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample
 
 Requirements:
 
@@ -269,13 +277,17 @@ Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
     "snp_indel_caller": "deepvariant",
 ```
 
-> **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data
+> [!NOTE]
+> Running DeepVariant/DeepTrio on ONT data assumes r10 data
 
-> **_Note:_** In singleton mode, Clair3 and DeepVariant is available
+> [!NOTE]
+> In singleton mode, Clair3 and DeepVariant is available
 
-> **_Note:_** In duo mode, only DeepVariant is available
+> [!NOTE]
+> In duo mode, only DeepVariant is available
 
-> **_Note:_** In trio mode, only DeepTrio is available
+> [!NOTE]
+> In trio mode, only DeepTrio is available
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -289,7 +301,8 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-> **_Note:_** variant annotation is only available for hg38
+> [!NOTE]
+> variant annotation is only available for hg38
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
@@ -303,7 +316,8 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
     "analyse_base_mods": "yes",
 ```
 
-> **_Note:_** processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+> [!NOTE]
+> processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
 Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
 
@@ -333,7 +347,8 @@ Optionally run relatedness checks and specify the path to an appropriate somalie
     "sites": "NONE"
 ```
 
-> **_Note:_** checking relatedness is only available for duo/trio mode
+> [!NOTE]
+> checking relatedness is only available for duo/trio mode
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 

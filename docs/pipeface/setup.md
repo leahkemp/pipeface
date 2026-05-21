@@ -31,7 +31,8 @@ cd pipeface
 
 ### Reference genome
 
-> **_Note:_** Variant annotation is only available for hg38.
+> [!NOTE]
+> Variant annotation is only available for hg38.
 
 #### hg38
 
@@ -89,7 +90,8 @@ samtools faidx hs1.fa
 
 ### Tandem repeat call regions file (if running tandem repeat calling)
 
-> **_Note:_** You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catalogs below.
+> [!NOTE]
+> You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catalogs below.
 
 #### hg38
 
@@ -215,9 +217,11 @@ sample_04,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/
 sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
 ```
 
-> **_Note:_** In singleton mode, `family_id` is only used to define the output directory structure.
+> [!NOTE]
+> In singleton mode, `family_id` is only used to define the output directory structure.
 
-> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+> [!NOTE]
+> Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
@@ -245,9 +249,11 @@ sample_05,family02,father,/path/to/sample_05.bam,ont,NONE,NONE
 sample_06,family02,mother,/path/to/sample_06.bam,ont,NONE,NONE
 ```
 
-> **_Note:_** In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
+> [!NOTE]
+> In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
 
-> **_Note:_** Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+> [!NOTE]
+> Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
@@ -276,11 +282,14 @@ Specify the input data format ('ubam_fastq' or 'aligned_bam'). Eg:
     "in_data_format": "ubam_fastq",
 ```
 
-> **_Note:_** If you provide an aligned BAM and set `in_data_format` to `aligned_bam`, the pipeline will start from post-alignment processes.
+> [!NOTE]
+> If you provide an aligned BAM and set `in_data_format` to `aligned_bam`, the pipeline will start from post-alignment processes.
 
-> **_Note:_** If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
+> [!NOTE]
+> If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
 
-> **_Note:_** Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
+> [!NOTE]
+> Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
 
 Specify the path to the reference genome and its index. Eg:
 
@@ -305,9 +314,11 @@ Optionally turn on haploid-aware mode. Eg:
     "parbed": "NONE",
 ```
 
-> **_Note:_** Haploid-aware mode is only available for singleton XY samples.
+> [!NOTE]
+> Haploid-aware mode is only available for singleton XY samples.
 
-> **_Note:_** Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
+> [!NOTE]
+> Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
 
 Optionally specify the path to the tandem repeat bed file (used by the SV caller to improve SV calling in tandem repeat regions). Set to 'NONE' if not required. Eg:
 
@@ -363,11 +374,14 @@ Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the S
     "snp_indel_caller": "clair3",
 ```
 
-> **_Note:_** Running DeepVariant/DeepTrio on ONT data assumes r10 data.
+> [!NOTE]
+> Running DeepVariant/DeepTrio on ONT data assumes r10 data.
 
-> **_Note:_** In singleton and duo mode, the SNP/indel caller must be 'clair3' or 'deepvariant'.
+> [!NOTE]
+> In singleton and duo mode, the SNP/indel caller must be 'clair3' or 'deepvariant'.
 
-> **_Note:_** In trio mode, the SNP/indel caller must be 'clair3' or 'deeptrio'.
+> [!NOTE]
+> In trio mode, the SNP/indel caller must be 'clair3' or 'deeptrio'.
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -399,7 +413,8 @@ Optionally specify a threshold for the mapping quality (MAPQ) filter for structu
     "sv_mapq": "60",
 ```
 
-> **_Note:_** If you intend to merge the output SV VCF's with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
+> [!NOTE]
+> If you intend to merge the output SV VCF's with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
 
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
@@ -413,7 +428,8 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "no",
 ```
 
-> **_Note:_** Variant annotation is only available for hg38.
+> [!NOTE]
+> Variant annotation is only available for hg38.
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
@@ -439,7 +455,8 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
     "analyse_base_mods": "no",
 ```
 
-> **_Note:_** Processing base modifications assumes base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format.
+> [!NOTE]
+> Processing base modifications assumes base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format.
 
 Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file (used by TRGT and LongTR to define the tandem repeat regions to genotype). Set to 'NONE' if not required. Eg:
 
@@ -469,9 +486,11 @@ Optionally run relatedness checks and specify the path to an appropriate somalie
     "sites": "NONE",
 ```
 
-> **_Note:_** In singleton mode, checking relatedness will produce a somalier extracted file.
+> [!NOTE]
+> In singleton mode, checking relatedness will produce a somalier extracted file.
 
-> **_Note:_** In duo/trio mode, checking relatedness will additionally run joint relatedness and quality control checks.
+> [!NOTE]
+> In duo/trio mode, checking relatedness will additionally run joint relatedness and quality control checks.
 
 Specify the directory in which to write the pipeline outputs. Eg:
 
