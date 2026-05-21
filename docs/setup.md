@@ -198,16 +198,10 @@ sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
 > [!NOTE]
-> In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
-
-> [!NOTE]
-> In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
-
-> [!NOTE]
-> In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
-
-> [!NOTE]
-> Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample
+> - In duo/trio mode, `family_id` and `family_position` are used to define the joint SNP/indel calling/merging
+> - In duo mode, a `proband`, and either a `father` or `mother` must be defined in the `family_position` column for every `family_id`
+> - In trio mode, a `proband`, `father` and `mother` must be defined in the `family_position` column for every `family_id`
+> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample
 
 Requirements:
 
@@ -278,16 +272,10 @@ Specify the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 ```
 
 > [!NOTE]
-> Running DeepVariant/DeepTrio on ONT data assumes r10 data
-
-> [!NOTE]
-> In singleton mode, Clair3 and DeepVariant is available
-
-> [!NOTE]
-> In duo mode, only DeepVariant is available
-
-> [!NOTE]
-> In trio mode, only DeepTrio is available
+> - Running DeepVariant/DeepTrio on ONT data assumes r10 data
+> - In singleton mode, Clair3 and DeepVariant is available
+> - In duo mode, only DeepVariant is available
+> - In trio mode, only DeepTrio is available
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 

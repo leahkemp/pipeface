@@ -218,10 +218,8 @@ sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/
 ```
 
 > [!NOTE]
-> In singleton mode, `family_id` is only used to define the output directory structure.
-
-> [!NOTE]
-> Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+> - In singleton mode, `family_id` is only used to define the output directory structure.
+> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
@@ -250,10 +248,8 @@ sample_06,family02,mother,/path/to/sample_06.bam,ont,NONE,NONE
 ```
 
 > [!NOTE]
-> In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
-
-> [!NOTE]
-> Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+> - In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
+> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
@@ -283,13 +279,9 @@ Specify the input data format ('ubam_fastq' or 'aligned_bam'). Eg:
 ```
 
 > [!NOTE]
-> If you provide an aligned BAM and set `in_data_format` to `aligned_bam`, the pipeline will start from post-alignment processes.
-
-> [!NOTE]
-> If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
-
-> [!NOTE]
-> Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
+> - If you provide an aligned BAM and set `in_data_format` to `aligned_bam`, the pipeline will start from post-alignment processes.
+> - If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
+> - Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
 
 Specify the path to the reference genome and its index. Eg:
 
@@ -315,10 +307,8 @@ Optionally turn on haploid-aware mode. Eg:
 ```
 
 > [!NOTE]
-> Haploid-aware mode is only available for singleton XY samples.
-
-> [!NOTE]
-> Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
+> - Haploid-aware mode is only available for singleton XY samples.
+> - Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
 
 Optionally specify the path to the tandem repeat bed file (used by the SV caller to improve SV calling in tandem repeat regions). Set to 'NONE' if not required. Eg:
 
@@ -375,13 +365,9 @@ Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the S
 ```
 
 > [!NOTE]
-> Running DeepVariant/DeepTrio on ONT data assumes r10 data.
-
-> [!NOTE]
-> In singleton and duo mode, the SNP/indel caller must be 'clair3' or 'deepvariant'.
-
-> [!NOTE]
-> In trio mode, the SNP/indel caller must be 'clair3' or 'deeptrio'.
+> - Running DeepVariant/DeepTrio on ONT data assumes r10 data.
+> - In singleton and duo mode, the SNP/indel caller must be 'clair3' or 'deepvariant'.
+> - In trio mode, the SNP/indel caller must be 'clair3' or 'deeptrio'.
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
@@ -487,10 +473,8 @@ Optionally run relatedness checks and specify the path to an appropriate somalie
 ```
 
 > [!NOTE]
-> In singleton mode, checking relatedness will produce a somalier extracted file.
-
-> [!NOTE]
-> In duo/trio mode, checking relatedness will additionally run joint relatedness and quality control checks.
+> - In singleton mode, checking relatedness will produce a somalier extracted file.
+> - In duo/trio mode, checking relatedness will additionally run joint relatedness and quality control checks.
 
 Specify the directory in which to write the pipeline outputs. Eg:
 

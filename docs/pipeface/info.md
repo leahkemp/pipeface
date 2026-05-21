@@ -196,10 +196,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Joint relatedness and quality control somalier TSV and HTML files
 
 > [!NOTE]
-> Running DeepVariant/DeepTrio on ONT data assumes r10 data
-
-> [!NOTE]
-> Running base modification analyses assumes the input data is in uBAM format and base modifications are present in these data
+> - Running DeepVariant/DeepTrio on ONT data assumes r10 data
+> - Running base modification analyses assumes the input data is in uBAM format and base modifications are present in these data
 
 ## Haploid Aware Mode
 

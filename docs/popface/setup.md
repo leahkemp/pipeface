@@ -35,10 +35,8 @@ pop_02,sample_14,no,NONE,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,
 ```
 
 > [!NOTE]
-> `pop_id` is used to define the SNP/indel gVCF merging, the SV VCF merging and the somalier relatedness/quality control checks.
-
-> [!NOTE]
-> `gvcf`, `bam`, `sniffles`, `cutesv`, and `somalier` are all optional (provide 'NONE' if not required).
+> - `pop_id` is used to define the SNP/indel gVCF merging, the SV VCF merging and the somalier relatedness/quality control checks.
+> - `gvcf`, `bam`, `sniffles`, `cutesv`, and `somalier` are all optional (provide 'NONE' if not required).
 
 Requirements:
 
