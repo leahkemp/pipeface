@@ -25,7 +25,7 @@
 Download the variant databases if you wish to run the variant annotation component of the pipeline.
 
 > [!NOTE]
-> variant annotation is only available for hg38
+> Variant annotation is only available for hg38
 
 ### VEP cache
 
@@ -252,7 +252,7 @@ params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job scheduler.
 
 > [!NOTE]
-> the 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPU's
+> The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPU's
 
 ## 3. Get pipeline dependencies
 

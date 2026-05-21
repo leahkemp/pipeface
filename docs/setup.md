@@ -119,7 +119,7 @@ cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS
 ### Somalier sites file (if running relatedness check)
 
 > [!NOTE]
-> checking relatedness is only available for duo/trio mode
+> Checking relatedness is only available for duo/trio mode
 
 #### hg38
 
@@ -290,7 +290,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 ```
 
 > [!NOTE]
-> variant annotation is only available for hg38
+> Variant annotation is only available for hg38
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 
@@ -305,7 +305,7 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 ```
 
 > [!NOTE]
-> processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+> Processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
 Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
 
@@ -336,7 +336,7 @@ Optionally run relatedness checks and specify the path to an appropriate somalie
 ```
 
 > [!NOTE]
-> checking relatedness is only available for duo/trio mode
+> Checking relatedness is only available for duo/trio mode
 
 Specify the directory in which to write the pipeline outputs (please provide a full path). Eg:
 
