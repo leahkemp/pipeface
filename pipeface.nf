@@ -1382,6 +1382,7 @@ process jasmine {
         grep '##' ${out_vcf}.tmp.vcf > ${out_vcf}.vcf
         grep '#CHROM' ${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${out_vcf}.vcf
         grep -v '#' ${out_vcf}.tmp.vcf >> ${out_vcf}.vcf
+        # sort
         bcftools sort ${out_vcf}.vcf -o ${out_vcf}.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} ${out_vcf}.vcf

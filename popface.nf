@@ -397,6 +397,9 @@ process jasmine {
         grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
         grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
         grep -v '#' ${partition}.${out_vcf}.tmp.vcf >> ${partition}.${out_vcf}.vcf
+        # add iris info tag if iris didn't refine any variants in current chunk
+        sed -i '/^#CHROM/i ##INFO=<ID=IRIS_PROCESSED,Number=1,Type=String,Description="Whether or not a variant has been considered by Iris for refinement">\n##INFO=<ID=IRIS_REFINED,Number=1,Type=String,Description="Whether or not a variant has been refined by Iris">' ${partition}.${out_vcf}.vcf
+        # sort
         bcftools sort ${partition}.${out_vcf}.vcf -o ${partition}.${out_vcf}.vcf
         # compress and index vcf
         bgzip -@ ${task.cpus} ${partition}.${out_vcf}.vcf
