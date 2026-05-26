@@ -7,9 +7,11 @@
       - [hg38](#hg38)
       - [hs1](#hs1)
     - [Tandem repeat call regions file (if running tandem repeat calling)](#tandem-repeat-call-regions-file-if-running-tandem-repeat-calling)
-    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
       - [hg38](#hg38-1)
       - [hs1](#hs1-1)
+    - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
+      - [hg38](#hg38-2)
+      - [hs1](#hs1-2)
     - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
@@ -89,13 +91,14 @@ samtools faidx hs1.fa
 ### Tandem repeat call regions file (if running tandem repeat calling)
 
 > [!NOTE]
-> You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catelog below.
+> You can create a BED file defining the tandem repeat regions you wish to call. Alternatively you can use one of the catalogs below.
+
+#### hg38
 
 Get a copy of the Broad Institute tandem repeat catalog
 
 ```bash
 wget https://github.com/broadinstitute/tandem-repeat-catalog/releases/download/v1.0.2/variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
-gunzip variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
 ```
 
 Check download was successful by checking md5sum
@@ -110,10 +113,48 @@ Expected md5sum
 d50345a1967c507bcdd3cf35c4db27d0  variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
 ```
 
+gunzip
+
+```bash
+gunzip variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
+```
+
 Prepare file for LongTR
 
 ```bash
 cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
+```
+
+#### hs1
+
+Get a copy of the Broad Institute tandem repeat catalog
+
+```bash
+curl https://zenodo.org/records/14597629/files/chm13.v2.bed.gz?download=1 -o chm13.v2.bed.gz
+```
+
+Check download was successful by checking md5sum
+
+```bash
+md5sum chm13.v2.bed.gz
+```
+
+Expected md5sum
+
+```txt
+51d118a5c70b63692f560077cbc0fa10  chm13.v2.bed.gz
+```
+
+gunzip
+
+```bash
+gunzip chm13.v2.bed.gz
+```
+
+Prepare file for LongTR
+
+```bash
+cut -f1-4 chm13.v2.bed | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > chm13.v2.longtr.bed
 ```
 
 ### Somalier sites file (if running relatedness check)
@@ -167,7 +208,7 @@ tar -xvf hifi_revio.tar.gz
 
 ### Singleton mode
 
-Specify the sample ID, family ID (optional), file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be processed. Eg:
+Specify the sample ID, family ID (optional), file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each file to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
@@ -180,11 +221,11 @@ sample_04,,,/path/to/m84088_240403_043745_s2.hifi_reads.bc2035.bam,pacbio,NONE,/
 ```
 
 > [!NOTE]
-> In singleton mode, `family_id` will only used to organise the output files into subdirectories of `family_id` (if provided)
+> In singleton mode, `family_id` will only be used to organise the output files into subdirectories of `family_id` (if provided)
 
 ### Duo/Trio mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each data to be processed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest bed file (optional) and file path to clair3 model (if running Clair3) for each file to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
@@ -194,7 +235,7 @@ sample_02,family01,father,/path/to/PGXXOX240067.bam,ont,NONE,NONE
 sample_03,family01,mother,/path/to/PGXXOX240068.bam,ont,NONE,NONE
 sample_04,family02,proband,/path/to/PGXXOX240069.bam,ont,NONE,NONE
 sample_05,family02,father,/path/to/PGXXOX240070.bam,ont,NONE,NONE
-sample_04,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
+sample_06,family02,mother,/path/to/PGXXOX240071.bam,ont,NONE,NONE
 ```
 
 > [!NOTE]
@@ -229,7 +270,7 @@ Specify the input data format ('ubam_fastq'). Eg:
     "in_data_format": "ubam_fastq",
 ```
 
-Specify the path to the reference genome and it's index. Eg:
+Specify the path to the reference genome and its index. Eg:
 
 ```json
     "ref": "/path/to/hg38.fa",
@@ -305,7 +346,7 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 ```
 
 > [!NOTE]
-> Processing base modifications assume base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
+> Processing base modifications assumes base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format
 
 Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
 

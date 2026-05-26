@@ -8,7 +8,7 @@ flowchart TB
 
 input_gvcf("DeepVariant gVCFs")
 input_bam("Aligned BAMs")
-input_svs("Structural Variant VCF's")
+input_svs("Structural Variant VCFs")
 gvcf_merging("gVCF merging")
 joint_split_multiallele("Split multiallelic variants into biallelic variants")
 split_vcf("Split joint VCF")

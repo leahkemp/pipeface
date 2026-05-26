@@ -91,7 +91,7 @@ samtools faidx hs1.fa
 ### Tandem repeat call regions file (if running tandem repeat calling)
 
 > [!NOTE]
-> You can create a BED file defining the tandem repeats regions you wish to call, alternatively you can use the catalogs below.
+> You can create a BED file defining the tandem repeat regions you wish to call. Alternatively you can use one of the catalogs below.
 
 #### hg38
 
@@ -205,7 +205,7 @@ tar -xvf hifi_revio.tar.gz
 
 ### Singleton mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each data to be processed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each file to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
@@ -234,7 +234,7 @@ Requirements:
 
 ### Duo/Trio mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each data to be processed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each file to be processed. Eg:
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
@@ -400,7 +400,7 @@ Optionally specify a threshold for the mapping quality (MAPQ) filter for structu
 ```
 
 > [!NOTE]
-> If you intend to merge the output SV VCF's with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
+> If you intend to merge the output SV VCFs with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
 
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 

@@ -869,7 +869,7 @@ workflow {
                 exit 1, "When 'related' is 'yes', 'family_position' should not be 'NONE'."
             }
             if (gvcf != 'NONE' && bam == 'NONE') {
-                exit 1, "When a GVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
+                exit 1, "When a gVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
             }
             if (sniffles != 'NONE' && bam == 'NONE') {
                 exit 1, "When a Sniffles SV VCF is provided in the 'sniffles' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. sniffles = '${sniffles}' and bam = '${bam}' provided."

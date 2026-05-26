@@ -1749,7 +1749,7 @@ workflow {
             }
             else if (in_data_format == 'aligned_bam') {
                 if (!file(in_file + '.bai').exists()) {
-                    exit 1, "You've specified that the in data format is aligned BAM, but it looks like '${in_file}' defined in the file column of '${in_data}' isn't indexed (ie. '${in_file}.bai doesn't exist')."
+                    exit 1, "You've specified that the in data format is aligned BAM, but it looks like '${in_file}' defined in the file column of '${in_data}' isn't indexed (ie. '${in_file}.bai' doesn't exist)."
                 }
                 if (!in_file.contains('bam') && in_data_format_override != 'yes') {
                     exit 1, "You've specified that the in data format is aligned BAM, but it looks like you may not be passing a BAM file based on the file names defined in the file column of '${in_data}'. Check file '${in_file}'. Pass '--in_data_format_override yes' on the command line to override this error."

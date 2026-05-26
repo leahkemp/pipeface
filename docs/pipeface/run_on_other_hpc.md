@@ -18,7 +18,7 @@
 ## Assumptions
 
 - Running on a HPC
-- You have access to appropriate GPU's if running DeepVariant/DeepTrio
+- You have access to appropriate GPUs if running DeepVariant/DeepTrio
 
 ## 1. Download variant databases (optional)
 
@@ -252,7 +252,7 @@ params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job scheduler.
 
 > [!NOTE]
-> The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPU's
+> The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPUs
 
 ## 3. Get pipeline dependencies
 

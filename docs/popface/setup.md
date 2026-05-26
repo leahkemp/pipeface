@@ -14,7 +14,7 @@ cd pipeface
 
 ## 2. Modify in_data_popface.csv
 
-Specify the population ID, sample ID, relatedness, family position, file path to the gVCF file, file path to the aligned BAM file, file path to the sniffles SV VCF file, file path to the cuteSV SV VCF file, file path to the somalier extracted file and the data type for each data to be processed. Eg:
+Specify the population ID, sample ID, relatedness, family position, file path to the gVCF file, file path to the aligned BAM file, file path to the sniffles SV VCF file, file path to the cuteSV SV VCF file, file path to the somalier extracted file and the data type for each file to be processed. Eg:
 
 ```csv
 pop_id,sample_id,related,family_position,gvcf,bam,sniffles,cutesv,somalier,data_type
