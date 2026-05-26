@@ -136,10 +136,10 @@ a5288ced0c2fe893fcfae4d2022b9cd9  gnomad.joint.v4.1.sites.chrX.vcf.bgz
 Merge into a single file
 
 ```bash
-zcat gnomad.joint.v4.1.sites.chr1.vcf.bgz | head -n1000 | grep '#' > gnomad.joint.v4.1.sites.chrall.vcf
-for i in {1..22} X Y; do zgrep -v '#' gnomad.joint.v4.1.sites.chr${i}.vcf.gz >> gnomad.joint.v4.1.sites.chrall.vcf; done
-bgzip gnomad.joint.v4.1.sites.chrall.vcf
-tabix gnomad.joint.v4.1.sites.chrall.vcf.gz
+for chr in {1..22} X Y; do
+    echo gnomad.joint.v4.1.sites.chr${chr}.vcf.bgz
+done > vcf_list.txt
+bcftools concat --naive --file-list vcf_list.txt --output-type z --threads 24 --output gnomad.joint.v4.1.sites.chrall.vcf.gz
 ```
 
 ### ClinVar
