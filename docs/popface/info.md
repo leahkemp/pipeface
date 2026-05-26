@@ -24,7 +24,7 @@ concat_tr_vcf("Concatenate TR VCFs")
 input_somalier("Somalier extracted files")
 joint_somalier("Joint somalier relatedness/quality control check")
 
-input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->concat_sv_vcf->joint_snp_indel_annotation
+input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->concat_sv_vcf-.->joint_snp_indel_annotation
 input_bam-.->snp_indel_phasing
 input_svs-.->split_sv_vcf-.->sv_vcf_merging-.->joint_sv_annotation
 input_bam-.->sv_vcf_merging
