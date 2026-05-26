@@ -116,7 +116,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - ONT and/or pacbio HiFi data
 - Singletons, duos or trios
 - WGS and/or targeted
-- hg38 or hs1 reference genome
+- hg38 or chm13 reference genome
 
 ## Main tools
 
