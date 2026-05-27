@@ -374,7 +374,7 @@ process jasmine {
         val ref_index
 
     output:
-        tuple val(pop_id), val(sv_caller), path("${partition}.*.vcf.gz"), path("${partition}.*.vcf.gz.tbi"), optional: true
+        tuple val(pop_id), val(sv_caller), path("${partition}.*.vcf.gz"), path("${partition}.*.vcf.gz.tbi")
 
     script:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
@@ -409,6 +409,10 @@ process jasmine {
         # compress and index vcf
         bgzip -@ ${task.cpus} ${partition}.${out_vcf}.vcf
         tabix ${partition}.${out_vcf}.vcf.gz
+        # cleanup jasmine intermediate vcfs to reduce file number pressure
+        if [[ -f ${partition}.${out_vcf}.vcf.gz && -f ${partition}.${out_vcf}.vcf.gz.tbi ]]; then
+            find . -mindepth 1 -type f ! -name ".command.*" ! -name ".exitcode" ! -name "${partition}.${out_vcf}.vcf.gz" ! -name "${partition}.${out_vcf}.vcf.gz.tbi" -delete
+        fi
         """
 
     stub:
