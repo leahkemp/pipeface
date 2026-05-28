@@ -19,6 +19,7 @@ import gzip
 import sys
 from bisect import bisect_left
 
+# minimum number of distinct variants in a chunk across all samples
 MIN_VARIANTS = 50
 
 def parse_args():
