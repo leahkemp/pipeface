@@ -12,6 +12,7 @@
     "mode": "",
     "snp_indel_caller": "",
     "sv_caller": "",
+    "sv_mapq": "",
     "annotate": "",
     "calculate_depth": "",
     "analyse_base_mods": "",
