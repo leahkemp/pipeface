@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.11.0"
+def pipeface_version = "0.11.1"
 
 // set defaults for undocumented params
 params.outdir2 = ""
