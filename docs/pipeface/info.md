@@ -121,7 +121,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 ## Main tools
 
 - [Minimap2](https://github.com/lh3/minimap2)
-- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)/[DeepTrio](https://github.com/google/deepvariant/blob/r1.8/docs/deeptrio-details.md)
+- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)/[DeepTrio](https://github.com/google/deepvariant/blob/r1.10/docs/deeptrio-details.md)
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)

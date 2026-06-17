@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.11.0"
+def pipeface_version = "dev"
 
 // set defaults for undocumented params
 params.outdir2 = ""
@@ -411,7 +411,7 @@ process deepvariant_dry_run {
         }
         """
         # do a dry-run of deepvariant
-        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --dry_run=true \
+        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --nophase_vcf --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
@@ -713,9 +713,9 @@ process deeptrio_make_examples {
         val ref_index
 
     output:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path("make_examples_child.*.gz"), path("gvcf_child.*.gz"), path("*.example_info.json"), val(call_variants_proband_args), emit: proband
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path("make_examples_parent1.*.gz"), path("gvcf_parent1.*.gz"), path("*.example_info.json"), val(call_variants_father_args), emit: father
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path("make_examples_parent2.*.gz"), path("gvcf_parent2.*.gz"), path("*.example_info.json"), val(call_variants_mother_args), emit: mother
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path("make_examples_child.*.gz"), path("gvcf_child.*.gz"), path("make_examples_child_call_variant_outputs.*.gz"), path("*.example_info.json"), val(call_variants_proband_args), emit: proband
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path("make_examples_parent1.*.gz"), path("gvcf_parent1.*.gz"), path("make_examples_parent1_call_variant_outputs.*.gz"), path("*.example_info.json"), val(call_variants_father_args), emit: father
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path("make_examples_parent2.*.gz"), path("gvcf_parent2.*.gz"), path("make_examples_parent2_call_variant_outputs.*.gz"), path("*.example_info.json"), val(call_variants_mother_args), emit: mother
 
     script:
         """
@@ -734,6 +734,9 @@ process deeptrio_make_examples {
         touch make_examples_parent1.tfrecord-00000-of-00104.gz
         touch make_examples_parent2.tfrecord-00000-of-00104.gz
         touch make_examples.tfrecord-00000-of-00104.gz.example_info.json
+        touch make_examples_child_call_variant_outputs.tfrecord-00000-of-00104.gz
+        touch make_examples_parent1_call_variant_outputs.tfrecord-00000-of-00104.gz
+        touch make_examples_parent2_call_variant_outputs.tfrecord-00000-of-00104.gz
         touch gvcf_child.tfrecord-00000-of-00104.gz
         touch gvcf_parent1.tfrecord-00000-of-00104.gz
         touch gvcf_parent2.tfrecord-00000-of-00104.gz
@@ -744,10 +747,10 @@ process deeptrio_make_examples {
 process deeptrio_call_variants {
 
     input:
-        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), path(example_info), val(call_variants_args)
+        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), val(cvo), path(example_info), val(call_variants_args)
 
     output:
-        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("*.gz"), val(gvcf)
+        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("call_variants_output*.gz"), val(gvcf), val(cvo)
 
     script:
         def matcher = make_examples[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -767,19 +770,21 @@ process deeptrio_call_variants {
 process deeptrio_postprocessing {
     
     input:
-        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf)
+        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf), path(cvo)
         val ref
         val ref_index
-        
+
     output:
         tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("${family_position}_snp_indel.g.vcf.gz")
 
     script:
-        def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
-        def gvcf_name = matcher[0][1]
-        def gvcf_num_shards = matcher[0][2] as int
+        def gvcf_matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def gvcf_name = gvcf_matcher[0][1]
+        def cvo_matcher = cvo[0].baseName =~ /^(.+)-\d{5}-of-\d{5}$/
+        def cvo_name = cvo_matcher[0][1]
+        def num_shards = gvcf_matcher[0][2] as int
         """
-        postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${gvcf_num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
+        postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${num_shards}.gz" --small_model_cvo_records "${cvo_name}@${num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
         vcf_stats_report --input_vcf "${family_position}_snp_indel.vcf.gz" --outfile_base "${family_position}_snp_indel"
         """
 
@@ -1086,16 +1091,14 @@ process minimod {
     script:
         """
         # run minimod
-        minimod mod-freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes -o modfreqs.tmp.bed
-        # sort
-        awk 'NR > 1 { print }' modfreqs.tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
+        minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary --insertions -o modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # separate haplotypes
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.tmp.bed > \${FILE}.bed; done
-            awk '\$9==1' modfreqs.bed >> modfreqs_hap1.bed
-            awk '\$9==2' modfreqs.bed >> modfreqs_hap2.bed
-            awk '\$9=="*"' modfreqs.bed >> modfreqs_combined.bed
-            awk '\$9==0' modfreqs.bed >> modfreqs_unphased.bed
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.bed > \${FILE}.bed; done
+            awk '\$10==1' modfreqs.bed >> modfreqs_hap1.bed
+            awk '\$10==2' modfreqs.bed >> modfreqs_hap2.bed
+            awk '\$10=="*"' modfreqs.bed >> modfreqs_combined.bed
+            awk '\$10==0' modfreqs.bed >> modfreqs_unphased.bed
             # generate bigwig
             cut -f1,2 $ref_index > chrom.sizes
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do awk 'NR > 1 { print }' \${FILE}.bed | cut -f1-3,7 > \${FILE}.formatted.bed; done
