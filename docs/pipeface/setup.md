@@ -12,7 +12,7 @@
     - [Somalier sites file (if running relatedness check)](#somalier-sites-file-if-running-relatedness-check)
       - [hg38](#hg38-2)
       - [hs1](#hs1-2)
-    - [Clair3 models (if running clair3)](#clair3-models-if-running-clair3)
+    - [Clair3 models (if running Clair3)](#clair3-models-if-running-clair3)
       - [ONT](#ont)
       - [Pacbio HiFi revio](#pacbio-hifi-revio)
   - [3. Modify in\_data\_pipeface.csv](#3-modify-in_data_pipefacecsv)
@@ -171,7 +171,7 @@ wget -O sites.hg38.v0.2.19.vcf.gz https://github.com/brentp/somalier/files/34124
 wget -O sites.chm13v2.T2T.v0.2.19.vcf.gz https://github.com/brentp/somalier/files/9954286/sites.chm13v2.T2T.vcf.gz
 ```
 
-### Clair3 models (if running clair3)
+### Clair3 models (if running Clair3)
 
 #### ONT
 
@@ -181,7 +181,7 @@ Clone the Rerio github repository
 git clone https://github.com/nanoporetech/rerio
 ```
 
-Get a copy of the clair3 models
+Get a copy of the Clair3 models
 
 ```bash
 python3 rerio/download_model.py --clair3
@@ -189,7 +189,7 @@ python3 rerio/download_model.py --clair3
 
 #### Pacbio HiFi revio
 
-Get a copy of the clair3 models
+Get a copy of the Clair3 models
 
 ```bash
 wget http://www.bio8.cs.hku.hk/clair3/clair3_models/hifi_revio.tar.gz
@@ -205,16 +205,16 @@ tar -xvf hifi_revio.tar.gz
 
 ### Singleton mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each file to be processed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
 
 ```csv
-sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,NONE,NONE,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_01,NONE,NONE,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_02,NONE,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_03,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/
-sample_04,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
-sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/
+sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_01,NONE,NONE,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,ont_r10_dorado_sup_4khz
+sample_01,NONE,NONE,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,ont_r10_dorado_sup_4khz
+sample_02,NONE,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,NONE
+sample_03,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,NONE
+sample_04,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
+sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 ```
 
 > [!NOTE]
@@ -230,21 +230,22 @@ Requirements:
 - set `family_id` to 'NONE' if not required
 - `family_position` can be any value (set to 'NONE' if not required)
 - set `regions_of_interest` to 'NONE' if not required
-- set `clair3_model` to the path of an appropriate Clair3 model when clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
+- set `clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
+- set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
 
 ### Duo/Trio mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file and file path to clair3 model for each file to be processed. Eg:
+Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
 
 ```csv
-sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model
-sample_01,family01,proband,/path/to/sample_01_1.bam,ont,NONE,NONE
-sample_01,family01,proband,/path/to/sample_01_2.bam,ont,NONE,NONE
-sample_02,family01,father,/path/to/sample_02.bam,ont,NONE,NONE
-sample_03,family01,mother,/path/to/sample_03.bam,ont,NONE,NONE
-sample_04,family02,proband,/path/to/sample_04.bam,ont,NONE,NONE
-sample_05,family02,father,/path/to/sample_05.bam,ont,NONE,NONE
-sample_06,family02,mother,/path/to/sample_06.bam,ont,NONE,NONE
+sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_01,family01,proband,/path/to/sample_01_1.bam,ont,NONE,NONE,NONE
+sample_01,family01,proband,/path/to/sample_01_2.bam,ont,NONE,NONE,NONE
+sample_02,family01,father,/path/to/sample_02.bam,ont,NONE,NONE,NONE
+sample_03,family01,mother,/path/to/sample_03.bam,ont,NONE,NONE,NONE
+sample_04,family02,proband,/path/to/sample_04.bam,ont,NONE,NONE,NONE
+sample_05,family02,father,/path/to/sample_05.bam,ont,NONE,NONE,NONE
+sample_06,family02,mother,/path/to/sample_06.bam,ont,NONE,NONE,NONE
 ```
 
 > [!NOTE]
@@ -262,7 +263,8 @@ Requirements:
 - in duo mode, exactly 2 unique `sample_id` values are required per `family_id`, with a `proband` and either a `father` or `mother` in the `family_position` column
 - in trio mode, exactly 3 unique `sample_id` values are required per `family_id`, with a `proband`, `father` and `mother` in the `family_position` column
 - set `regions_of_interest` to 'NONE' if not required
-- set `clair3_model` to the path of an appropriate Clair3 model when clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
+- set `Clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
+- set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
 
 ## 4. Modify parameters_pipeface.json
 
@@ -368,6 +370,18 @@ Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the S
 > - Running DeepVariant/DeepTrio on ONT data assumes r10 data.
 > - In singleton and duo mode, the SNP/indel caller must be 'clair3' or 'deepvariant'.
 > - In trio mode, the SNP/indel caller must be 'clair3' or 'deeptrio'.
+
+Optionally turn on somatic calling ('yes' or 'no'). Eg:
+
+```json
+    "somatic_calling": "yes",
+```
+
+*OR*
+
+```json
+    "somatic_calling": "no",
+```
 
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 

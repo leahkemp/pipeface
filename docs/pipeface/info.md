@@ -13,6 +13,7 @@ merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
+somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
 snp_indel_annotation("SNP/indel annotation (hg38 only)")
@@ -25,6 +26,7 @@ sv_annotation("Structural variant annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->somatic_calling
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->somalier
@@ -45,6 +47,7 @@ merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
+somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
 joint_somalier("Joint somalier relatedness/quality control check")
@@ -62,6 +65,7 @@ joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->somatic_calling
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
@@ -83,6 +87,7 @@ merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
+somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
 joint_snp_indel_calling("Joint SNP/indel variant calling")
@@ -101,6 +106,7 @@ joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->somatic_calling
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
@@ -131,6 +137,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [LongTR](https://github.com/gymrek-lab/LongTR)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
+- [ClairS-TO](https://github.com/HKU-BAL/ClairS-TO)
 
 *[See the list of software and their versions used by this version of pipeface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](../../config/nextflow_pipeface.config) file is used).*
 
@@ -164,6 +171,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 - Somalier extracted files
+- ClairS-TO somatic SNV/indel VCF files
 
 ### Duo
 
@@ -179,6 +187,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
+- ClairS-TO somatic SNV/indel VCF files
 
 ### Trio
 
@@ -194,6 +203,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
+- ClairS-TO somatic SNV/indel VCF files
 
 > [!NOTE]
 > - Running DeepVariant/DeepTrio on ONT data assumes r10 data

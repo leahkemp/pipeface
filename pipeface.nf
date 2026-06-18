@@ -35,6 +35,7 @@ process scrape_settings {
         val tr_call_regions
         val check_relatedness
         val sites
+        val somatic_calling
         val outdir
         val outdir2
         val haploidaware
@@ -79,6 +80,7 @@ process scrape_settings {
             echo "Tandem repeat call regions: $tr_call_regions"
             echo "Check relatedness: $check_relatedness"
             echo "Somalier sites file: $sites"
+            echo "Somatic calling: $somatic_calling"
             echo "Outdir: $outdir"
         } > pipeface_settings.txt
         """
@@ -380,6 +382,38 @@ process clair3_post_processing {
         """
         touch snp_indel.g.vcf.gz
         touch snp_indel.g.vcf.gz.tbi
+        """
+
+}
+
+process clairs_to {
+
+    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.${ref_name}.clairs_to.$filename" }, pattern: '{snv,indel}.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(clairs_to_platform), val(regions_of_interest)
+        val ref
+        val ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path("snv.vcf.gz"), path("snv.vcf.gz.tbi"), path("indel.vcf.gz"), path("indel.vcf.gz.tbi")
+
+    script:
+        // optionally pass regions of interest bed file
+        def regions_of_interest_optional = regions_of_interest != 'NONE' ? "--bed_fn $regions_of_interest" : ''
+        """
+        run_clairs_to --tumor_bam_fn $bam --ref_fn $ref --output_dir ./ --threads ${task.cpus} --platform $clairs_to_platform --sample_name $sample_id --include_all_ctgs $regions_of_interest_optional
+        """
+
+    stub:
+        """
+        touch snv.vcf.gz
+        touch snv.vcf.gz.tbi
+        touch indel.vcf.gz
+        touch indel.vcf.gz.tbi
         """
 
 }
@@ -1475,6 +1509,7 @@ workflow {
     tr_call_regions = "${params.tr_call_regions}".trim()
     check_relatedness = "${params.check_relatedness}".trim()
     sites = "${params.sites}".trim()
+    somatic_calling = "${params.somatic_calling}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
     vep_db = "${params.vep_db}".trim()
@@ -1525,7 +1560,7 @@ workflow {
     if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
         exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
     }
-    [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness].each { param, val ->
+    [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness, somatic_calling: somatic_calling].each { param, val ->
         if (!(val in ['yes', 'no'])) {
             exit 1, "'${param}' should be either 'yes' or 'no', ${param} = '${val}' provided."
         }
@@ -1589,7 +1624,7 @@ workflow {
         exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
-        [annotate: [annotate, 'yes'], mode: [mode, 'NONE'], tandem_repeat: [tandem_repeat, 'NONE'], calculate_depth: [calculate_depth, 'no'], analyse_base_mods: [analyse_base_mods, 'no'], tr_calling: [tr_calling, 'no'], check_relatedness: [check_relatedness, 'no']].each { param, vals ->
+        [annotate: [annotate, 'yes'], mode: [mode, 'NONE'], tandem_repeat: [tandem_repeat, 'NONE'], calculate_depth: [calculate_depth, 'no'], analyse_base_mods: [analyse_base_mods, 'no'], tr_calling: [tr_calling, 'no'], check_relatedness: [check_relatedness, 'no'], somatic_calling: [somatic_calling, 'no']].each { param, vals ->
             def (val, expected) = vals
             if (val != expected) {
                 exit 1, "When the in data format is SNP/indel VCF or SV VCF, set ${param} to '${expected}', in_data_format = '${in_data_format}' and ${param} = '${val}' provided."
@@ -1642,6 +1677,8 @@ workflow {
             data_type:                   tuple(row.sample_id, row.family_id, row.data_type)
             regions_of_interest:         tuple(row.sample_id, row.family_id, row.regions_of_interest)
             clair3_model:                tuple(row.sample_id, row.family_id, row.clair3_model)
+            clairs_to_platform:             tuple(row.sample_id, row.family_id, row.clairs_to_platform)
+            clairs_to_validation:        tuple(row.sample_id, row.family_id, row.clairs_to_platform)
             row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
             family_validation:           tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
             sample_family_validation:    tuple(row.sample_id, row.family_id)
@@ -1694,6 +1731,10 @@ workflow {
     csv.clair3_model
         .groupTuple(by: [0,1,2])
         .set { clair3_model_ch }
+
+    csv.clairs_to_platform
+        .groupTuple(by: [0,1,2])
+        .set { clairs_to_platform_ch }
 
     // check user provided in data
     csv.row_validation
@@ -1775,6 +1816,23 @@ workflow {
         .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
             if (family_ids.unique().size() > 1) {
                 exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'family_id', conflicting 'family_id' values '${family_ids}' provided for sample '${sample_id}'."
+            }
+        }
+
+    csv.clairs_to_validation
+        .map { sample_id, family_id, clairs_to_platform ->
+            // check for empty entries
+            if (clairs_to_platform.isEmpty()) {
+                exit 1, "There is an empty entry in the 'clairs_to_platform' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            // check value constraints and cross-parameter compatibility
+            if (somatic_calling == 'yes' && in_data_format in ['ubam_fastq', 'aligned_bam']) {
+                if (clairs_to_platform == 'NONE') {
+                    exit 1, "When somatic_calling is 'yes', provide a ClairS-TO platform in the 'clairs_to_platform' column of '${in_data}' rather than setting it to 'NONE'."
+                }
+            }
+            else if (clairs_to_platform != 'NONE') {
+                exit 1, "Set the 'clairs_to_platform' column of '${in_data}' to 'NONE' when somatic_calling is not 'yes', '${clairs_to_platform}' provided."
             }
         }
 
@@ -1873,7 +1931,7 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
@@ -1886,6 +1944,10 @@ workflow {
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (calculate_depth == 'yes') {
             mosdepth(bam.join(regions_of_interest_ch, by: [0,1]), outdir, outdir2, ref_name)
+        }
+        // somatic calling
+        if (somatic_calling == 'yes') {
+            clairs_to(bam.join(clairs_to_platform_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
