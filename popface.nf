@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag popface version
-def popface_version = "0.11.0"
+def popface_version = "0.11.1"
 
 // set defaults for undocumented params
 params.outdir2 = ""
@@ -392,7 +392,7 @@ process jasmine {
         done
         # run jasmine
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
-        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
+        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
         grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
