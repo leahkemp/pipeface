@@ -382,8 +382,6 @@ process jasmine {
         def iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants' + (data_type == 'pacbio' ? ',--pacbio' : '')
         // conditionally define require first flag
         def require_first_sample_optional = related == 'yes' ? '--require_first_sample' : ''
-        // conditionally define merging strategy
-        def merging_strategy = related == 'yes' ? '--clique_merging' : '--centroid_merging'
         """
         # create file lists in in_data_pipeface.csv row order (sample_ids and bams are pre-sorted by csv index)
         SAMPLES=(${sample_ids.join(' ')})
@@ -394,7 +392,7 @@ process jasmine {
         done
         # run jasmine
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
-        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes $merging_strategy --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
+        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
         grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
