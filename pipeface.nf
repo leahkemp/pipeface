@@ -392,7 +392,7 @@ process deepvariant_dry_run {
         val ref_index
         val sex
         val haploidaware
-        val parbed
+        path parbed
         val chr_x_seq
         val chr_y_seq
 
@@ -405,7 +405,7 @@ process deepvariant_dry_run {
         // conditionally define haploid contigs and par regions
         if (haploidaware == 'yes') {
             haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed $parbed"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
         }
         else {
             haploidparameter = ""
@@ -436,7 +436,7 @@ process deepvariant_make_examples {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_args), val(call_variants_args), val(regions_of_interest)
         val ref
         val ref_index
-        val parbed
+        path parbed
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path("make_examples.*.gz{,.example_info.json}"), path("make_examples_call_variant_outputs.*.gz"), path("gvcf.*.gz")
@@ -499,7 +499,7 @@ process deepvariant_post_processing {
         val snp_indel_caller
         val sex
         val haploidaware
-        val parbed
+        path parbed
         val chr_x_seq
         val chr_y_seq
 
@@ -514,7 +514,7 @@ process deepvariant_post_processing {
         // conditionally define haploid contigs and par regions
         if (haploidaware == 'yes') {
             haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed $parbed"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
         }
         else {
             haploidparameter = ""
@@ -1472,6 +1472,7 @@ workflow {
     in_data = "${params.in_data}".trim()
     sex = "${params.sex}".trim()
     parbed = "${params.parbed}".trim()
+    parbed_file = parbed != 'NONE' ? file(parbed) : []
     in_data_format = "${params.in_data_format}".trim()
     in_data_format_override = "${params.in_data_format_override}".trim()
     ref = "${params.ref}".trim()
@@ -1506,6 +1507,9 @@ workflow {
     ref_name = file(ref).getSimpleName()
     chr_x_seq = "${params.chr_x_seq}".trim()
     chr_y_seq = "${params.chr_y_seq}".trim()
+
+    // handle files which can be set to a non-path value (NONE)
+    parbed_file = parbed != 'NONE' ? file(parbed) : []
 
     // check user provided parameters
     // check for empty entries
@@ -1911,16 +1915,16 @@ workflow {
                 (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             }
             else if (haploidaware == 'yes' && sex == 'XY') {
-                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed)
+                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed_file)
                 haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
                 (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
-            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref, ref_index, sex, haploidaware, parbed, chr_x_seq, chr_y_seq)
-            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed)
+            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref, ref_index, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
+            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed_file)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, sex, haploidaware, parbed, chr_x_seq, chr_y_seq)
+            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
             // filter refcall variants
             snp_indel_vcf_bam = filter_ref_call(snp_indel_raw_vcf_bam)
         }
