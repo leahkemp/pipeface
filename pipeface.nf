@@ -10,8 +10,8 @@ params.in_data_format_override = ""
 
 // default values for chrX and chrY contig names. Used when sex = 'XY' and 
 // haploidaware = 'yes'. Don't change unless your reference genome has different names. 
-params.chrXseq = "chrX"
-params.chrYseq = "chrY"
+params.chr_x_seq = "chrX"
+params.chr_y_seq = "chrY"
 
 process scrape_settings {
 
@@ -392,7 +392,9 @@ process deepvariant_dry_run {
         val ref_index
         val sex
         val haploidaware
-        val parbed
+        path parbed
+        val chr_x_seq
+        val chr_y_seq
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), env(make_examples_args), env(call_variants_args)
@@ -402,8 +404,8 @@ process deepvariant_dry_run {
         def model = data_type == 'ont' ? 'ONT_R104' : 'PACBIO'
         // conditionally define haploid contigs and par regions
         if (haploidaware == 'yes') {
-            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed $parbed"
+            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
         }
         else {
             haploidparameter = ""
@@ -434,7 +436,7 @@ process deepvariant_make_examples {
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_args), val(call_variants_args), val(regions_of_interest)
         val ref
         val ref_index
-        val parbed
+        path parbed
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path("make_examples.*.gz{,.example_info.json}"), path("make_examples_call_variant_outputs.*.gz"), path("gvcf.*.gz")
@@ -495,6 +497,11 @@ process deepvariant_post_processing {
         val outdir2
         val ref_name
         val snp_indel_caller
+        val sex
+        val haploidaware
+        path parbed
+        val chr_x_seq
+        val chr_y_seq
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path("snp_indel.vcf.gz"), path("snp_indel.vcf.gz.tbi")
@@ -504,9 +511,18 @@ process deepvariant_post_processing {
     script:
         def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
         def num_shards = matcher[0][2] as int
+        // conditionally define haploid contigs and par regions
+        if (haploidaware == 'yes') {
+            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
+        }
+        else {
+            haploidparameter = ""
+            parbedparameter = ""
+        }
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
-        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}"
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}" ${haploidparameter} ${parbedparameter}
         vcf_stats_report --input_vcf "snp_indel.vcf.gz" --outfile_base "snp_indel"
         # tag bam and gvcf with family_position for downstream glnexus
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
@@ -1456,6 +1472,7 @@ workflow {
     in_data = "${params.in_data}".trim()
     sex = "${params.sex}".trim()
     parbed = "${params.parbed}".trim()
+    parbed_file = parbed != 'NONE' ? file(parbed) : []
     in_data_format = "${params.in_data_format}".trim()
     in_data_format_override = "${params.in_data_format_override}".trim()
     ref = "${params.ref}".trim()
@@ -1488,6 +1505,11 @@ workflow {
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
     ref_name = file(ref).getSimpleName()
+    chr_x_seq = "${params.chr_x_seq}".trim()
+    chr_y_seq = "${params.chr_y_seq}".trim()
+
+    // handle files which can be set to a non-path value (NONE)
+    parbed_file = parbed != 'NONE' ? file(parbed) : []
 
     // check user provided parameters
     // check for empty entries
@@ -1541,7 +1563,7 @@ workflow {
             exit 1, "In haploid-aware mode, provide a valid PAR BED file, parbed = 'NONE' provided."
         }
         def ref_index_content = file(ref_index).text
-        if (!ref_index_content.contains(chrXseq) || !ref_index_content.contains(chrYseq)) {
+        if (!ref_index_content.contains(chr_x_seq) || !ref_index_content.contains(chr_y_seq)) {
             exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${ref_index}."
         }
     }
@@ -1654,7 +1676,7 @@ workflow {
         .map { sample_id, family_id, files, data_type, regions_of_interest, clair3_model ->
             if (haploidaware == 'yes' && regions_of_interest != 'NONE' && file(regions_of_interest).exists()) {
                 def content = file(regions_of_interest).text
-                if (!content.contains(chrXseq) || !content.contains(chrYseq)) {
+                if (!content.contains(chr_x_seq) || !content.contains(chr_y_seq)) {
                     exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${regions_of_interest}."
                 }
             }
@@ -1893,16 +1915,16 @@ workflow {
                 (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
             }
             else if (haploidaware == 'yes' && sex == 'XY') {
-                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed)
+                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed_file)
                 haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
                 (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
-            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref, ref_index, sex, haploidaware, parbed)
-            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed)
+            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref, ref_index, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
+            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed_file)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
             // filter refcall variants
             snp_indel_vcf_bam = filter_ref_call(snp_indel_raw_vcf_bam)
         }
