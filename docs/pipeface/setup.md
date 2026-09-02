@@ -309,6 +309,9 @@ Optionally specify the path to the tandem repeat bed file (used by the SV caller
     "tandem_repeat": "NONE",
 ```
 
+> [!TIP]
+> If you intend to later merge a large cohort with popface, it's recommended to provide a tandem repeat bed file for SV calling to allow the SV merging in popface to scale to a large number of samples.
+
 Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
 ```json
@@ -386,8 +389,8 @@ Optionally specify a threshold for the mapping quality (MAPQ) filter for structu
     "sv_mapq": "60",
 ```
 
-> [!NOTE]
-> If you intend to merge the output SV VCFs with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
+> [!TIP]
+> If you intend to later merge a large cohort with popface, it's recommended to use a MAPQ of 60 to allow the SV merging in popface to scale to a large number of samples.
 
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
