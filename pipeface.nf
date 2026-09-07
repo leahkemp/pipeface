@@ -399,9 +399,9 @@ process clairs_to {
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.${ref_name}.clairs_to.$filename" }, pattern: '{snv,indel}.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(clairs_to_platform), val(regions_of_interest)
-        val ref
-        val ref_index
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(clairs_to_platform), path(regions_of_interest)
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -411,7 +411,7 @@ process clairs_to {
 
     script:
         // optionally pass regions of interest bed file
-        def regions_of_interest_optional = regions_of_interest != 'NONE' ? "--bed_fn $regions_of_interest" : ''
+        def regions_of_interest_optional = regions_of_interest ? "--bed_fn $regions_of_interest" : ''
         """
         run_clairs_to --tumor_bam_fn $bam --ref_fn $ref --output_dir ./ --threads ${task.cpus} --platform $clairs_to_platform --sample_name $sample_id --include_all_ctgs $regions_of_interest_optional
         """
@@ -2032,7 +2032,7 @@ workflow {
         }
         // somatic calling
         if (somatic_calling == 'yes') {
-            clairs_to(bam.join(clairs_to_platform_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+            clairs_to(bam.join(clairs_to_platform_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
