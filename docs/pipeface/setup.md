@@ -277,6 +277,9 @@ Specify the path to the reference genome and its index. Eg:
     "ref_index": "/path/to/hg38.fa.fai",
 ```
 
+> [!NOTE]
+> The index must be named after the reference genome with a `.fai` suffix (eg. `hg38.fa` and `hg38.fa.fai`).
+
 Optionally turn on haploid-aware mode. Eg:
 
 ```json
