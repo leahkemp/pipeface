@@ -40,10 +40,10 @@ RUN wget -O- "https://github.com/samtools/bcftools/releases/download/1.21/bcftoo
     mv /bcftools-1.21/plugins/* /usr/local/libexec/bcftools/
 
 # whatshap
-RUN pip install whatshap==2.3 --break-system-packages
+RUN pip install whatshap==2.8 --break-system-packages
 
 # minimod
-RUN wget -O- "https://github.com/warp9seq/minimod/releases/download/v0.3.0/minimod-v0.3.0-release.tar.gz" | tar -xz && \
+RUN wget -O- "https://github.com/warp9seq/minimod/releases/download/v0.5.0/minimod-v0.5.0-release.tar.gz" | tar -xz && \
     cd minimod-* && \
     ./scripts/install-hts.sh && \
     make && \
@@ -58,10 +58,10 @@ RUN wget "http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bedGraphToBigWig
 RUN pip install cuteSV==2.1.1 --break-system-packages
 
 # sniffles
-RUN pip install sniffles==2.6.0 --break-system-packages
+RUN pip install sniffles==2.8.0 --break-system-packages
 
 # somalier
-RUN wget "https://github.com/brentp/somalier/releases/download/v0.2.19/somalier" && \
+RUN wget "https://github.com/brentp/somalier/releases/download/v0.3.2/somalier" && \
     chmod a+x somalier && \
     mv somalier /usr/local/bin/
 
@@ -125,7 +125,7 @@ RUN wget -O- "https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz" | tar 
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
 LABEL description="docker image containing most software required for pipeface/popface"
-LABEL version="0.0.4"
+LABEL version="0.0.5"
 LABEL maintainer.name="Leah Kemp"
 LABEL maintainer.email="leahmhkemp@gmail.com"
 

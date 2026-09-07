@@ -175,30 +175,17 @@ wget -O sites.chm13v2.T2T.v0.2.19.vcf.gz https://github.com/brentp/somalier/file
 
 #### ONT
 
-Clone the Rerio github repository
-
 ```bash
-git clone https://github.com/nanoporetech/rerio
+wget -r -np -nH --cut-dirs=2 -R "index.html*" -P ./clair3_models/ont/ https://www.bio8.cs.hku.hk/clair3/clair3_models_rerio_pytorch/r1041_e82_400bps_sup_v500/
 ```
 
-Get a copy of the Clair3 models
-
-```bash
-python3 rerio/download_model.py --clair3
-```
+> [!NOTE]
+> The example above downloads one example model. Browse the full list of available models at <https://www.bio8.cs.hku.hk/clair3/clair3_models_rerio_pytorch/>.
 
 #### Pacbio HiFi revio
 
-Get a copy of the Clair3 models
-
 ```bash
-wget http://www.bio8.cs.hku.hk/clair3/clair3_models/hifi_revio.tar.gz
-```
-
-Untar
-
-```bash
-tar -xvf hifi_revio.tar.gz
+wget -r -np -nH --cut-dirs=2 -R "index.html*" ./clair3_models/hifi_revio/ https://www.bio8.cs.hku.hk/clair3/clair3_models_pytorch/hifi_revio/
 ```
 
 ## 3. Modify in_data_pipeface.csv
@@ -209,10 +196,10 @@ Specify the sample ID, family ID, family position, file path to the data, data t
 
 ```csv
 sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
-sample_01,NONE,NONE,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,ont_r10_dorado_sup_4khz
-sample_01,NONE,NONE,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,ont_r10_dorado_sup_4khz
-sample_02,NONE,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,NONE
-sample_03,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_sup_v420/,NONE
+sample_01,NONE,NONE,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_01,NONE,NONE,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_02,NONE,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
+sample_03,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
 sample_04,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 ```
@@ -292,6 +279,9 @@ Specify the path to the reference genome and its index. Eg:
     "ref_index": "/path/to/hg38.fa.fai",
 ```
 
+> [!NOTE]
+> The index must be named after the reference genome with a `.fai` suffix (eg. `hg38.fa` and `hg38.fa.fai`).
+
 Optionally turn on haploid-aware mode. Eg:
 
 ```json
@@ -323,6 +313,9 @@ Optionally specify the path to the tandem repeat bed file (used by the SV caller
 ```json
     "tandem_repeat": "NONE",
 ```
+
+> [!TIP]
+> If you intend to later merge a large cohort with popface, it's recommended to provide a tandem repeat bed file for SV calling to allow the SV merging in popface to scale to a large number of samples.
 
 Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the SNP/indel caller to use ('clair3', 'deepvariant' or 'deeptrio'). Eg:
 
@@ -413,8 +406,8 @@ Optionally specify a threshold for the mapping quality (MAPQ) filter for structu
     "sv_mapq": "60",
 ```
 
-> [!NOTE]
-> If you intend to merge the output SV VCFs with many samples in popface, it's recommended to use MAPQ 60 to allow the SV merging in popface to scale to a large number of samples (for example 500-1000 samples).
+> [!TIP]
+> If you intend to later merge a large cohort with popface, it's recommended to use a MAPQ of 60 to allow the SV merging in popface to scale to a large number of samples.
 
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 

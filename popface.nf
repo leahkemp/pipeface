@@ -1,13 +1,13 @@
 nextflow.enable.dsl=2
 
 // tag popface version
-def popface_version = "0.11.0"
+def popface_version = "dev"
 
 // set defaults for undocumented params
 params.outdir2 = ""
 params.annotate_override = ""
 params.min_gap = 100000
-params.chunks = 5
+params.chunks = 15
 
 process scrape_settings {
 
@@ -66,7 +66,7 @@ process glnexus_pre_processing {
 
     input:
         tuple val(pop_id), val(sample_id), path(gvcf)
-        val (ref_index)
+        path ref_index
 
     output:
         tuple val(pop_id), val(sample_id), path("*.amended.g.vcf.gz")
@@ -87,7 +87,7 @@ process glnexus_pre_processing {
 
     stub:
         """
-        touch sample1.amended.g.vcf.gz
+        touch ${sample_id}.amended.g.vcf.gz
         """
 
 }
@@ -97,7 +97,7 @@ process glnexus {
     input:
         tuple val(pop_id), val(sample_ids), path(gvcfs)
         val snp_indel_caller
-        val clair3_config
+        path clair3_config
 
     output:
         tuple val(pop_id), val(sample_ids), path("snp_indel.bcf")
@@ -148,8 +148,8 @@ process split_multiallele {
 
     input:
         tuple val(pop_id), path(snp_indel_vcf), path(snp_indel_vcf_index)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(pop_id), path("snp_indel.split.vcf.gz"), path("snp_indel.split.vcf.gz.tbi")
@@ -189,8 +189,8 @@ process split_vcf {
 
     stub:
         """
-        touch sample1.snp_indel.vcf.gz
-        touch sample1.snp_indel.vcf.gz.tbi
+        touch ${sample_id}.snp_indel.vcf.gz
+        touch ${sample_id}.snp_indel.vcf.gz.tbi
         """
 
 }
@@ -202,15 +202,15 @@ process whatshap_phase {
 
     input:
         tuple val(pop_id), val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(bam), path(bam_index)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
         val snp_indel_caller
 
     output:
-        tuple val(pop_id), path("${sample_id}.snp_indel.phased.vcf.gz"), path("${sample_id}.snp_indel.phased.vcf.gz.tbi")
+        tuple val(pop_id), val(sample_id), path("${sample_id}.snp_indel.phased.vcf.gz"), path("${sample_id}.snp_indel.phased.vcf.gz.tbi")
         tuple val(pop_id), path("snp_indel.phased.read_list.txt"), path("snp_indel.phased.stats.gtf")
 
     script:
@@ -230,6 +230,8 @@ process whatshap_phase {
         """
         touch ${sample_id}.snp_indel.phased.vcf.gz
         touch ${sample_id}.snp_indel.phased.vcf.gz.tbi
+        touch snp_indel.phased.read_list.txt
+        touch snp_indel.phased.stats.gtf
         """
 
 }
@@ -250,8 +252,10 @@ process merge_vcf {
 
     script:
         """
+        # create file list in in_data_popface.csv row order (vcfs are pre-sorted by csv index)
+        printf '%s\\n' ${snp_indel_phased_vcfs.join(' ')} > vcf_list.txt
         # merge vcf
-        bcftools merge -Oz -o snp_indel.phased.vcf.gz ./*.snp_indel.phased.vcf.gz --threads ${task.cpus}
+        bcftools merge -Oz -o snp_indel.phased.vcf.gz -l vcf_list.txt --threads ${task.cpus}
         # index vcf
         tabix snp_indel.phased.vcf.gz
         """
@@ -268,7 +272,7 @@ process split_sv_vcfs {
 
     input:
         tuple val(pop_id), val(sv_caller), val(sample_ids), path(sv_vcfs), path(sv_vcf_indices)
-        val ref_index
+        path ref_index
         val min_gap
         val chunks
 
@@ -370,8 +374,8 @@ process jasmine {
 
     input:
         tuple val(pop_id), val(partition), val(sv_caller), path(split_sv_vcfs), val(sample_ids), path(bams), path(bams_indices), val(data_type), val(related)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(pop_id), val(sv_caller), path("${partition}.*.vcf.gz"), path("${partition}.*.vcf.gz.tbi")
@@ -379,7 +383,7 @@ process jasmine {
     script:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         // conditionally define iris arguments (by default, iris will pass minimap -x map-ont, the --pacbio flag passed to iris will pass minimap -x map-pb)
-        def iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants' + (data_type == 'pacbio' ? ',--pacbio' : '')
+        def iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants' + (data_type == 'pacbio' ? ',--pacbio' : '') + ",threads=${task.cpus}"
         // conditionally define require first flag
         def require_first_sample_optional = related == 'yes' ? '--require_first_sample' : ''
         """
@@ -392,7 +396,7 @@ process jasmine {
         done
         # run jasmine
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
-        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
+        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
         grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
@@ -409,10 +413,6 @@ process jasmine {
         # compress and index vcf
         bgzip -@ ${task.cpus} ${partition}.${out_vcf}.vcf
         tabix ${partition}.${out_vcf}.vcf.gz
-        # cleanup jasmine intermediate vcfs to reduce file number pressure
-        if [[ -f ${partition}.${out_vcf}.vcf.gz && -f ${partition}.${out_vcf}.vcf.gz.tbi ]]; then
-            find . -mindepth 1 -type f ! -name ".command.*" ! -name ".exitcode" ! -name "${partition}.${out_vcf}.vcf.gz" ! -name "${partition}.${out_vcf}.vcf.gz.tbi" -delete
-        fi
         """
 
     stub:
@@ -446,9 +446,9 @@ process concat_sv_vcf {
         VCFS=(*sv*.vcf.gz)
         # concat vcfs (or pass through if only one) and sort
         if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools sort -Oz -o ${out_vcf}.vcf.gz \${VCFS[0]}
+            bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz \${VCFS[0]}
         else
-            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -Oz -o ${out_vcf}.vcf.gz -
+            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
         fi
         # index vcf
         tabix ${out_vcf}.vcf.gz
@@ -493,7 +493,7 @@ process somalier {
 process longtr_pre_processing {
 
     input:
-        val tr_call_regions
+        path tr_call_regions
 
     output:
         path("split.*.bed")
@@ -515,8 +515,8 @@ process longtr {
 
     input:
         tuple val(pop_id), val(sample_ids), path(bams), path(bam_indices), val(data_type), path(split_bed)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(pop_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
@@ -577,23 +577,89 @@ process concat_tr_vcf {
 
 }
 
+process list_chromosomes {
+
+    input:
+        tuple val(pop_id), path(joint_snp_indel_phased_vcf), path(joint_snp_indel_phased_vcf_index)
+
+    output:
+        tuple val(pop_id), path("chromosomes.txt")
+
+    script:
+        """
+        # list chromosomes with variants to annotate per chromosome
+        tabix -l $joint_snp_indel_phased_vcf > chromosomes.txt
+        """
+
+    stub:
+        """
+        echo chr1 > chromosomes.txt
+        """
+
+}
+
 process vep_snp_indel {
+
+    input:
+        tuple val(pop_id), path(joint_snp_indel_phased_vcf), path(joint_snp_indel_phased_vcf_index), val(chr)
+        path ref
+        path ref_index
+        path vep_db
+        path revel_db
+        path revel_db_index
+        path gnomad_db
+        path gnomad_db_index
+        path clinvar_db
+        path clinvar_db_index
+        path cadd_snv_db
+        path cadd_snv_db_index
+        path cadd_indel_db
+        path cadd_indel_db_index
+        path spliceai_snv_db
+        path spliceai_snv_db_index
+        path spliceai_indel_db
+        path spliceai_indel_db_index
+        path alphamissense_db
+        path alphamissense_db_index
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+
+    output:
+        tuple val(pop_id), path("*.snp_indel.phased.annotated.vcf.gz"), path("*.snp_indel.phased.annotated.vcf.gz.tbi")
+
+    script:
+        """
+        # extract chromosome
+        tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
+        # run vep
+        vep -i ${chr}.snp_indel.phased.vcf.gz -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
+        --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
+        --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
+        --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
+        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
+        --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
+        --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
+        --plugin AlphaMissense,file=$alphamissense_db
+        # index vcf
+        tabix ${chr}.snp_indel.phased.annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch ${chr}.snp_indel.phased.annotated.vcf.gz
+        touch ${chr}.snp_indel.phased.annotated.vcf.gz.tbi
+        """
+
+}
+
+process concat_snp_indel_vcf {
 
     publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$snp_indel_caller.$filename"}, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(pop_id), path(joint_snp_indel_phased_vcf), path(joint_snp_indel_phased_vcf_index)
-        val ref
-        val ref_index
-        val vep_db
-        val revel_db
-        val gnomad_db
-        val clinvar_db
-        val cadd_snv_db
-        val cadd_indel_db
-        val spliceai_snv_db
-        val spliceai_indel_db
-        val alphamissense_db
+        tuple val(pop_id), path(annotated_vcfs), path(annotated_vcf_indices)
         val outdir
         val outdir2
         val ref_name
@@ -604,15 +670,14 @@ process vep_snp_indel {
 
     script:
         """
-        # run vep
-        vep -i $joint_snp_indel_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
-        --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
-        --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
-        --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
-        --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
-        --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
-        --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
-        --plugin AlphaMissense,file=$alphamissense_db
+        # get list of vcfs
+        VCFS=(*.snp_indel.phased.annotated.vcf.gz)
+        # concat vcfs (or pass through if only one) and sort
+        if [[ \${#VCFS[@]} -eq 1 ]]; then
+            bcftools sort -T ./ -Oz -o snp_indel.phased.annotated.vcf.gz \${VCFS[0]}
+        else
+            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o snp_indel.phased.annotated.vcf.gz -
+        fi
         # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
         """
@@ -631,11 +696,13 @@ process vep_sv {
 
     input:
         tuple val(pop_id), val(sv_caller), path(sv_vcf)
-        val ref
-        val ref_index
-        val vep_db
-        val gnomad_db
-        val cadd_sv_db
+        path ref
+        path ref_index
+        path vep_db
+        path gnomad_db
+        path gnomad_db_index
+        path cadd_sv_db
+        path cadd_sv_db_index
         val outdir
         val outdir2
         val ref_name
@@ -717,10 +784,21 @@ workflow {
             exit 1, "File does not exist, ${param} = '${val}' provided. Set to 'NONE' if not required."
         }
     }
+    // the reference and its index are staged into each task directory by name, so tools can only find the index if it is named <ref>.fai
+    if (file(ref_index).getName() != file(ref).getName() + '.fai') {
+        exit 1, "The reference genome index should be named after the reference genome with a '.fai' suffix (eg. 'hg38.fa' and 'hg38.fa.fai'), ref = '${ref}' and ref_index = '${ref_index}' provided."
+    }
     if (annotate == 'yes') {
-        [vep_db: vep_db, revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db].each { param, val ->
+        def annotation_dbs = [revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, cadd_sv_db: cadd_sv_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db]
+        ([vep_db: vep_db] + annotation_dbs).each { param, val ->
             if (!file(val).exists()) {
                 exit 1, "Annotation database file does not exist, ${param} = '${val}' provided."
+            }
+        }
+        // the tabix indexes are staged alongside the databases, so they must exist as <db>.tbi
+        annotation_dbs.each { param, val ->
+            if (!file("${val}.tbi").exists()) {
+                exit 1, "Annotation database index does not exist, expected '${val}.tbi' alongside ${param} = '${val}'."
             }
         }
     }
@@ -758,6 +836,33 @@ workflow {
         exit 1, "When not calling tandem repeats, set tandem repeat call regions file to 'NONE', tr_calling = '${tr_calling}' and tr_call_regions = '${tr_call_regions}' provided."
     }
 
+    // build file objects so files are staged into (and tracked for resume in) each task directory
+    // the string versions above are kept for validation messages and the settings file
+    // files which can be set to 'NONE' are passed as an empty list, which stages nothing and evaluates as false in the process script
+    ref_file = file(ref)
+    ref_index_file = file(ref_index)
+    tr_call_regions_file = tr_call_regions != 'NONE' ? file(tr_call_regions) : []
+    clair3_config_file = clair3_config != 'NONE' ? file(clair3_config) : []
+    vep_db_file = annotate == 'yes' ? file(vep_db) : []
+    revel_db_file = annotate == 'yes' ? file(revel_db) : []
+    revel_db_index_file = annotate == 'yes' ? file("${revel_db}.tbi") : []
+    gnomad_db_file = annotate == 'yes' ? file(gnomad_db) : []
+    gnomad_db_index_file = annotate == 'yes' ? file("${gnomad_db}.tbi") : []
+    clinvar_db_file = annotate == 'yes' ? file(clinvar_db) : []
+    clinvar_db_index_file = annotate == 'yes' ? file("${clinvar_db}.tbi") : []
+    cadd_snv_db_file = annotate == 'yes' ? file(cadd_snv_db) : []
+    cadd_snv_db_index_file = annotate == 'yes' ? file("${cadd_snv_db}.tbi") : []
+    cadd_indel_db_file = annotate == 'yes' ? file(cadd_indel_db) : []
+    cadd_indel_db_index_file = annotate == 'yes' ? file("${cadd_indel_db}.tbi") : []
+    cadd_sv_db_file = annotate == 'yes' ? file(cadd_sv_db) : []
+    cadd_sv_db_index_file = annotate == 'yes' ? file("${cadd_sv_db}.tbi") : []
+    spliceai_snv_db_file = annotate == 'yes' ? file(spliceai_snv_db) : []
+    spliceai_snv_db_index_file = annotate == 'yes' ? file("${spliceai_snv_db}.tbi") : []
+    spliceai_indel_db_file = annotate == 'yes' ? file(spliceai_indel_db) : []
+    spliceai_indel_db_index_file = annotate == 'yes' ? file("${spliceai_indel_db}.tbi") : []
+    alphamissense_db_file = annotate == 'yes' ? file(alphamissense_db) : []
+    alphamissense_db_index_file = annotate == 'yes' ? file("${alphamissense_db}.tbi") : []
+
     // read in data
     Channel
         .fromPath(in_data)
@@ -790,30 +895,32 @@ workflow {
 
     csv.gvcfs
         .filter { pop_id, sample_id, gvcf, index -> gvcf != 'NONE' }
+        .map { pop_id, sample_id, gvcf, index -> tuple(pop_id, sample_id, file(gvcf), index) }
         .set { gvcfs_ch }
 
     csv.gvcfs_bams
         .filter { pop_id, sample_id, gvcf, bam -> gvcf != 'NONE' }
-        .map { pop_id, sample_id, gvcf, bam -> tuple(pop_id, sample_id, bam, "${bam}.bai") }
+        .map { pop_id, sample_id, gvcf, bam -> tuple(pop_id, sample_id, file(bam), file("${bam}.bai")) }
         .set { gvcfs_bams_ch }
 
     csv.svs
         .flatMap { pop_id, sample_id, sniffles, cutesv ->
             def tuples = []
-            if (sniffles != 'NONE') tuples << tuple(pop_id, sample_id, 'sniffles', sniffles, "${sniffles}.tbi")
-            if (cutesv != 'NONE') tuples << tuple(pop_id, sample_id, 'cutesv', cutesv, "${cutesv}.tbi")
+            if (sniffles != 'NONE') tuples << tuple(pop_id, sample_id, 'sniffles', file(sniffles), file("${sniffles}.tbi"))
+            if (cutesv != 'NONE') tuples << tuple(pop_id, sample_id, 'cutesv', file(cutesv), file("${cutesv}.tbi"))
             return tuples
         }
         .set { svs_ch }
 
     csv.somaliers
         .filter { pop_id, somalier -> somalier != 'NONE' }
+        .map { pop_id, somalier -> tuple(pop_id, file(somalier)) }
         .groupTuple(by: 0)
         .set { somalier_files_ch }
 
     csv.bams_data_type
         .filter { pop_id, sample_id, bam, data_type, index -> bam != 'NONE' }
-        .map { pop_id, sample_id, bam, data_type, index -> tuple(pop_id, sample_id, bam, "${bam}.bai", data_type, index) }
+        .map { pop_id, sample_id, bam, data_type, index -> tuple(pop_id, sample_id, file(bam), file("${bam}.bai"), data_type, index) }
         .groupTuple(by: [0,4])
         .map { pop_id, sample_ids, bams, bais, data_type, indices ->
             def sorted = [indices, sample_ids, bams, bais].transpose().sort { a, b -> a[0] <=> b[0] }
@@ -950,7 +1057,7 @@ workflow {
     if (snp_indel_caller != 'NONE') {
         if (snp_indel_caller == 'clair3') {
             gvcfs_for_pre = gvcfs_ch.map { pop_id, sample_id, gvcf, index -> tuple(pop_id, sample_id, gvcf) }
-            gvcfs = glnexus_pre_processing(gvcfs_for_pre, ref_index)
+            gvcfs = glnexus_pre_processing(gvcfs_for_pre, ref_index_file)
                 .join(gvcfs_ch.map { pop_id, sample_id, gvcf, index -> tuple(pop_id, sample_id, index) }, by: [0,1])
                 .map { pop_id, sample_id, amended_gvcf, index -> tuple(pop_id, index as Integer, sample_id, amended_gvcf) }
                 .groupTuple(by: 0)
@@ -962,10 +1069,10 @@ workflow {
                 .groupTuple(by: 0)
                 .map(sort_by_index)
         }
-        joint_snp_indel_bcf = glnexus(gvcfs, snp_indel_caller, clair3_config)
+        joint_snp_indel_bcf = glnexus(gvcfs, snp_indel_caller, clair3_config_file)
         joint_snp_indel_vcf = glnexus_post_processing(joint_snp_indel_bcf)
         // split multiallelic variants
-        joint_snp_indel_split_vcf = split_multiallele(joint_snp_indel_vcf, ref, ref_index)
+        joint_snp_indel_split_vcf = split_multiallele(joint_snp_indel_vcf, ref_file, ref_index_file)
         // phasing
         joint_snp_indel_vcf_id = joint_snp_indel_split_vcf
             .combine(id_ch)
@@ -976,15 +1083,23 @@ workflow {
                 tuple(pop_id, sample_id, joint_vcf, joint_vcf_index)
             }
         snp_indel_vcf = split_vcf(joint_snp_indel_vcf_id)
-        (snp_indel_phased_vcfs, stats) = whatshap_phase(snp_indel_vcf.join(gvcfs_bams_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
-        vcfs = snp_indel_phased_vcfs.groupTuple(by: 0)
+        (snp_indel_phased_vcfs, stats) = whatshap_phase(snp_indel_vcf.join(gvcfs_bams_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
+        // sort phased vcfs by csv row index to preserve in data sample order in the merged vcf
+        vcfs = snp_indel_phased_vcfs
+            .join(gvcfs_ch.map { pop_id, sample_id, gvcf, index -> tuple(pop_id, sample_id, index as Integer) }, by: [0,1])
+            .map { pop_id, sample_id, vcf, vcf_index, index -> tuple(pop_id, index, vcf, vcf_index) }
+            .groupTuple(by: 0)
+            .map { pop_id, indices, vcf_files, vcf_indices ->
+                def sorted = [indices, vcf_files, vcf_indices].transpose().sort { a, b -> a[0] <=> b[0] }
+                tuple(pop_id, sorted.collect { it[1] }, sorted.collect { it[2] })
+            }
         joint_snp_indel_phased_vcf = merge_vcf(vcfs, outdir, outdir2, ref_name, snp_indel_caller)
     }
     // sv vcf merging
     sv_vcfs_grouped = svs_ch
         .map { pop_id, sample_id, sv_caller, vcf, tbi -> tuple(pop_id, sv_caller, sample_id, vcf, tbi) }
         .groupTuple(by: [0,1])
-    split_sv_vcfs_ch = split_sv_vcfs(sv_vcfs_grouped, ref_index, min_gap, chunks)
+    split_sv_vcfs_ch = split_sv_vcfs(sv_vcfs_grouped, ref_index_file, min_gap, chunks)
     jasmine_input = split_sv_vcfs_ch
         .flatMap { pop_id, sv_caller, vcfs ->
             vcfs.collectMany { vcf ->
@@ -995,23 +1110,27 @@ workflow {
         .groupTuple(by: [0,1,2])
         .combine(bams_data_type_ch, by: 0)
         .combine(related_ch, by: 0)
-    merged_sv_vcfs = jasmine(jasmine_input, ref, ref_index)
+    merged_sv_vcfs = jasmine(jasmine_input, ref_file, ref_index_file)
     (joint_sv_vcf, joint_sv_vcf_indexed) = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
     // somalier
     somalier(somalier_files_ch, outdir, outdir2, ref_name)
     // tr calling
     if (tr_calling == 'yes') {
-        split_bed = longtr_pre_processing(tr_call_regions).flatten()
+        split_bed = longtr_pre_processing(tr_call_regions_file).flatten()
         longtr_input = bams_data_type_ch
             .combine(split_bed)
-        tr_vcfs = longtr(longtr_input, ref, ref_index)
+        tr_vcfs = longtr(longtr_input, ref_file, ref_index_file)
         concat_tr_vcf(tr_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
     }
     // annotation
     if (annotate == 'yes') {
         if (snp_indel_caller != 'NONE') {
-            vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
+            // annotate per chromosome and concat back into a single vcf
+            chromosomes = list_chromosomes(joint_snp_indel_phased_vcf)
+                .flatMap { pop_id, chrom_file -> chrom_file.readLines().collect { chrom -> tuple(pop_id, chrom) } }
+            annotated_snp_indel_vcfs = vep_snp_indel(joint_snp_indel_phased_vcf.combine(chromosomes, by: 0), ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller)
+            concat_snp_indel_vcf(annotated_snp_indel_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name, snp_indel_caller)
         }
-        vep_sv(joint_sv_vcf, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+        vep_sv(joint_sv_vcf, ref_file, ref_index_file, vep_db_file, gnomad_db_file, gnomad_db_index_file, cadd_sv_db_file, cadd_sv_db_index_file, outdir, outdir2, ref_name)
     }
 }

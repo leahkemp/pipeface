@@ -38,6 +38,12 @@ pop_02,sample_14,no,NONE,/path/to/sample_14.hg38.deepvariant.snp_indel.g.vcf.gz,
 > - `pop_id` is used to define the SNP/indel gVCF merging, the SV VCF merging and the somalier relatedness/quality control checks.
 > - `gvcf`, `bam`, `sniffles`, `cutesv`, and `somalier` are all optional (provide 'NONE' if not required).
 
+> [!TIP]
+> For large cohorts, it's recommended to run one merge at a time (one popface run SNP/indel gVCF merging and SV VCF merging) rather than launching multiple merges concurrently. A single large cohort merge already spawns many parallel jobs and puts significant pressure on the job queue, disk space and file/inode quotas.
+
+> [!TIP]
+> In general, it's important to pre-filter the input SNP/indel and SV calls before running popface. Popface merges the calls as provided, so poor quality calls inflate the merge and propagate into the joint call set. For example, it's recommended to remove SV calls that have a spuriously high read support before running the cuteSV merge.
+
 Requirements:
 
 - `pop_id` must not be 'NONE'
@@ -75,6 +81,9 @@ Specify the path to the reference genome and its index. Eg:
     "ref": "/path/to/hg38.fa",
     "ref_index": "/path/to/hg38.fa.fai",
 ```
+
+> [!NOTE]
+> The index must be named after the reference genome with a `.fai` suffix (eg. `hg38.fa` and `hg38.fa.fai`).
 
 Specify the SNP/indel caller used to generate the gVCF files ('clair3', 'deepvariant', or 'NONE' if no gVCF files are provided). Eg:
 
