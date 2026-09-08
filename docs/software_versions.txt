@@ -4,6 +4,7 @@ minimod: 0.5.0
 mosdepth: 0.3.9
 LongTR: 1.2
 Clair3: 2.0.1
+ClairS-TO: 0.4.2
 DeepVariant: 1.10.0
 DeepTrio: 1.10.0
 GLnexus: 1.4.3

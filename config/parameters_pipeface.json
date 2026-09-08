@@ -20,6 +20,7 @@
     "tr_call_regions": "",
     "check_relatedness": "",
     "sites": "",
+    "somatic_calling": "",
     "outdir": ""
 
 }
