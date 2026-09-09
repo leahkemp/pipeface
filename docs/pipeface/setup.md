@@ -119,11 +119,14 @@ gunzip
 gunzip variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed.gz
 ```
 
-Prepare file for LongTR
+Prepare file for LongTR (keep the motif and the catalog's locus ID, drop homopolymers and loci longer than 1 kb)
 
 ```bash
-cat variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed | sed 's/ID.*MOTIFS=//' | sed 's/;.*//' | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
+awk 'BEGIN { OFS = "\t" } { split($4, f, ";"); id = substr(f[1], 4); motif = substr(f[2], 8); if (length(motif) > 1 && $3 - $2 <= 1000) print $1, $2, $3, motif, id }' variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
 ```
+
+> [!NOTE]
+> The fifth column is the locus ID, which LongTR writes to the ID column of the tandem repeat VCF file.
 
 #### hs1
 
@@ -151,11 +154,14 @@ gunzip
 gunzip chm13.v2.bed.gz
 ```
 
-Prepare file for LongTR
+Prepare file for LongTR (keep the motif, add a locus ID built from the coordinates, drop homopolymers and loci longer than 1 kb)
 
 ```bash
-cut -f1-4 chm13.v2.bed | awk 'length($4) > 1' | awk '$3 - $2 <= 1000' > chm13.v2.longtr.bed
+awk 'BEGIN { OFS = "\t" } { if (length($4) > 1 && $3 - $2 <= 1000) print $1, $2, $3, $4, $1 "-" $2 "-" $3 }' chm13.v2.bed > chm13.v2.longtr.bed
 ```
+
+> [!NOTE]
+> The fifth column is the locus ID, which LongTR writes to the ID column of the tandem repeat VCF file.
 
 ### Somalier sites file (if running relatedness check)
 
