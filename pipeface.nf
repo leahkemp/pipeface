@@ -175,6 +175,8 @@ process minimap2 {
         samtools fastq -@ ${task.cpus} -T '*' $merged | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index -@ ${task.cpus} sorted.bam
+        # check bam integrity
+        samtools quickcheck sorted.bam
         """
         else if (extension in ['gz', 'fastq'])
         """
@@ -182,6 +184,8 @@ process minimap2 {
         minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref $merged | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index -@ ${task.cpus} sorted.bam
+        # check bam integrity
+        samtools quickcheck sorted.bam
         """
 
     stub:
