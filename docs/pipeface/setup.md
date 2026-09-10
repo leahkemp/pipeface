@@ -296,14 +296,6 @@ Optionally turn on haploid-aware mode. Eg:
     "parbed": "/path/to/par.bed",
 ```
 
-*OR*
-
-```json
-    "haploidaware": "no",
-    "sex": "NONE",
-    "parbed": "NONE",
-```
-
 > [!NOTE]
 > - Haploid-aware mode is only available for singleton XY samples.
 > - Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
@@ -314,12 +306,6 @@ Optionally specify the path to the tandem repeat bed file (used by the SV caller
     "tandem_repeat": "/path/to/tandem_repeat.bed",
 ```
 
-*OR*
-
-```json
-    "tandem_repeat": "NONE",
-```
-
 > [!TIP]
 > If you intend to later merge a large cohort with popface, it's recommended to provide a tandem repeat bed file for SV calling to allow the SV merging in popface to scale to a large number of samples.
 
@@ -328,41 +314,6 @@ Specify the mode to run the pipeline in ('singleton', 'duo' or 'trio') and the S
 ```json
     "mode": "singleton",
     "snp_indel_caller": "deepvariant",
-```
-
-*OR*
-
-```json
-    "mode": "singleton",
-    "snp_indel_caller": "clair3",
-```
-
-*OR*
-
-```json
-    "mode": "duo",
-    "snp_indel_caller": "deepvariant",
-```
-
-*OR*
-
-```json
-    "mode": "duo",
-    "snp_indel_caller": "clair3",
-```
-
-*OR*
-
-```json
-    "mode": "trio",
-    "snp_indel_caller": "deeptrio",
-```
-
-*OR*
-
-```json
-    "mode": "trio",
-    "snp_indel_caller": "clair3",
 ```
 
 > [!NOTE]
@@ -376,40 +327,16 @@ Optionally turn on somatic calling ('yes' or 'no'). Eg:
     "somatic_calling": "yes",
 ```
 
-*OR*
-
-```json
-    "somatic_calling": "no",
-```
-
 Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
 
 ```json
     "sv_caller": "sniffles",
 ```
 
-*OR*
-
-```json
-    "sv_caller": "cutesv",
-```
-
-*OR*
-
-```json
-    "sv_caller": "both",
-```
-
 Optionally specify a threshold for the mapping quality (MAPQ) filter for structural variant calls. Set to 'NONE' to use default thresholds. Maximum value is 60. Eg:
 
 ```json
     "sv_mapq": "NONE",
-```
-
-*OR*
-
-```json
-    "sv_mapq": "60",
 ```
 
 > [!TIP]
@@ -421,12 +348,6 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
     "annotate": "yes",
 ```
 
-*OR*
-
-```json
-    "annotate": "no",
-```
-
 > [!NOTE]
 > Variant annotation is only available for hg38.
 
@@ -436,22 +357,10 @@ Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
     "calculate_depth": "yes",
 ```
 
-*OR*
-
-```json
-    "calculate_depth": "no",
-```
-
 Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 
 ```json
     "analyse_base_mods": "yes",
-```
-
-*OR*
-
-```json
-    "analyse_base_mods": "no",
 ```
 
 > [!NOTE]
@@ -464,25 +373,11 @@ Optionally run tandem repeat calling and specify the path to an appropriate tand
     "tr_call_regions": "/path/to/variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed",
 ```
 
-*OR*
-
-```json
-    "tr_calling": "no",
-    "tr_call_regions": "NONE",
-```
-
 Optionally run relatedness checks and specify the path to an appropriate somalier sites file. Set to 'NONE' if not required. Eg:
 
 ```json
     "check_relatedness": "yes",
     "sites": "/path/to/sites.hg38.vcf.gz",
-```
-
-*OR*
-
-```json
-    "check_relatedness": "no",
-    "sites": "NONE",
 ```
 
 > [!NOTE]
@@ -493,12 +388,6 @@ Specify whether the pipeface files should be prepared for ingestion into [puzzle
 
 ```json
     "prepare_for_puzzleapp": "yes",
-```
-
-*OR*
-
-```json
-    "prepare_for_puzzleapp": "no",
 ```
 
 > [!NOTE]

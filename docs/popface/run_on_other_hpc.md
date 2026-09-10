@@ -10,7 +10,7 @@
     - [CADD](#cadd)
     - [spliceAI](#spliceai)
     - [AlphaMissense](#alphamissense)
-  - [2. Modify nextflow\_popface\_container.config](#2-modify-nextflow_popface_containerconfig)
+  - [2. Modify nextflow\_popface.config](#2-modify-nextflow_popfaceconfig)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
   - [4. Run popface](#4-run-popface)
   - [Information](#information)
@@ -232,7 +232,7 @@ Index
 tabix -s 1 -b 2 -e 2 -f -S 1 AlphaMissense_hg38.tsv.gz
 ```
 
-## 2. Modify nextflow_popface_container.config
+## 2. Modify nextflow_popface.config
 
 Specify the paths to your local copies of the variant databases. Eg:
 
@@ -249,7 +249,7 @@ params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.vcf.gz'
 params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 ```
 
-Modify the rest of the `nextflow_popface_container.config` for your specific HPC/job scheduler.
+Modify the rest of the `nextflow_popface.config` for your specific HPC/job scheduler: the `executor`, `queue`, `project` and `storage` settings in the `process` block, the `cacheDir` the software containers are pulled to, and per-process resources where needed. Alternatively keep `nextflow_popface.config` untouched and put your settings in a small config that starts with `includeConfig 'nextflow_popface.config'`, as `nextflow_popface_nci.config` does for NCI.
 
 > [!NOTE]
 > The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPUs
@@ -266,19 +266,19 @@ You'll need access to nextflow and singularity. Tested on:
 Run the pipeline. Eg:
 
 ```bash
-nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 Or run a dry run to validate parameters without executing processes. Eg:
 
 ```bash
-nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 If you need to resume a pipeline run, use the `-resume` flag. Eg:
 
 ```bash
-nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 ## Information
