@@ -483,6 +483,22 @@ Optionally run relatedness checks and specify the path to an appropriate somalie
 > - In singleton mode, checking relatedness will produce a somalier extracted file.
 > - In duo/trio mode, checking relatedness will additionally run joint relatedness and quality control checks.
 
+Specify whether the pipeface files should be prepared for ingestion into [puzzleapp](https://github.com/GenTechGp/puzzleapp) ('yes' or 'no'). Eg:
+
+```json
+    "prepare_for_puzzleapp": "yes",
+```
+
+*OR*
+
+```json
+    "prepare_for_puzzleapp": "no",
+```
+
+> [!NOTE]
+> - Preparing for puzzleapp is only available for hg38.
+> - Preparing for puzzleapp requires variant annotation (annotate = 'yes') and alignment depth calculation (calculate_depth = 'yes').
+
 Specify the directory in which to write the pipeline outputs. Eg:
 
 ```json

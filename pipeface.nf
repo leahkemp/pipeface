@@ -36,6 +36,7 @@ process scrape_settings {
         val check_relatedness
         val sites
         val somatic_calling
+        val prepare_for_puzzleapp
         val outdir
         val outdir2
         val haploidaware
@@ -81,6 +82,7 @@ process scrape_settings {
             echo "Check relatedness: $check_relatedness"
             echo "Somalier sites file: $sites"
             echo "Somatic calling: $somatic_calling"
+            echo "Prepare for puzzleapp: $prepare_for_puzzleapp"
             echo "Outdir: $outdir"
         } > pipeface_settings.txt
         """
@@ -95,6 +97,7 @@ process scrape_settings {
             echo "Input data file/files: $files"
             echo "In data csv path: $in_data"
             echo "Annotate: $annotate"
+            echo "Prepare for puzzleapp: $prepare_for_puzzleapp"
             echo "Outdir: $outdir"
         } > pipeface_settings.txt
         """
@@ -1503,7 +1506,7 @@ process vep_sv {
         val mode
 
     output:
-        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
+        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi"), val(sv_caller)
 
     script:
         // conditionally define output sv caller specific filename
@@ -1522,6 +1525,109 @@ process vep_sv {
         """
         touch ${out_vcf}.vcf.gz
         touch ${out_vcf}.vcf.gz.tbi
+        """
+
+}
+
+process puzzleapp_preprocess_snp_indel {
+
+    publishDir { task ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$sample_id.$ref_name.$snp_indel_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.$snp_indel_caller.$filename"
+        }
+    }, pattern: '*.{tsv,html}'
+
+    input:
+        tuple val(sample_id), val(family_id), path(snp_indel_annotated_vcf), path(snp_indel_annotated_vcf_index), val(sample_ids), val(kinships), path(depths, stageAs: 'depth?.txt')
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+        val mode
+
+    output:
+        tuple val(sample_id), val(family_id), path("snp_indel.phased.annotated.tsv")
+        tuple val(sample_id), val(family_id), path("coverage_vaf.html")
+
+    script:
+        // build the yaml 'samples' entries
+        // entries are in the same order as the staged mosdepth summaries (depth1.txt, depth2.txt, ...)
+        def samples_yaml = [sample_ids, kinships].transpose().withIndex().collect { entry, i ->
+            "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\", coverage: \"depth${i + 1}.txt\"}"
+        }.join(', ')
+        """
+        # create puzzleapp config
+        cat > config.yaml << 'EOF'
+        samples: [$samples_yaml]
+        paths: {snvs_vcf: "$snp_indel_annotated_vcf", snvs_tsv: "snp_indel.phased.annotated.tsv", coverage_vaf_html: "coverage_vaf.html"}
+        EOF
+        # run_preprocess
+        Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.annotated.tsv
+        touch coverage_vaf.html
+        """
+
+}
+
+process puzzleapp_preprocess_sv {
+
+    publishDir { task ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$sample_id.$ref_name.$sv_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.${sv_caller}.jasmine.$filename"
+        }
+    }, pattern: '*.annotated.tsv'
+
+    input:
+        tuple val(sample_id), val(family_id), path(sv_annotated_vcf), path(sv_annotated_vcf_index), val(sv_caller), val(sample_ids), val(kinships)
+        val outdir
+        val outdir2
+        val ref_name
+        val mode
+
+    output:
+        tuple val(sample_id), val(family_id), path("*.annotated.tsv"), val(sv_caller)
+
+    script:
+        // conditionally define output sv caller specific filename
+        def out_tsv = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        // build the yaml 'samples' entries
+        def samples_yaml = [sample_ids, kinships].transpose().collect { entry ->
+            "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\"}"
+        }.join(', ')
+        """
+        # create puzzleapp config
+        cat > config.yaml << 'EOF'
+        samples: [$samples_yaml]
+        paths: {svs_vcf: "$sv_annotated_vcf", svs_tsv: "${out_tsv}.tsv"}
+        EOF
+        # run_preprocess
+        Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
+        """
+
+    stub:
+        def out_tsv = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        """
+        touch ${out_tsv}.tsv
         """
 
 }
@@ -1552,6 +1658,7 @@ workflow {
     check_relatedness = "${params.check_relatedness}".trim()
     sites = "${params.sites}".trim()
     somatic_calling = "${params.somatic_calling}".trim()
+    prepare_for_puzzleapp = "${params.prepare_for_puzzleapp}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
     vep_db = "${params.vep_db}".trim()
@@ -1615,7 +1722,7 @@ workflow {
     if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
         exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
     }
-    [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness, somatic_calling: somatic_calling].each { param, val ->
+    [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness, somatic_calling: somatic_calling, prepare_for_puzzleapp: prepare_for_puzzleapp].each { param, val ->
         if (!(val in ['yes', 'no'])) {
             exit 1, "'${param}' should be either 'yes' or 'no', ${param} = '${val}' provided."
         }
@@ -1679,11 +1786,22 @@ workflow {
         exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
-        [annotate: [annotate, 'yes'], mode: [mode, 'NONE'], tandem_repeat: [tandem_repeat, 'NONE'], calculate_depth: [calculate_depth, 'no'], analyse_base_mods: [analyse_base_mods, 'no'], tr_calling: [tr_calling, 'no'], check_relatedness: [check_relatedness, 'no'], somatic_calling: [somatic_calling, 'no']].each { param, vals ->
+        [annotate: [annotate, 'yes'], mode: [mode, 'NONE'], tandem_repeat: [tandem_repeat, 'NONE'], calculate_depth: [calculate_depth, 'no'], analyse_base_mods: [analyse_base_mods, 'no'], tr_calling: [tr_calling, 'no'], check_relatedness: [check_relatedness, 'no'], somatic_calling: [somatic_calling, 'no'], prepare_for_puzzleapp: [prepare_for_puzzleapp, 'no']].each { param, vals ->
             def (val, expected) = vals
             if (val != expected) {
                 exit 1, "When the in data format is SNP/indel VCF or SV VCF, set ${param} to '${expected}', in_data_format = '${in_data_format}' and ${param} = '${val}' provided."
             }
+        }
+    }
+    if (prepare_for_puzzleapp == 'yes') {
+        if (annotate == 'no') {
+            exit 1, "Preparing for puzzleapp requires annotation. Set annotate to 'yes' or prepare_for_puzzleapp to 'no', prepare_for_puzzleapp = '${prepare_for_puzzleapp}' and annotate = '${annotate}' provided."
+        }
+        if (calculate_depth == 'no') {
+            exit 1, "Preparing for puzzleapp requires depth calculation. Set calculate_depth to 'yes' or prepare_for_puzzleapp to 'no', prepare_for_puzzleapp = '${prepare_for_puzzleapp}' and calculate_depth = '${calculate_depth}' provided."
+        }
+        if (!ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38')) {
+            exit 1, "Preparing for puzzleapp is only supported for hg38/GRCh38. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome, ref = '${ref}' provided. Set prepare_for_puzzleapp to 'no'."
         }
     }
     if (in_data_format == 'snp_indel_vcf') {
@@ -2016,7 +2134,7 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
@@ -2028,7 +2146,7 @@ workflow {
     // qc
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (calculate_depth == 'yes') {
-            mosdepth(bam.join(regions_of_interest_ch, by: [0,1]), outdir, outdir2, ref_name)
+            depth_ch = mosdepth(bam.join(regions_of_interest_ch, by: [0,1]), outdir, outdir2, ref_name)
         }
         // somatic calling
         if (somatic_calling == 'yes') {
@@ -2119,7 +2237,7 @@ workflow {
         if (mode in ['duo', 'trio']) {
             // joint snp/indel annotation
             if (annotate == 'yes') {
-                vep_snp_indel(joint_snp_indel_phased_vcf, ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
+                annotated_snp_indel_vcf = vep_snp_indel(joint_snp_indel_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
             }
         }
         // sv calling
@@ -2155,7 +2273,7 @@ workflow {
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
         if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
-            vep_snp_indel(snp_indel_split_phased_vcf, ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
+            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_split_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     if (mode in ['duo', 'trio']) {
@@ -2203,6 +2321,30 @@ workflow {
                 sv_vcf_for_vep = sv_vcf_for_vep.mix(joint_sv_vcf_cutesv)
             }
         }
-        vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, gnomad_db_file, gnomad_db_index_file, cadd_sv_db_file, cadd_sv_db_index_file, outdir, outdir2, ref_name, mode)
+        annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, gnomad_db_file, gnomad_db_index_file, cadd_sv_db_file, cadd_sv_db_index_file, outdir, outdir2, ref_name, mode)
+    }
+    // puzzleapp preprocessing
+    if (prepare_for_puzzleapp == 'yes') {
+        // pedigree keyed like the annotated vcfs (proband sample_id in duo/trio): sample ids, kinships and mosdepth summaries in matching order
+        if (mode in ['duo', 'trio']) {
+            pedigree_ch = family_position_ch
+                .join(depth_ch, by: [0,1])
+                .groupTuple(by: 1)
+                .map { sample_ids, family_id, family_positions, depths ->
+                    tuple(sample_ids[family_positions.indexOf('proband')], family_id, sample_ids, family_positions, depths)
+                }
+        }
+        else {
+            // a singleton is the proband of its own pedigree
+            pedigree_ch = family_position_ch
+                .join(depth_ch, by: [0,1])
+                .map { sample_id, family_id, family_position, depth ->
+                    tuple(sample_id, family_id, [sample_id], ['proband'], depth)
+                }
+        }
+        puzzleapp_preprocess_snp_indel(annotated_snp_indel_vcf.join(pedigree_ch, by: [0,1]), outdir, outdir2, ref_name, snp_indel_caller, mode)
+        // combine rather than join: with sv_caller 'both' there are two annotated sv vcfs per key
+        sv_pedigree_ch = pedigree_ch.map { sample_id, family_id, sample_ids, kinships, depths -> tuple(sample_id, family_id, sample_ids, kinships) }
+        puzzleapp_preprocess_sv(annotated_sv_vcf.combine(sv_pedigree_ch, by: [0,1]), outdir, outdir2, ref_name, mode)
     }
 }
