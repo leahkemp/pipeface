@@ -19,6 +19,7 @@ split_sv_vcf("Split SV VCF")
 sv_vcf_merging("Structural variant VCF merging")
 concat_sv_vcf("Concatenate SV VCFs")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 joint_tr_calling("Joint TR calling")
 concat_tr_vcf("Concatenate TR VCFs")
 input_somalier("Somalier extracted files")
@@ -26,7 +27,7 @@ joint_somalier("Joint somalier relatedness/quality control check")
 
 input_gvcf-.->gvcf_merging-.->joint_split_multiallele-.->split_vcf-.->snp_indel_phasing-.->merge_vcf-.->joint_snp_indel_annotation
 input_bam-.->snp_indel_phasing
-input_svs-.->split_sv_vcf-.->sv_vcf_merging-.->concat_sv_vcf-.->joint_sv_annotation
+input_svs-.->split_sv_vcf-.->sv_vcf_merging-.->concat_sv_vcf-.->joint_sv_annotation-.->sv_repeat_annotation
 input_bam-.->sv_vcf_merging
 input_bam-.->joint_tr_calling-.->concat_tr_vcf
 input_somalier-.->joint_somalier
@@ -42,6 +43,7 @@ input_somalier-.->joint_somalier
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
+- [SVscanner](https://github.com/GenTechGp/SVscanner)
 - [somalier](https://github.com/brentp/somalier)
 - [LongTR](https://github.com/gymrek-lab/LongTR)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
@@ -66,7 +68,8 @@ input_somalier-.->joint_somalier
 - Joint phased Clair3 or DeepVariant SNP/indel VCF file
 - Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
 - Joint phased tandem repeat VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 

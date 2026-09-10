@@ -8,3 +8,5 @@ CADD SV (1000G) database: phase3
 SpliceAI SNV database: 1.3
 SpliceAI indel database: 1.3
 AlphaMissense database: GRCh38
+Dfam mammalia partition database: 3.9
+STRchive database: 2.2.0/hg38
