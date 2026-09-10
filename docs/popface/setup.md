@@ -91,28 +91,10 @@ Specify the SNP/indel caller used to generate the gVCF files ('clair3', 'deepvar
     "snp_indel_caller": "deepvariant",
 ```
 
-*OR*
-
-```json
-    "snp_indel_caller": "clair3",
-```
-
-*OR*
-
-```json
-    "snp_indel_caller": "NONE",
-```
-
 Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 
 ```json
     "annotate": "yes",
-```
-
-*OR*
-
-```json
-    "annotate": "no",
 ```
 
 > [!NOTE]
@@ -123,13 +105,6 @@ Optionally run tandem repeat calling and specify the path to an appropriate tand
 ```json
     "tr_calling": "yes",
     "tr_call_regions": "/path/to/variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed",
-```
-
-*OR*
-
-```json
-    "tr_calling": "no",
-    "tr_call_regions": "NONE",
 ```
 
 Specify the directory in which to write the pipeline outputs. Eg:
