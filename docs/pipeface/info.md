@@ -22,6 +22,7 @@ somalier("Somalier extract")
 tr_calling("TR calling")
 sv_calling("Structural variant calling")
 sv_annotation("Structural variant annotation (hg38 only)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -30,7 +31,7 @@ haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->somalier
 haplotagging-.->tr_calling
 snp_indel_phasing-.->snp_indel_annotation
-sv_calling-.->sv_annotation
+sv_calling-.->sv_annotation-.->sv_repeat_annotation
 
 ```
 
@@ -59,6 +60,7 @@ joint_tr_calling("Joint TR calling")
 sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -68,7 +70,7 @@ haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
 snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
 
 ```
 
@@ -98,6 +100,7 @@ joint_tr_calling("Joint TR calling")
 sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -107,7 +110,7 @@ haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
 snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
 
 ```
 
@@ -126,6 +129,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
+- [SVscanner](https://github.com/GenTechGp/SVscanner)
 - [somalier](https://github.com/brentp/somalier)
 - [mosdepth](https://github.com/brentp/mosdepth)
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
@@ -162,7 +166,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- SVscanner text diagrams of the repeat elements annotated in each SV (hg38 only)
 - Somalier extracted files
 
 ### Duo
@@ -175,7 +180,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
@@ -190,7 +196,8 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files

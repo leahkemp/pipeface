@@ -10,6 +10,7 @@
     - [CADD](#cadd)
     - [spliceAI](#spliceai)
     - [AlphaMissense](#alphamissense)
+    - [Dfam](#dfam)
   - [2. Modify nextflow\_pipeface\_container.config](#2-modify-nextflow_pipeface_containerconfig)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
   - [4. Run pipeface](#4-run-pipeface)
@@ -232,6 +233,17 @@ Index
 tabix -s 1 -b 2 -e 2 -f -S 1 AlphaMissense_hg38.tsv.gz
 ```
 
+### Dfam
+
+Get a local copy of the Dfam 3.9 Mammalia partition and put it in a directory of its own. Eg.
+
+```bash
+mkdir -p /path/to/dfam
+cd /path/to/dfam
+curl -O https://www.dfam.org/releases/Dfam_3.9/families/FamDB/dfam39_full.7.h5.gz
+gunzip dfam39_full.7.h5.gz
+```
+
 ## 2. Modify nextflow_pipeface_container.config
 
 Specify the paths to your local copies of the variant databases. Eg:
@@ -247,6 +259,7 @@ params.cadd_sv_db = '/path/to/1000G_phase3_SVs.tsv.gz'
 params.spliceai_snv_db = '/path/to/spliceai_scores.raw.snv.hg38.vcf.gz'
 params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.vcf.gz'
 params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
+params.dfam_db = '/path/to/dfam/'
 ```
 
 Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job scheduler.

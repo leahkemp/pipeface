@@ -627,8 +627,6 @@ process vep_snp_indel {
 
 process vep_sv {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.${sv_caller}.jasmine.$filename"}, pattern: '*.annotated.vcf.gz*'
-
     input:
         tuple val(pop_id), val(sv_caller), path(sv_vcf)
         val ref
@@ -636,23 +634,55 @@ process vep_sv {
         val vep_db
         val gnomad_db
         val cadd_sv_db
+
+    output:
+        tuple val(pop_id), val(sv_caller), path("sv.vep_annotated.vcf.gz"), path("sv.vep_annotated.vcf.gz.tbi")
+
+    script:
+        """
+        # run vep
+        vep -i $sv_vcf -o sv.vep_annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
+            --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
+            --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
+        # index vcf
+        tabix sv.vep_annotated.vcf.gz
+        """
+
+    stub:
+        """
+        touch sv.vep_annotated.vcf.gz
+        touch sv.vep_annotated.vcf.gz.tbi
+        """
+
+}
+
+process sv_scanner {
+
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.${sv_caller}.jasmine.$filename" }, pattern: '*.annotated.*'
+
+    input:
+        tuple val(pop_id), val(sv_caller), path(annotated_sv_vcf)
+        val ref
+        val ref_index
+        path dfam_db
         val outdir
         val outdir2
         val ref_name
 
     output:
-        tuple val(pop_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
+        tuple val(pop_id), val(sv_caller), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
+        tuple val(pop_id), val(sv_caller), path("*.annotated.diagram.txt")
 
     script:
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         """
-        # run vep
-        vep -i $sv_vcf -o ${out_vcf}.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
-            --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
-            --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
-        # index vcf
-        tabix ${out_vcf}.vcf.gz
+        # run svscanner
+        svscanner --out out --vcf $annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
+        # rename files
+        ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
+        ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
+        ln -s out/diagram.txt ${out_vcf}.diagram.txt
         """
 
     stub:
@@ -660,6 +690,7 @@ process vep_sv {
         """
         touch ${out_vcf}.vcf.gz
         touch ${out_vcf}.vcf.gz.tbi
+        touch ${out_vcf}.diagram.txt
         """
 
 }
@@ -690,6 +721,7 @@ workflow {
     spliceai_snv_db = "${params.spliceai_snv_db}".trim()
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
+    dfam_db = "${params.dfam_db}".trim()
     ref_name = file(ref).getSimpleName()
 
     // check user provided parameters
@@ -718,7 +750,7 @@ workflow {
         }
     }
     if (annotate == 'yes') {
-        [vep_db: vep_db, revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db].each { param, val ->
+        [vep_db: vep_db, revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db, dfam_db: dfam_db].each { param, val ->
             if (!file(val).exists()) {
                 exit 1, "Annotation database file does not exist, ${param} = '${val}' provided."
             }
@@ -1012,6 +1044,8 @@ workflow {
         if (snp_indel_caller != 'NONE') {
             vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller)
         }
-        vep_sv(joint_sv_vcf, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name)
+        vep_annotated_sv_vcf = vep_sv(joint_sv_vcf, ref, ref_index, vep_db, gnomad_db, cadd_sv_db)
+        // sv repeat annotation
+        sv_scanner(vep_annotated_sv_vcf.map { pop_id, sv_caller, vcf, vcf_index -> tuple(pop_id, sv_caller, vcf) }, ref, ref_index, file(dfam_db), outdir, outdir2, ref_name)
     }
 }
