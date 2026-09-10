@@ -13,6 +13,7 @@ merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
+somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
 snp_indel_annotation("SNP/indel annotation (hg38 only)")
@@ -23,15 +24,18 @@ tr_calling("TR calling")
 sv_calling("Structural variant calling")
 sv_annotation("Structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->somatic_calling
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->somalier
 haplotagging-.->tr_calling
-snp_indel_phasing-.->snp_indel_annotation
-sv_calling-.->sv_annotation-.->sv_repeat_annotation
+snp_indel_phasing-.->snp_indel_annotation-.->puzzleapp_preprocessing
+sv_calling-.->sv_annotation-.->sv_repeat_annotation-.->puzzleapp_preprocessing
+depth-.->puzzleapp_preprocessing
 
 ```
 
@@ -46,6 +50,7 @@ merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
+somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
 joint_somalier("Joint somalier relatedness/quality control check")
@@ -61,16 +66,19 @@ sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->somatic_calling
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
-snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
+snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation-.->puzzleapp_preprocessing
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation-.->puzzleapp_preprocessing
+depth-.->puzzleapp_preprocessing
 
 ```
 
@@ -85,6 +93,7 @@ merging("Merge runs (if needed)")
 alignment("bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
+somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
 joint_snp_indel_calling("Joint SNP/indel variant calling")
@@ -101,16 +110,19 @@ sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
+alignment-.->somatic_calling
 alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
-snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
+snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation-.->puzzleapp_preprocessing
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation-.->puzzleapp_preprocessing
+depth-.->puzzleapp_preprocessing
 
 ```
 
@@ -124,17 +136,19 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
 ## Main tools
 
 - [Minimap2](https://github.com/lh3/minimap2)
-- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)/[DeepTrio](https://github.com/google/deepvariant/blob/r1.8/docs/deeptrio-details.md)
+- [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)/[DeepTrio](https://github.com/google/deepvariant/blob/r1.10/docs/deeptrio-details.md)
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
 - [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
 - [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
-- [SVscanner](https://github.com/GenTechGp/SVscanner)
 - [somalier](https://github.com/brentp/somalier)
 - [mosdepth](https://github.com/brentp/mosdepth)
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [LongTR](https://github.com/gymrek-lab/LongTR)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
+- [SVscanner](https://github.com/GenTechGp/SVscanner)
+- [puzzleapp](https://github.com/GenTechGp/puzzleapp)
+- [ClairS-TO](https://github.com/HKU-BAL/ClairS-TO)
 
 *[See the list of software and their versions used by this version of pipeface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](../../config/nextflow_pipeface.config) file is used).*
 
@@ -168,7 +182,9 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 - SVscanner text diagrams of the repeat elements annotated in each SV (hg38 only)
+- Puzzleapp SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Somalier extracted files
+- ClairS-TO somatic SNV/indel VCF files
 
 ### Duo
 
@@ -182,9 +198,11 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 - SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
+- Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
+- ClairS-TO somatic SNV/indel VCF files
 
 ### Trio
 
@@ -198,9 +216,11 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->sv_repeat_annotation
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
 - SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
+- Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
+- ClairS-TO somatic SNV/indel VCF files
 
 > [!NOTE]
 > - Running DeepVariant/DeepTrio on ONT data assumes r10 data

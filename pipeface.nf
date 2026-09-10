@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.11.1"
+def pipeface_version = "dev"
 
 // set defaults for undocumented params
 params.outdir2 = ""
@@ -10,8 +10,8 @@ params.in_data_format_override = ""
 
 // default values for chrX and chrY contig names. Used when sex = 'XY' and 
 // haploidaware = 'yes'. Don't change unless your reference genome has different names. 
-params.chrXseq = "chrX"
-params.chrYseq = "chrY"
+params.chr_x_seq = "chrX"
+params.chr_y_seq = "chrY"
 
 process scrape_settings {
 
@@ -35,6 +35,8 @@ process scrape_settings {
         val tr_call_regions
         val check_relatedness
         val sites
+        val somatic_calling
+        val prepare_for_puzzleapp
         val outdir
         val outdir2
         val haploidaware
@@ -79,6 +81,8 @@ process scrape_settings {
             echo "Tandem repeat call regions: $tr_call_regions"
             echo "Check relatedness: $check_relatedness"
             echo "Somalier sites file: $sites"
+            echo "Somatic calling: $somatic_calling"
+            echo "Prepare for puzzleapp: $prepare_for_puzzleapp"
             echo "Outdir: $outdir"
         } > pipeface_settings.txt
         """
@@ -93,6 +97,7 @@ process scrape_settings {
             echo "Input data file/files: $files"
             echo "In data csv path: $in_data"
             echo "Annotate: $annotate"
+            echo "Prepare for puzzleapp: $prepare_for_puzzleapp"
             echo "Outdir: $outdir"
         } > pipeface_settings.txt
         """
@@ -155,8 +160,8 @@ process minimap2 {
 
     input:
         tuple val(sample_id), val(family_id), path(merged), val(extension), val(data_type)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(sample_id), val(family_id), path("sorted.bam"), path("sorted.bam.bai")
@@ -192,7 +197,7 @@ process mosdepth {
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.${ref_name}.mosdepth.$filename" }, pattern: 'depth.txt'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(regions_of_interest)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(regions_of_interest)
         val outdir
         val outdir2
         val ref_name
@@ -202,7 +207,7 @@ process mosdepth {
 
     script:
         // optionally pass regions of interest bed file
-        def regions_of_interest_optional = regions_of_interest != 'NONE' ? "-b $regions_of_interest" : ''
+        def regions_of_interest_optional = regions_of_interest ? "-b $regions_of_interest" : ''
         """
         # run mosdepth
         mosdepth depth $bam $regions_of_interest_optional --no-per-base -t ${task.cpus}
@@ -220,9 +225,9 @@ process mosdepth {
 process clair3_pre_processing {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(regions_of_interest)
-        val ref
-        val ref_index
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(regions_of_interest)
+        path ref
+        path ref_index
         path parbed
 
     output:
@@ -233,10 +238,10 @@ process clair3_pre_processing {
         # if regions were given, we use them to subset the genome index to construct the genome.bed file
         if [[ -f "${regions_of_interest}" ]]; then
             awk 'NR==FNR { len[\$1]=\$2; next } \$1 in len { print \$1 "\\t0\\t" len[\$1] }' \
-                "${ref}.fai" "${regions_of_interest}" > genome.bed
+                "${ref_index}" "${regions_of_interest}" > genome.bed
         else
         # fallback: use full genome .fai
-            awk '{ print \$1 "\\t0\\t" \$2 }' "${ref}.fai" > genome.bed
+            awk '{ print \$1 "\\t0\\t" \$2 }' "${ref_index}" > genome.bed
         fi
         genomebed="genome.bed"
         # separate out genome bed into a haploid and diploid bed each
@@ -264,9 +269,9 @@ process clair3 {
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type), val(regions_of_interest), val(clair3_model)
-        val ref
-        val ref_index
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type), path(regions_of_interest), path(clair3_model)
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -278,7 +283,7 @@ process clair3 {
 
     script:
         // optionally pass regions of interest bed file
-        def regions_of_interest_optional = regions_of_interest != 'NONE' ? "--bed_fn=$regions_of_interest" : ''
+        def regions_of_interest_optional = regions_of_interest ? "--bed_fn=$regions_of_interest" : ''
         // conditionally define platform
         def platform = data_type == 'ont' ? 'ont' : 'hifi'
         """
@@ -295,6 +300,8 @@ process clair3 {
         """
         touch snp_indel.vcf.gz
         touch snp_indel.vcf.gz.tbi
+        touch snp_indel.g.vcf.gz
+        touch snp_indel.g.vcf.gz.tbi
         """
 
 }
@@ -304,9 +311,9 @@ process clair3_haploid_aware {
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(diploid_bed), path(haploid_bed), val(data_type), val(clair3_model)
-        val ref
-        val ref_index
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(diploid_bed), path(haploid_bed), val(data_type), path(clair3_model)
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -336,10 +343,14 @@ process clair3_haploid_aware {
 
     stub:
         """
-        touch haploid_merge_output.vcf.gz
-        touch diploid_merge_output.vcf.gz
+        touch haploid_snp_indel.vcf.gz
+        touch haploid_snp_indel.vcf.gz.tbi
+        touch diploid_snp_indel.vcf.gz
+        touch diploid_snp_indel.vcf.gz.tbi
         touch haploid_snp_indel.g.vcf.gz
+        touch haploid_snp_indel.g.vcf.gz.tbi
         touch diploid_snp_indel.g.vcf.gz
+        touch diploid_snp_indel.g.vcf.gz.tbi
         """
 
 }
@@ -378,8 +389,42 @@ process clair3_post_processing {
 
     stub:
         """
+        touch snp_indel.vcf.gz
+        touch snp_indel.vcf.gz.tbi
         touch snp_indel.g.vcf.gz
         touch snp_indel.g.vcf.gz.tbi
+        """
+
+}
+
+process clairs_to {
+
+    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.${ref_name}.clairs_to.$filename" }, pattern: '{snv,indel}.vcf.gz*'
+
+    input:
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(clairs_to_platform), path(regions_of_interest)
+        path ref
+        path ref_index
+        val outdir
+        val outdir2
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path("snv.vcf.gz"), path("snv.vcf.gz.tbi"), path("indel.vcf.gz"), path("indel.vcf.gz.tbi")
+
+    script:
+        // optionally pass regions of interest bed file
+        def regions_of_interest_optional = regions_of_interest ? "--bed_fn $regions_of_interest" : ''
+        """
+        run_clairs_to --tumor_bam_fn $bam --ref_fn $ref --output_dir ./ --threads ${task.cpus} --platform $clairs_to_platform --sample_name $sample_id --include_all_ctgs $regions_of_interest_optional
+        """
+
+    stub:
+        """
+        touch snv.vcf.gz
+        touch snv.vcf.gz.tbi
+        touch indel.vcf.gz
+        touch indel.vcf.gz.tbi
         """
 
 }
@@ -388,11 +433,13 @@ process deepvariant_dry_run {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val sex
         val haploidaware
-        val parbed
+        path parbed
+        val chr_x_seq
+        val chr_y_seq
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), env(make_examples_args), env(call_variants_args)
@@ -402,8 +449,8 @@ process deepvariant_dry_run {
         def model = data_type == 'ont' ? 'ONT_R104' : 'PACBIO'
         // conditionally define haploid contigs and par regions
         if (haploidaware == 'yes') {
-            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs ${params.chrXseq},${params.chrYseq}"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed $parbed"
+            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
         }
         else {
             haploidparameter = ""
@@ -411,7 +458,7 @@ process deepvariant_dry_run {
         }
         """
         # do a dry-run of deepvariant
-        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --dry_run=true \
+        run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --nophase_vcf --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
         # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
@@ -431,17 +478,17 @@ process deepvariant_dry_run {
 process deepvariant_make_examples {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_args), val(call_variants_args), val(regions_of_interest)
-        val ref
-        val ref_index
-        val parbed
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(make_examples_args), val(call_variants_args), path(regions_of_interest)
+        path ref
+        path ref_index
+        path parbed
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(call_variants_args), path("make_examples.*.gz{,.example_info.json}"), path("make_examples_call_variant_outputs.*.gz"), path("gvcf.*.gz")
 
     script:
         // conditionally pass regions of interest bed file
-        def regions_of_interest_optional = regions_of_interest != 'NONE' ? "--regions $regions_of_interest" : ''
+        def regions_of_interest_optional = regions_of_interest ? "--regions $regions_of_interest" : ''
         """
         seq 0 ${task.cpus - 1} | parallel -q --halt 2 --line-buffer make_examples \\
             --mode calling --ref "${ref}" --reads "${bam}" --sample_name "${sample_id}" ${regions_of_interest_optional} --examples "make_examples.tfrecord@${task.cpus}.gz" --gvcf "gvcf.tfrecord@${task.cpus}.gz" ${make_examples_args}
@@ -489,12 +536,17 @@ process deepvariant_post_processing {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out), val(family_position)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
         val snp_indel_caller
+        val sex
+        val haploidaware
+        path parbed
+        val chr_x_seq
+        val chr_y_seq
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path("snp_indel.vcf.gz"), path("snp_indel.vcf.gz.tbi")
@@ -504,9 +556,18 @@ process deepvariant_post_processing {
     script:
         def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
         def num_shards = matcher[0][2] as int
+        // conditionally define haploid contigs and par regions
+        if (haploidaware == 'yes') {
+            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
+            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
+        }
+        else {
+            haploidparameter = ""
+            parbedparameter = ""
+        }
         """
         # postprocess_variants and vcf_stats_report stages in deepvariant
-        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}"
+        postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}" ${haploidparameter} ${parbedparameter}
         vcf_stats_report --input_vcf "snp_indel.vcf.gz" --outfile_base "snp_indel"
         # tag bam and gvcf with family_position for downstream glnexus
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
@@ -520,6 +581,9 @@ process deepvariant_post_processing {
         touch snp_indel.vcf.gz.tbi
         touch snp_indel.g.vcf.gz
         touch snp_indel.g.vcf.gz.tbi
+        touch ${family_position}_snp_indel.g.vcf.gz
+        touch ${family_position}.sorted.bam
+        touch ${family_position}.sorted.bam.bai
         """
 
 }
@@ -551,8 +615,8 @@ process split_multiallele {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_vcf), path(snp_indel_vcf_index)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path("snp_indel.split.vcf.gz"), path("snp_indel.split.vcf.gz.tbi")
@@ -586,8 +650,8 @@ process whatshap_phase {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -624,8 +688,8 @@ process whatshap_haplotag {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index), val(family_position)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -651,6 +715,8 @@ process whatshap_haplotag {
         touch sorted.haplotagged.bam
         touch sorted.haplotagged.bam.bai
         touch sorted.haplotagged.tsv
+        touch ${family_position}.sorted.haplotagged.bam
+        touch ${family_position}.sorted.haplotagged.bam.bai
         """
 
 }
@@ -661,8 +727,8 @@ process deeptrio_dry_run {
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(proband_data_type)
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(father_data_type)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(mother_data_type)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), val(proband_data_type)
@@ -709,13 +775,13 @@ process deeptrio_make_examples {
         tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), val(father_data_type)
         tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), val(mother_data_type)
         tuple val(make_examples_cs_args), val(make_examples_calling_args), val(call_variants_proband_args), val(call_variants_father_args), val(call_variants_mother_args)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
-        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path("make_examples_child.*.gz"), path("gvcf_child.*.gz"), path("*.example_info.json"), val(call_variants_proband_args), emit: proband
-        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path("make_examples_parent1.*.gz"), path("gvcf_parent1.*.gz"), path("*.example_info.json"), val(call_variants_father_args), emit: father
-        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path("make_examples_parent2.*.gz"), path("gvcf_parent2.*.gz"), path("*.example_info.json"), val(call_variants_mother_args), emit: mother
+        tuple val(proband_sample_id), val(proband_family_id), val(proband_family_position), path(proband_haplotagged_bam), path(proband_haplotagged_bam_index), path("make_examples_child.*.gz"), path("gvcf_child.*.gz"), path("make_examples_child_call_variant_outputs.*.gz"), path("*.example_info.json"), val(call_variants_proband_args), emit: proband
+        tuple val(father_sample_id), val(father_family_id), val(father_family_position), path(father_haplotagged_bam), path(father_haplotagged_bam_index), path("make_examples_parent1.*.gz"), path("gvcf_parent1.*.gz"), path("make_examples_parent1_call_variant_outputs.*.gz"), path("*.example_info.json"), val(call_variants_father_args), emit: father
+        tuple val(mother_sample_id), val(mother_family_id), val(mother_family_position), path(mother_haplotagged_bam), path(mother_haplotagged_bam_index), path("make_examples_parent2.*.gz"), path("gvcf_parent2.*.gz"), path("make_examples_parent2_call_variant_outputs.*.gz"), path("*.example_info.json"), val(call_variants_mother_args), emit: mother
 
     script:
         """
@@ -734,6 +800,9 @@ process deeptrio_make_examples {
         touch make_examples_parent1.tfrecord-00000-of-00104.gz
         touch make_examples_parent2.tfrecord-00000-of-00104.gz
         touch make_examples.tfrecord-00000-of-00104.gz.example_info.json
+        touch make_examples_child_call_variant_outputs.tfrecord-00000-of-00104.gz
+        touch make_examples_parent1_call_variant_outputs.tfrecord-00000-of-00104.gz
+        touch make_examples_parent2_call_variant_outputs.tfrecord-00000-of-00104.gz
         touch gvcf_child.tfrecord-00000-of-00104.gz
         touch gvcf_parent1.tfrecord-00000-of-00104.gz
         touch gvcf_parent2.tfrecord-00000-of-00104.gz
@@ -744,10 +813,10 @@ process deeptrio_make_examples {
 process deeptrio_call_variants {
 
     input:
-        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), path(example_info), val(call_variants_args)
+        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(make_examples), val(gvcf), val(cvo), path(example_info), val(call_variants_args)
 
     output:
-        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("*.gz"), val(gvcf)
+        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("call_variants_output*.gz"), val(gvcf), val(cvo)
 
     script:
         def matcher = make_examples[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
@@ -767,19 +836,21 @@ process deeptrio_call_variants {
 process deeptrio_postprocessing {
     
     input:
-        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf)
-        val ref
-        val ref_index
-        
+        tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path(call_variants), path(gvcf), path(cvo)
+        path ref
+        path ref_index
+
     output:
         tuple val(sample_id), val(family_id), val(family_position), path(haplotagged_bam), path(haplotagged_bam_index), path("${family_position}_snp_indel.g.vcf.gz")
 
     script:
-        def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
-        def gvcf_name = matcher[0][1]
-        def gvcf_num_shards = matcher[0][2] as int
+        def gvcf_matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
+        def gvcf_name = gvcf_matcher[0][1]
+        def cvo_matcher = cvo[0].baseName =~ /^(.+)-\d{5}-of-\d{5}$/
+        def cvo_name = cvo_matcher[0][1]
+        def num_shards = gvcf_matcher[0][2] as int
         """
-        postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${gvcf_num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
+        postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${num_shards}.gz" --small_model_cvo_records "${cvo_name}@${num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
         vcf_stats_report --input_vcf "${family_position}_snp_indel.vcf.gz" --outfile_base "${family_position}_snp_indel"
         """
 
@@ -787,7 +858,7 @@ process deeptrio_postprocessing {
         """
         touch ${family_position}_snp_indel.vcf.gz
         touch ${family_position}_snp_indel.vcf.gz.tbi
-        touch ${family_position}_snp_indel.g.vcf
+        touch ${family_position}_snp_indel.g.vcf.gz
         """
 
 }
@@ -801,9 +872,9 @@ process somalier_extract {
 
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index)
-        val ref
-        val ref_index
-        val sites
+        path ref
+        path ref_index
+        path sites
         val outdir
         val outdir2
         val ref_name
@@ -855,7 +926,7 @@ process glnexus_pre_processing {
 
     input:
         tuple val(sample_id), val(family_id), path(gvcf)
-        val ref_index
+        path ref_index
 
     output:
         tuple val(sample_id), val(family_id), path("*.amended.g.vcf.gz")
@@ -886,7 +957,7 @@ process glnexus {
     input:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(gvcfs)
         val snp_indel_caller
-        val clair3_config
+        path clair3_config
 
     output:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path("snp_indel.bcf")
@@ -935,8 +1006,8 @@ process split_multiallele_family {
 
     input:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(snp_indel_vcf), path(snp_indel_vcf_index)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams), path(bam_indices), path("snp_indel.split.vcf.gz"), path("snp_indel.split.vcf.gz.tbi")
@@ -966,8 +1037,8 @@ process whatshap_phase_family {
 
     input:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), path(snp_indel_split_vcf), path(snp_indel_split_vcf_index)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -1025,17 +1096,25 @@ process vep_snp_indel {
 
     input:
         tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
-        val ref
-        val ref_index
-        val vep_db
-        val revel_db
-        val gnomad_db
-        val clinvar_db
-        val cadd_snv_db
-        val cadd_indel_db
-        val spliceai_snv_db
-        val spliceai_indel_db
-        val alphamissense_db
+        path ref
+        path ref_index
+        path vep_db
+        path revel_db
+        path revel_db_index
+        path gnomad_db
+        path gnomad_db_index
+        path clinvar_db
+        path clinvar_db_index
+        path cadd_snv_db
+        path cadd_snv_db_index
+        path cadd_indel_db
+        path cadd_indel_db_index
+        path spliceai_snv_db
+        path spliceai_snv_db_index
+        path spliceai_indel_db
+        path spliceai_indel_db_index
+        path alphamissense_db
+        path alphamissense_db_index
         val outdir
         val outdir2
         val ref_name
@@ -1074,8 +1153,8 @@ process minimod {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -1086,16 +1165,14 @@ process minimod {
     script:
         """
         # run minimod
-        minimod mod-freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes -o modfreqs.tmp.bed
-        # sort
-        awk 'NR > 1 { print }' modfreqs.tmp.bed | sort -k1,1 -k2,2n > modfreqs.bed
+        minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary --insertions -o modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # separate haplotypes
-            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.tmp.bed > \${FILE}.bed; done
-            awk '\$9==1' modfreqs.bed >> modfreqs_hap1.bed
-            awk '\$9==2' modfreqs.bed >> modfreqs_hap2.bed
-            awk '\$9=="*"' modfreqs.bed >> modfreqs_combined.bed
-            awk '\$9==0' modfreqs.bed >> modfreqs_unphased.bed
+            for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.bed > \${FILE}.bed; done
+            awk '\$10==1' modfreqs.bed >> modfreqs_hap1.bed
+            awk '\$10==2' modfreqs.bed >> modfreqs_hap2.bed
+            awk '\$10=="*"' modfreqs.bed >> modfreqs_combined.bed
+            awk '\$10==0' modfreqs.bed >> modfreqs_unphased.bed
             # generate bigwig
             cut -f1,2 $ref_index > chrom.sizes
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do awk 'NR > 1 { print }' \${FILE}.bed | cut -f1-3,7 > \${FILE}.formatted.bed; done
@@ -1118,7 +1195,7 @@ process minimod {
 process longtr_pre_processing {
 
     input:
-        val tr_call_regions
+        path tr_call_regions
 
     output:
         path("split.*.bed")
@@ -1141,8 +1218,8 @@ process longtr {
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
         path split_beds
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(sample_id), val(family_id), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
@@ -1171,8 +1248,8 @@ process longtr_family {
     input:
         tuple val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type)
         path split_beds
-        val ref
-        val ref_index
+        path ref
+        path ref_index
 
     output:
         tuple val(family_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
@@ -1274,9 +1351,9 @@ process sniffles {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(family_position)
-        val ref
-        val ref_index
-        val tandem_repeat
+        path ref
+        path ref_index
+        path tandem_repeat
         val outdir
         val outdir2
         val ref_name
@@ -1289,7 +1366,7 @@ process sniffles {
 
     script:
         // optionally pass tandem repeat bed file
-        def tandem_repeat_optional = tandem_repeat != 'NONE' ? "--tandem-repeats $tandem_repeat" : ''
+        def tandem_repeat_optional = tandem_repeat ? "--tandem-repeats $tandem_repeat" : ''
         // optionally set mapq filter threshold
         def mapq_optional = sv_mapq != 'NONE' ? "--mapq ${sv_mapq}" : ''
         """
@@ -1311,9 +1388,9 @@ process cutesv {
 
     input:
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
-        val ref
-        val ref_index
-        val tandem_repeat
+        path ref
+        path ref_index
+        path tandem_repeat
         val outdir
         val outdir2
         val ref_name
@@ -1353,8 +1430,8 @@ process jasmine {
 
     input:
         tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(sv_vcfs, stageAs: 'sv?.vcf.gz'), path(bams, stageAs: 'bam?.bam'), val(data_type), val(sv_caller)
-        val ref
-        val ref_index
+        path ref
+        path ref_index
         val outdir
         val outdir2
         val ref_name
@@ -1402,18 +1479,16 @@ process vep_sv {
 
     input:
         tuple val(sample_id), val(family_id), path(sv_vcf), val(sv_caller)
-        val ref
-        val ref_index
-        val vep_db
-        val gnomad_db
-        val cadd_sv_db
-        val outdir
-        val outdir2
-        val ref_name
-        val mode
+        path ref
+        path ref_index
+        path vep_db
+        path gnomad_db
+        path gnomad_db_index
+        path cadd_sv_db
+        path cadd_sv_db_index
 
     output:
-        tuple val(sample_id), val(family_id), path("sv.vep_annotated.vcf.gz"), path("sv.vep_annotated.vcf.gz.tbi"), val(sv_caller)
+        tuple val(sample_id), val(family_id), path("sv.vep_annotated.vcf.gz"), val(sv_caller)
 
     script:
         """
@@ -1421,14 +1496,11 @@ process vep_sv {
         vep -i $sv_vcf -o sv.vep_annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
             --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
             --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
-        # index vcf
-        tabix sv.vep_annotated.vcf.gz
         """
 
     stub:
         """
         touch sv.vep_annotated.vcf.gz
-        touch sv.vep_annotated.vcf.gz.tbi
         """
 
 }
@@ -1450,9 +1522,9 @@ process sv_scanner {
     }, pattern: '*.annotated.*'
 
     input:
-        tuple val(sample_id), val(family_id), path(annotated_sv_vcf), val(sv_caller)
-        val ref
-        val ref_index
+        tuple val(sample_id), val(family_id), path(vep_annotated_sv_vcf), val(sv_caller)
+        path ref
+        path ref_index
         path dfam_db
         val outdir
         val outdir2
@@ -1460,8 +1532,7 @@ process sv_scanner {
         val mode
 
     output:
-        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), val(sv_caller)
-        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
+        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi"), val(sv_caller)
         tuple val(sample_id), val(family_id), path("*.annotated.diagram.txt")
 
     script:
@@ -1469,7 +1540,7 @@ process sv_scanner {
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         """
         # run svscanner
-        svscanner --out out --vcf $annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
+        svscanner --out out --vcf $vep_annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
         # rename files
         ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
         ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
@@ -1482,6 +1553,109 @@ process sv_scanner {
         touch ${out_vcf}.vcf.gz
         touch ${out_vcf}.vcf.gz.tbi
         touch ${out_vcf}.diagram.txt
+        """
+
+}
+
+process puzzleapp_preprocess_snp_indel {
+
+    publishDir { task ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$sample_id.$ref_name.$snp_indel_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.$snp_indel_caller.$filename"
+        }
+    }, pattern: '*.{tsv,html}'
+
+    input:
+        tuple val(sample_id), val(family_id), path(snp_indel_annotated_vcf), path(snp_indel_annotated_vcf_index), val(sample_ids), val(kinships), path(depths, stageAs: 'depth?.txt')
+        val outdir
+        val outdir2
+        val ref_name
+        val snp_indel_caller
+        val mode
+
+    output:
+        tuple val(sample_id), val(family_id), path("snp_indel.phased.annotated.tsv")
+        tuple val(sample_id), val(family_id), path("coverage_vaf.html")
+
+    script:
+        // build the yaml 'samples' entries
+        // entries are in the same order as the staged mosdepth summaries (depth1.txt, depth2.txt, ...)
+        def samples_yaml = [sample_ids, kinships].transpose().withIndex().collect { entry, i ->
+            "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\", coverage: \"depth${i + 1}.txt\"}"
+        }.join(', ')
+        """
+        # create puzzleapp config
+        cat > config.yaml << 'EOF'
+        samples: [$samples_yaml]
+        paths: {snvs_vcf: "$snp_indel_annotated_vcf", snvs_tsv: "snp_indel.phased.annotated.tsv", coverage_vaf_html: "coverage_vaf.html"}
+        EOF
+        # run_preprocess
+        Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.annotated.tsv
+        touch coverage_vaf.html
+        """
+
+}
+
+process puzzleapp_preprocess_sv {
+
+    publishDir { task ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id"
+        } else {
+            return "$outdir/$family_id/$outdir2"
+        }
+    }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
+        if (mode in ['singleton', 'NONE']) {
+            return "$sample_id.$ref_name.$sv_caller.$filename"
+        } else {
+            return "$family_id.$ref_name.${sv_caller}.jasmine.$filename"
+        }
+    }, pattern: '*.annotated.tsv'
+
+    input:
+        tuple val(sample_id), val(family_id), path(sv_annotated_vcf), path(sv_annotated_vcf_index), val(sv_caller), val(sample_ids), val(kinships)
+        val outdir
+        val outdir2
+        val ref_name
+        val mode
+
+    output:
+        tuple val(sample_id), val(family_id), path("*.annotated.tsv"), val(sv_caller)
+
+    script:
+        // conditionally define output sv caller specific filename
+        def out_tsv = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        // build the yaml 'samples' entries
+        def samples_yaml = [sample_ids, kinships].transpose().collect { entry ->
+            "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\"}"
+        }.join(', ')
+        """
+        # create puzzleapp config
+        cat > config.yaml << 'EOF'
+        samples: [$samples_yaml]
+        paths: {svs_vcf: "$sv_annotated_vcf", svs_tsv: "${out_tsv}.tsv"}
+        EOF
+        # run_preprocess
+        Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
+        """
+
+    stub:
+        def out_tsv = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        """
+        touch ${out_tsv}.tsv
         """
 
 }
@@ -1511,6 +1685,8 @@ workflow {
     tr_call_regions = "${params.tr_call_regions}".trim()
     check_relatedness = "${params.check_relatedness}".trim()
     sites = "${params.sites}".trim()
+    somatic_calling = "${params.somatic_calling}".trim()
+    prepare_for_puzzleapp = "${params.prepare_for_puzzleapp}".trim()
     outdir = "${params.outdir}".trim()
     outdir2 = "${params.outdir2}".trim()
     vep_db = "${params.vep_db}".trim()
@@ -1525,6 +1701,8 @@ workflow {
     alphamissense_db = "${params.alphamissense_db}".trim()
     dfam_db = "${params.dfam_db}".trim()
     ref_name = file(ref).getSimpleName()
+    chr_x_seq = "${params.chr_x_seq}".trim()
+    chr_y_seq = "${params.chr_y_seq}".trim()
 
     // check user provided parameters
     // check for empty entries
@@ -1551,10 +1729,21 @@ workflow {
             exit 1, "File does not exist, ${param} = '${val}' provided. Set to 'NONE' if not required."
         }
     }
+    // the reference and its index are staged into each task directory by name, so tools can only find the index if it is named <ref>.fai
+    if (file(ref_index).getName() != file(ref).getName() + '.fai') {
+        exit 1, "The reference genome index should be named after the reference genome with a '.fai' suffix (eg. 'hg38.fa' and 'hg38.fa.fai'), ref = '${ref}' and ref_index = '${ref_index}' provided."
+    }
     if (annotate == 'yes') {
-        [vep_db: vep_db, revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db, dfam_db: dfam_db].each { param, val ->
+        def annotation_dbs = [revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, cadd_sv_db: cadd_sv_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db]
+        ([vep_db: vep_db, dfam_db: dfam_db] + annotation_dbs).each { param, val ->
             if (!file(val).exists()) {
                 exit 1, "Annotation database file does not exist, ${param} = '${val}' provided."
+            }
+        }
+        // the tabix indexes are staged alongside the databases, so they must exist as <db>.tbi
+        annotation_dbs.each { param, val ->
+            if (!file("${val}.tbi").exists()) {
+                exit 1, "Annotation database index does not exist, expected '${val}.tbi' alongside ${param} = '${val}'."
             }
         }
     }
@@ -1562,7 +1751,7 @@ workflow {
     if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
         exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
     }
-    [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness].each { param, val ->
+    [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness, somatic_calling: somatic_calling, prepare_for_puzzleapp: prepare_for_puzzleapp].each { param, val ->
         if (!(val in ['yes', 'no'])) {
             exit 1, "'${param}' should be either 'yes' or 'no', ${param} = '${val}' provided."
         }
@@ -1578,7 +1767,7 @@ workflow {
             exit 1, "In haploid-aware mode, provide a valid PAR BED file, parbed = 'NONE' provided."
         }
         def ref_index_content = file(ref_index).text
-        if (!ref_index_content.contains(chrXseq) || !ref_index_content.contains(chrYseq)) {
+        if (!ref_index_content.contains(chr_x_seq) || !ref_index_content.contains(chr_y_seq)) {
             exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${ref_index}."
         }
     }
@@ -1626,11 +1815,22 @@ workflow {
         exit 1, "When not checking relatedness, set sites file to 'NONE', check_relatedness = '${check_relatedness}' and sites = '${sites}' provided."
     }
     if (in_data_format in ['snp_indel_vcf', 'sv_vcf']) {
-        [annotate: [annotate, 'yes'], mode: [mode, 'NONE'], tandem_repeat: [tandem_repeat, 'NONE'], calculate_depth: [calculate_depth, 'no'], analyse_base_mods: [analyse_base_mods, 'no'], tr_calling: [tr_calling, 'no'], check_relatedness: [check_relatedness, 'no']].each { param, vals ->
+        [annotate: [annotate, 'yes'], mode: [mode, 'NONE'], tandem_repeat: [tandem_repeat, 'NONE'], calculate_depth: [calculate_depth, 'no'], analyse_base_mods: [analyse_base_mods, 'no'], tr_calling: [tr_calling, 'no'], check_relatedness: [check_relatedness, 'no'], somatic_calling: [somatic_calling, 'no'], prepare_for_puzzleapp: [prepare_for_puzzleapp, 'no']].each { param, vals ->
             def (val, expected) = vals
             if (val != expected) {
                 exit 1, "When the in data format is SNP/indel VCF or SV VCF, set ${param} to '${expected}', in_data_format = '${in_data_format}' and ${param} = '${val}' provided."
             }
+        }
+    }
+    if (prepare_for_puzzleapp == 'yes') {
+        if (annotate == 'no') {
+            exit 1, "Preparing for puzzleapp requires annotation. Set annotate to 'yes' or prepare_for_puzzleapp to 'no', prepare_for_puzzleapp = '${prepare_for_puzzleapp}' and annotate = '${annotate}' provided."
+        }
+        if (calculate_depth == 'no') {
+            exit 1, "Preparing for puzzleapp requires depth calculation. Set calculate_depth to 'yes' or prepare_for_puzzleapp to 'no', prepare_for_puzzleapp = '${prepare_for_puzzleapp}' and calculate_depth = '${calculate_depth}' provided."
+        }
+        if (!ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38')) {
+            exit 1, "Preparing for puzzleapp is only supported for hg38/GRCh38. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome, ref = '${ref}' provided. Set prepare_for_puzzleapp to 'no'."
         }
     }
     if (in_data_format == 'snp_indel_vcf') {
@@ -1659,6 +1859,37 @@ workflow {
         exit 1, "Choice of publishing mode should be 'copy', 'copyNoFollow', 'link', 'move', 'rellink' or 'symlink', publish_mode = '$params.publish_mode' provided."
     }
 
+    // build file objects so files are staged into (and tracked for resume in) each task directory
+    // the string versions above are kept for validation messages and the settings file
+    // files which can be set to 'NONE' are passed as an empty list, which stages nothing and evaluates as false in the process script
+    ref_file = file(ref)
+    ref_index_file = file(ref_index)
+    tandem_repeat_file = tandem_repeat != 'NONE' ? file(tandem_repeat) : []
+    tr_call_regions_file = tr_call_regions != 'NONE' ? file(tr_call_regions) : []
+    parbed_file = parbed != 'NONE' ? file(parbed) : []
+    clair3_config_file = clair3_config != 'NONE' ? file(clair3_config) : []
+    sites_file = sites != 'NONE' ? file(sites) : []
+    vep_db_file = annotate == 'yes' ? file(vep_db) : []
+    revel_db_file = annotate == 'yes' ? file(revel_db) : []
+    revel_db_index_file = annotate == 'yes' ? file("${revel_db}.tbi") : []
+    gnomad_db_file = annotate == 'yes' ? file(gnomad_db) : []
+    gnomad_db_index_file = annotate == 'yes' ? file("${gnomad_db}.tbi") : []
+    clinvar_db_file = annotate == 'yes' ? file(clinvar_db) : []
+    clinvar_db_index_file = annotate == 'yes' ? file("${clinvar_db}.tbi") : []
+    cadd_snv_db_file = annotate == 'yes' ? file(cadd_snv_db) : []
+    cadd_snv_db_index_file = annotate == 'yes' ? file("${cadd_snv_db}.tbi") : []
+    cadd_indel_db_file = annotate == 'yes' ? file(cadd_indel_db) : []
+    cadd_indel_db_index_file = annotate == 'yes' ? file("${cadd_indel_db}.tbi") : []
+    cadd_sv_db_file = annotate == 'yes' ? file(cadd_sv_db) : []
+    cadd_sv_db_index_file = annotate == 'yes' ? file("${cadd_sv_db}.tbi") : []
+    spliceai_snv_db_file = annotate == 'yes' ? file(spliceai_snv_db) : []
+    spliceai_snv_db_index_file = annotate == 'yes' ? file("${spliceai_snv_db}.tbi") : []
+    spliceai_indel_db_file = annotate == 'yes' ? file(spliceai_indel_db) : []
+    spliceai_indel_db_index_file = annotate == 'yes' ? file("${spliceai_indel_db}.tbi") : []
+    alphamissense_db_file = annotate == 'yes' ? file(alphamissense_db) : []
+    alphamissense_db_index_file = annotate == 'yes' ? file("${alphamissense_db}.tbi") : []
+    dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
+
     // read in data
     Channel
         .fromPath(in_data)
@@ -1674,11 +1905,13 @@ workflow {
             id:                          tuple(row.sample_id, row.family_id)
             family_position:             tuple(row.sample_id, row.family_id, row.family_position)
             extension:                   tuple(row.sample_id, row.family_id, file(row.file).getExtension())
-            files:                       tuple(row.sample_id, row.family_id, row.file)
-            index:                       tuple(row.sample_id, row.family_id, "${row.file}.bai")
+            files:                       tuple(row.sample_id, row.family_id, file(row.file))
+            index:                       tuple(row.sample_id, row.family_id, file("${row.file}.bai"))
             data_type:                   tuple(row.sample_id, row.family_id, row.data_type)
-            regions_of_interest:         tuple(row.sample_id, row.family_id, row.regions_of_interest)
-            clair3_model:                tuple(row.sample_id, row.family_id, row.clair3_model)
+            regions_of_interest:         tuple(row.sample_id, row.family_id, row.regions_of_interest != 'NONE' ? file(row.regions_of_interest) : [])
+            clair3_model:                tuple(row.sample_id, row.family_id, row.clair3_model != 'NONE' ? file(row.clair3_model) : [])
+            clairs_to_platform:          tuple(row.sample_id, row.family_id, row.clairs_to_platform)
+            clairs_to_validation:        tuple(row.sample_id, row.family_id, row.clairs_to_platform)
             row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
             family_validation:           tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
             sample_family_validation:    tuple(row.sample_id, row.family_id)
@@ -1691,7 +1924,7 @@ workflow {
         .map { sample_id, family_id, files, data_type, regions_of_interest, clair3_model ->
             if (haploidaware == 'yes' && regions_of_interest != 'NONE' && file(regions_of_interest).exists()) {
                 def content = file(regions_of_interest).text
-                if (!content.contains(chrXseq) || !content.contains(chrYseq)) {
+                if (!content.contains(chr_x_seq) || !content.contains(chr_y_seq)) {
                     exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${regions_of_interest}."
                 }
             }
@@ -1731,6 +1964,10 @@ workflow {
     csv.clair3_model
         .groupTuple(by: [0,1,2])
         .set { clair3_model_ch }
+
+    csv.clairs_to_platform
+        .groupTuple(by: [0,1,2])
+        .set { clairs_to_platform_ch }
 
     // check user provided in data
     csv.row_validation
@@ -1812,6 +2049,23 @@ workflow {
         .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
             if (family_ids.unique().size() > 1) {
                 exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'family_id', conflicting 'family_id' values '${family_ids}' provided for sample '${sample_id}'."
+            }
+        }
+
+    csv.clairs_to_validation
+        .map { sample_id, family_id, clairs_to_platform ->
+            // check for empty entries
+            if (clairs_to_platform.isEmpty()) {
+                exit 1, "There is an empty entry in the 'clairs_to_platform' column of '${in_data}'. Set to 'NONE' if not required."
+            }
+            // check value constraints and cross-parameter compatibility
+            if (somatic_calling == 'yes' && in_data_format in ['ubam_fastq', 'aligned_bam']) {
+                if (clairs_to_platform == 'NONE') {
+                    exit 1, "When somatic_calling is 'yes', provide a ClairS-TO platform in the 'clairs_to_platform' column of '${in_data}' rather than setting it to 'NONE'."
+                }
+            }
+            else if (clairs_to_platform != 'NONE') {
+                exit 1, "Set the 'clairs_to_platform' column of '${in_data}' to 'NONE' when somatic_calling is not 'yes', '${clairs_to_platform}' provided."
             }
         }
 
@@ -1910,11 +2164,11 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
-        bam = minimap2(merged.join(extension_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref, ref_index)
+        bam = minimap2(merged.join(extension_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
     }
     else if (in_data_format == 'aligned_bam') {
         bam = id_ch.join(files_ch, by: [0,1]).join(index_ch, by: [0,1])
@@ -1922,40 +2176,44 @@ workflow {
     // qc
     if (in_data_format in ['ubam_fastq', 'aligned_bam']) {
         if (calculate_depth == 'yes') {
-            mosdepth(bam.join(regions_of_interest_ch, by: [0,1]), outdir, outdir2, ref_name)
+            depth_ch = mosdepth(bam.join(regions_of_interest_ch, by: [0,1]), outdir, outdir2, ref_name)
+        }
+        // somatic calling
+        if (somatic_calling == 'yes') {
+            clairs_to(bam.join(clairs_to_platform_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
             if (haploidaware == 'no' || sex == 'XX') {
-                (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+                (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
             }
             else if (haploidaware == 'yes' && sex == 'XY') {
-                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed)
-                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, parbed_file)
+                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
                 (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
             }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
-            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref, ref_index, sex, haploidaware, parbed)
-            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref, ref_index, parbed)
+            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref_file, ref_index_file, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
+            dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, parbed_file)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
             // filter refcall variants
             snp_indel_vcf_bam = filter_ref_call(snp_indel_raw_vcf_bam)
         }
         // split multiallelic variants
-        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref, ref_index)
+        snp_indel_split_vcf_bam = split_multiallele(snp_indel_vcf_bam, ref_file, ref_index_file)
         // phasing
-        (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+        (snp_indel_split_phased_vcf_bam, snp_indel_split_phased_vcf, phased_read_list) = whatshap_phase(snp_indel_split_vcf_bam, ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
         // haplotagging
-        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_split_phased_vcf_bam.join(family_position_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+        (haplotagged_bam, haplotagged_bam_fam, haplotagged_tsv) = whatshap_haplotag(snp_indel_split_phased_vcf_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
         // base mod analysis
         if (analyse_base_mods == 'yes') {
-            minimod(haplotagged_bam.join(data_type_ch, by: [0,1]), ref, ref_index, outdir, outdir2, ref_name)
+            minimod(haplotagged_bam.join(data_type_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
         }
         // somalier extract (singleton mode)
         if (check_relatedness == 'yes' && mode == 'singleton') {
-            somalier_extract(haplotagged_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
+            somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
         }
         if (mode == 'trio') {
             family_bam_by_position = haplotagged_bam_fam.groupTuple(by: 1).transpose()
@@ -1963,10 +2221,10 @@ workflow {
             father_bam = family_bam_by_position.filter { tuple -> tuple[2].contains("father") }
             mother_bam = family_bam_by_position.filter { tuple -> tuple[2].contains("mother") }
             // joint snp/indel calling
-            dt_commands = deeptrio_dry_run(proband_bam.join(data_type_ch, by: [0,1]), father_bam.join(data_type_ch, by: [0,1]), mother_bam.join(data_type_ch, by: [0,1]), ref, ref_index)
-            dt_examples = deeptrio_make_examples(dt_commands, ref, ref_index)
+            dt_commands = deeptrio_dry_run(proband_bam.join(data_type_ch, by: [0,1]), father_bam.join(data_type_ch, by: [0,1]), mother_bam.join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
+            dt_examples = deeptrio_make_examples(dt_commands, ref_file, ref_index_file)
             dt_calls = deeptrio_call_variants(dt_examples.proband.mix(dt_examples.father, dt_examples.mother))
-            snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref, ref_index)
+            snp_indel_gvcf_bam = deeptrio_postprocessing(dt_calls, ref_file, ref_index_file)
         }
         if (mode in ['duo', 'trio']) {
             if (snp_indel_caller == 'clair3') {
@@ -1975,7 +2233,7 @@ workflow {
                     .join(gvcf.map { sample_id, family_id, gvcf_file, gvcf_index -> tuple(sample_id, family_id, gvcf_file) }, by: [0,1])
                     .join(family_position_ch, by: [0,1])
                 // pre-process gvcfs for clair3 + glnexus compatibility
-                glnexus_ready_gvcfs = glnexus_pre_processing(clair3_gvcf_bam.map { sample_id, family_id, bam, bam_index, gvcf_file, family_position -> tuple(sample_id, family_id, gvcf_file) }, ref_index)
+                glnexus_ready_gvcfs = glnexus_pre_processing(clair3_gvcf_bam.map { sample_id, family_id, bam, bam_index, gvcf_file, family_position -> tuple(sample_id, family_id, gvcf_file) }, ref_index_file)
                 family_gvcf_bam = clair3_gvcf_bam
                     .map { sample_id, family_id, bam, bam_index, gvcf_file, family_position -> tuple(sample_id, family_id, family_position, bam, bam_index) }
                     .join(glnexus_ready_gvcfs, by: [0,1])
@@ -1988,7 +2246,7 @@ workflow {
             }
             // somalier extract and relate (duo/trio mode)
             if (check_relatedness == 'yes') {
-                somalier_files = somalier_extract(haplotagged_bam, ref, ref_index, sites, outdir, outdir2, ref_name)
+                somalier_files = somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
                 somalier_relate_input = somalier_files
                     .join(family_position_ch, by: [0,1])
                     .groupTuple(by: 1)
@@ -1999,30 +2257,30 @@ workflow {
                 somalier_relate(somalier_relate_input, outdir, outdir2, ref_name)
             }
             // gvcf merging
-            joint_snp_indel_bcf_bam = glnexus(family_gvcf_bam, snp_indel_caller, clair3_config)
+            joint_snp_indel_bcf_bam = glnexus(family_gvcf_bam, snp_indel_caller, clair3_config_file)
             joint_snp_indel_vcf_bam = glnexus_post_processing(joint_snp_indel_bcf_bam)
             // joint split multiallelic variants
-            joint_snp_indel_split_vcf_bam = split_multiallele_family(joint_snp_indel_vcf_bam, ref, ref_index)
+            joint_snp_indel_split_vcf_bam = split_multiallele_family(joint_snp_indel_vcf_bam, ref_file, ref_index_file)
             // joint phasing
-            (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_phase_family(joint_snp_indel_split_vcf_bam, ref, ref_index, outdir, outdir2, ref_name, snp_indel_caller)
+            (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_phase_family(joint_snp_indel_split_vcf_bam, ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
         }
         if (mode in ['duo', 'trio']) {
             // joint snp/indel annotation
             if (annotate == 'yes') {
-                vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
+                annotated_snp_indel_vcf = vep_snp_indel(joint_snp_indel_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
             }
         }
         // sv calling
         if (sv_caller in ['sniffles', 'both']) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name, sv_mapq)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
         }
         if (sv_caller in ['cutesv', 'both']) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref, ref_index, tandem_repeat, outdir, outdir2, ref_name, sv_mapq)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
         }
         if (tr_calling == 'yes') {
-            split_beds = longtr_pre_processing(tr_call_regions)
+            split_beds = longtr_pre_processing(tr_call_regions_file)
             // tr calling
-            tr_vcfs = longtr(haplotagged_bam.join(data_type_ch, by: [0,1]), split_beds, ref, ref_index)
+            tr_vcfs = longtr(haplotagged_bam.join(data_type_ch, by: [0,1]), split_beds, ref_file, ref_index_file)
             concat_tr_vcf(tr_vcfs, outdir, outdir2, ref_name)
             // joint tr calling
             if (mode in ['duo', 'trio']) {
@@ -2034,7 +2292,7 @@ workflow {
                     }
                     .groupTuple(by: 0)
                     .map(sort_longtr_family)
-                tr_vcfs_family = longtr_family(family_input, split_beds, ref, ref_index)
+                tr_vcfs_family = longtr_family(family_input, split_beds, ref_file, ref_index_file)
                 concat_tr_vcf_family(tr_vcfs_family, outdir, outdir2, ref_name)
             }
         }
@@ -2045,7 +2303,7 @@ workflow {
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
         if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
-            vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
+            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_split_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     if (mode in ['duo', 'trio']) {
@@ -2058,7 +2316,7 @@ workflow {
         }
         family_sv_all = sv_caller == 'both' ? family_sv_sniffles.mix(family_sv_cutesv) :
                         sv_caller == 'sniffles' ? family_sv_sniffles : family_sv_cutesv
-        (joint_sv_vcfs, joint_sv_vcfs_indexed) = jasmine(family_sv_all, ref, ref_index, outdir, outdir2, ref_name)
+        (joint_sv_vcfs, joint_sv_vcfs_indexed) = jasmine(family_sv_all, ref_file, ref_index_file, outdir, outdir2, ref_name)
         if (sv_caller in ['sniffles', 'both']) {
             joint_sv_vcf_sniffles = joint_sv_vcfs
                 .filter { it[2] == 'sniffles' }
@@ -2093,7 +2351,32 @@ workflow {
                 sv_vcf_for_vep = sv_vcf_for_vep.mix(joint_sv_vcf_cutesv)
             }
         }
-        annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name, mode)
-        sv_scanner(annotated_sv_vcf.map { s, f, vcf, vcf_index, caller -> tuple(s, f, vcf, caller) }, ref, ref_index, file(dfam_db), outdir, outdir2, ref_name, mode)
+        vep_annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, gnomad_db_file, gnomad_db_index_file, cadd_sv_db_file, cadd_sv_db_index_file)
+        // sv repeat annotation
+        (annotated_sv_vcf, sv_diagrams) = sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, dfam_db_file, outdir, outdir2, ref_name, mode)
+    }
+    // puzzleapp preprocessing
+    if (prepare_for_puzzleapp == 'yes') {
+        // pedigree keyed like the annotated vcfs (proband sample_id in duo/trio): sample ids, kinships and mosdepth summaries in matching order
+        if (mode in ['duo', 'trio']) {
+            pedigree_ch = family_position_ch
+                .join(depth_ch, by: [0,1])
+                .groupTuple(by: 1)
+                .map { sample_ids, family_id, family_positions, depths ->
+                    tuple(sample_ids[family_positions.indexOf('proband')], family_id, sample_ids, family_positions, depths)
+                }
+        }
+        else {
+            // a singleton is the proband of its own pedigree
+            pedigree_ch = family_position_ch
+                .join(depth_ch, by: [0,1])
+                .map { sample_id, family_id, family_position, depth ->
+                    tuple(sample_id, family_id, [sample_id], ['proband'], depth)
+                }
+        }
+        puzzleapp_preprocess_snp_indel(annotated_snp_indel_vcf.join(pedigree_ch, by: [0,1]), outdir, outdir2, ref_name, snp_indel_caller, mode)
+        // combine rather than join: with sv_caller 'both' there are two annotated sv vcfs per key
+        sv_pedigree_ch = pedigree_ch.map { sample_id, family_id, sample_ids, kinships, depths -> tuple(sample_id, family_id, sample_ids, kinships) }
+        puzzleapp_preprocess_sv(annotated_sv_vcf.combine(sv_pedigree_ch, by: [0,1]), outdir, outdir2, ref_name, mode)
     }
 }
