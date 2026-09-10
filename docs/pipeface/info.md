@@ -23,6 +23,7 @@ somalier("Somalier extract")
 tr_calling("TR calling")
 sv_calling("Structural variant calling")
 sv_annotation("Structural variant annotation (hg38 only)")
+puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -31,8 +32,9 @@ alignment-.->haplotagging
 haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->somalier
 haplotagging-.->tr_calling
-snp_indel_phasing-.->snp_indel_annotation
-sv_calling-.->sv_annotation
+snp_indel_phasing-.->snp_indel_annotation-.->puzzleapp_preprocessing
+sv_calling-.->sv_annotation-.->puzzleapp_preprocessing
+depth-.->puzzleapp_preprocessing
 
 ```
 
@@ -62,6 +64,7 @@ joint_tr_calling("Joint TR calling")
 sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
+puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -71,8 +74,9 @@ haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
-snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
+snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation-.->puzzleapp_preprocessing
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->puzzleapp_preprocessing
+depth-.->puzzleapp_preprocessing
 
 ```
 
@@ -103,6 +107,7 @@ joint_tr_calling("Joint TR calling")
 sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
 joint_sv_annotation("Joint structural variant annotation (hg38 only)")
+puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
@@ -112,8 +117,9 @@ haplotagging-.->calculate_base_mod_freqs
 haplotagging-.->tr_calling
 haplotagging-.->joint_tr_calling
 haplotagging-.->joint_somalier
-snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation
-sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
+snp_indel_phasing-.->joint_snp_indel_calling-.->gvcf_merging-.->joint_split_multiallele-.->joint_snp_indel_phasing-.->joint_snp_indel_annotation-.->puzzleapp_preprocessing
+sv_calling-.->sv_vcf_merging-.->joint_sv_annotation-.->puzzleapp_preprocessing
+depth-.->puzzleapp_preprocessing
 
 ```
 
@@ -137,6 +143,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - [minimod](https://github.com/warp9seq/minimod?tab=readme-ov-file)
 - [LongTR](https://github.com/gymrek-lab/LongTR)
 - [ensembl-vep](https://github.com/Ensembl/ensembl-vep)
+- [puzzleapp](https://github.com/GenTechGp/puzzleapp)
 - [ClairS-TO](https://github.com/HKU-BAL/ClairS-TO)
 
 *[See the list of software and their versions used by this version of pipeface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](../../config/nextflow_pipeface.config) file is used).*
@@ -170,6 +177,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Phased tandem repeat VCF file
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Puzzleapp SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Somalier extracted files
 - ClairS-TO somatic SNV/indel VCF files
 
@@ -184,6 +192,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
@@ -200,6 +209,7 @@ sv_calling-.->sv_vcf_merging-.->joint_sv_annotation
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
 - Joint phased and annotated Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
+- Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
