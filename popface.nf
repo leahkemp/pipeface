@@ -468,7 +468,7 @@ process somalier {
     publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.$filename" }, pattern: 'somalier*'
 
     input:
-        tuple val(pop_id), path(somalier_files)
+        tuple val(pop_id), val(sample_ids), val(family_positions), val(related), path(somalier_files)
         val outdir
         val outdir2
         val ref_name
@@ -477,8 +477,21 @@ process somalier {
         tuple val(pop_id), path("somalier.samples.tsv"), path("somalier.pairs.tsv"), path("somalier.html")
 
     script:
+        // pedigree: a related cohort is one family with parents linked to the proband and sex from the position,
+        // an unrelated cohort is one family per sample so somalier flags any unexpected relatedness
+        def father = family_positions.contains('father') ? sample_ids[family_positions.indexOf('father')] : '0'
+        def mother = family_positions.contains('mother') ? sample_ids[family_positions.indexOf('mother')] : '0'
+        def ped_lines = [sample_ids, family_positions].transpose().collect { sid, position ->
+            def family_id = related == 'yes' ? pop_id : sid
+            def sex = position == 'father' ? '1' : position == 'mother' ? '2' : '0'
+            def parents = position == 'proband' ? [father, mother] : ['0', '0']
+            "'" + ([family_id, sid] + parents + [sex, '-9']).join('\t') + "'"
+        }.join(' ')
         """
-        somalier relate $somalier_files
+        # write pedigree
+        printf '%s\\n' ${ped_lines} > somalier.ped
+        # run somalier
+        somalier relate --ped somalier.ped $somalier_files
         """
 
     stub:
@@ -905,7 +918,7 @@ workflow {
             gvcfs:              tuple(row.pop_id, row.sample_id, row.gvcf, index)
             gvcfs_bams:         tuple(row.pop_id, row.sample_id, row.gvcf, row.bam)
             svs:                tuple(row.pop_id, row.sample_id, row.sniffles, row.cutesv)
-            somaliers:          tuple(row.pop_id, row.somalier)
+            somaliers:          tuple(row.pop_id, row.sample_id, row.family_position, row.related, row.somalier)
             bams_data_type:     tuple(row.pop_id, row.sample_id, row.bam, row.data_type, index)
             related:            tuple(row.pop_id, row.related)
             row_validation:     tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type, row.related, row.family_position)
@@ -943,9 +956,10 @@ workflow {
         .set { svs_ch }
 
     csv.somaliers
-        .filter { pop_id, somalier -> somalier != 'NONE' }
-        .map { pop_id, somalier -> tuple(pop_id, file(somalier)) }
+        .filter { pop_id, sample_id, family_position, related, somalier -> somalier != 'NONE' }
+        .map { pop_id, sample_id, family_position, related, somalier -> tuple(pop_id, sample_id, family_position, related, file(somalier)) }
         .groupTuple(by: 0)
+        .map { pop_id, sample_ids, family_positions, relateds, somaliers -> tuple(pop_id, sample_ids, family_positions, relateds[0], somaliers) }
         .set { somalier_files_ch }
 
     csv.bams_data_type

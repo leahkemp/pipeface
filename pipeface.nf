@@ -900,7 +900,7 @@ process somalier_relate {
     publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$filename" }, pattern: 'somalier.*'
 
     input:
-        tuple val(proband_sample_id), val(family_id), path(somalier_files)
+        tuple val(proband_sample_id), val(family_id), path(somalier_files), val(sample_ids), val(family_positions)
         val outdir
         val outdir2
         val ref_name
@@ -909,8 +909,19 @@ process somalier_relate {
         tuple val(proband_sample_id), path("somalier.samples.tsv"), path("somalier.pairs.tsv"), path("somalier.html")
 
     script:
+        // pedigree from the family positions: parents linked to the proband, sex from the position, phenotype unknown
+        def father = family_positions.contains('father') ? sample_ids[family_positions.indexOf('father')] : '0'
+        def mother = family_positions.contains('mother') ? sample_ids[family_positions.indexOf('mother')] : '0'
+        def ped_lines = [sample_ids, family_positions].transpose().collect { sid, position ->
+            def sex = position == 'father' ? '1' : position == 'mother' ? '2' : '0'
+            def parents = position == 'proband' ? [father, mother] : ['0', '0']
+            "'" + ([family_id, sid] + parents + [sex, '-9']).join('\t') + "'"
+        }.join(' ')
         """
-        somalier relate $somalier_files
+        # write pedigree
+        printf '%s\\n' ${ped_lines} > somalier.ped
+        # run somalier
+        somalier relate --ped somalier.ped $somalier_files
         """
 
     stub:
@@ -2252,7 +2263,7 @@ workflow {
                     .groupTuple(by: 1)
                     .map { sample_ids, family_id, somalier_files_list, family_positions ->
                         def proband_sample_id = sample_ids[family_positions.indexOf('proband')]
-                        tuple(proband_sample_id, family_id, somalier_files_list.flatten())
+                        tuple(proband_sample_id, family_id, somalier_files_list.flatten(), sample_ids, family_positions)
                     }
                 somalier_relate(somalier_relate_input, outdir, outdir2, ref_name)
             }
