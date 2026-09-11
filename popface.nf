@@ -893,6 +893,15 @@ workflow {
     alphamissense_db_index_file = annotate == 'yes' ? file("${alphamissense_db}.tbi") : []
     dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
 
+    // check the in data csv header names every required column
+    def required_columns = ['pop_id', 'sample_id', 'related', 'family_position', 'gvcf', 'bam', 'sniffles', 'cutesv', 'somalier', 'data_type']
+    def header_line = file(in_data).readLines().find { it.trim() }
+    def header_columns = header_line ? header_line.split(',').collect { it.trim() } : []
+    def missing_columns = required_columns - header_columns
+    if (missing_columns) {
+        exit 1, "The in data csv '${in_data}' is missing required column(s): ${missing_columns.join(', ')}. The header should be: ${required_columns.join(',')}."
+    }
+
     // read in data
     Channel
         .fromPath(in_data)
