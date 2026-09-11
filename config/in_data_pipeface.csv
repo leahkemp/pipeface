@@ -1,1 +1,1 @@
-sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_id,family_id,family_position,sex,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
