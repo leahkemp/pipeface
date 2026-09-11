@@ -108,57 +108,10 @@ process scrape_settings {
 
 }
 
-process merge_runs {
-
-    input:
-        tuple val(sample_id), val(family_id), val(extension), path(files)
-
-    output:
-        tuple val(sample_id), val(family_id), path("merged")
-
-    script:
-        if (extension == 'gz')
-        """
-        ${
-            if (files instanceof List && files.size() > 1) {
-                "cat ${files} > merged"
-            } else {
-                "ln -s ${files} merged"
-            }
-        }
-        """
-        else if (extension == 'fastq')
-        """
-        ${
-            if (files instanceof List && files.size() > 1) {
-                "cat ${files} | bgzip -@ ${task.cpus} > merged"
-            } else {
-                "ln -s ${files} merged"
-            }
-        }
-        """
-        else if (extension == 'bam')
-        """
-        ${
-            if (files instanceof List && files.size() > 1) {
-                "samtools merge -@ ${task.cpus} ${files} -o merged"
-            } else {
-                "ln -s ${files} merged"
-            }
-        }
-        """
-
-    stub:
-        """
-        touch merged
-        """
-
-}
-
 process minimap2 {
 
     input:
-        tuple val(sample_id), val(family_id), path(merged), val(extension), val(data_type)
+        tuple val(sample_id), val(family_id), val(extension), path(files), val(data_type)
         path ref
         path ref_index
 
@@ -170,8 +123,8 @@ process minimap2 {
         def preset = data_type == 'ont' ? 'lr:hq' : 'map-hifi'
         if (extension == 'bam')
         """
-        # run minimap
-        samtools fastq -@ ${task.cpus} -T '*' $merged | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
+        # concatenate multiple runs of a sample on the fly and align
+        samtools cat ${files} | samtools fastq -@ ${task.cpus} -T '*' - | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index -@ ${task.cpus} sorted.bam
         # check bam integrity
@@ -179,8 +132,8 @@ process minimap2 {
         """
         else if (extension in ['gz', 'fastq'])
         """
-        # run minimap
-        minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref $merged | samtools sort -@ ${task.cpus} -o sorted.bam -
+        # concatenate multiple runs of a sample on the fly and align
+        cat ${files} | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index -@ ${task.cpus} sorted.bam
         # check bam integrity
@@ -2186,8 +2139,7 @@ workflow {
     scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
-        merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
-        bam = minimap2(merged.join(extension_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
+        bam = minimap2(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
     }
     else if (in_data_format == 'aligned_bam') {
         bam = id_ch.join(files_ch, by: [0,1]).join(index_ch, by: [0,1])
