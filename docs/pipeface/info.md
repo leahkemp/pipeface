@@ -9,8 +9,7 @@
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging("Merge runs (if needed)")
-alignment("bam to fastq conversion (if needed), alignment, sorting")
+alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -26,7 +25,7 @@ sv_annotation("Structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->somatic_calling
 alignment-.->haplotagging
@@ -46,8 +45,7 @@ depth-.->puzzleapp_preprocessing
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging("Merge runs (if needed)")
-alignment("bam to fastq conversion (if needed), alignment, sorting")
+alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -68,7 +66,7 @@ joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->somatic_calling
 alignment-.->haplotagging
@@ -89,8 +87,7 @@ depth-.->puzzleapp_preprocessing
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging("Merge runs (if needed)")
-alignment("bam to fastq conversion (if needed), alignment, sorting")
+alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -112,7 +109,7 @@ joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->somatic_calling
 alignment-.->haplotagging
