@@ -18,7 +18,7 @@ process scrape_settings {
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
 
     input:
-        tuple val(sample_id), val(family_id), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(family_position)
+        tuple val(sample_id), val(family_id), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(sex), val(family_position)
         val pipeface_version
         val in_data
         val in_data_format
@@ -40,7 +40,6 @@ process scrape_settings {
         val outdir
         val outdir2
         val haploidaware
-        val sex
         val parbed
         val sv_mapq
 
@@ -436,10 +435,9 @@ process clairs_to {
 process deepvariant_dry_run {
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), val(data_type), val(sex)
         path ref
         path ref_index
-        val sex
         val haploidaware
         path parbed
         val chr_x_seq
@@ -539,14 +537,13 @@ process deepvariant_post_processing {
     }, pattern: 'snp_indel.g.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out), val(family_position)
+        tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(make_examples_call_variant_out), path(gvcf), path(call_variants_out), val(family_position), val(sex)
         path ref
         path ref_index
         val outdir
         val outdir2
         val ref_name
         val snp_indel_caller
-        val sex
         val haploidaware
         path parbed
         val chr_x_seq
@@ -1668,7 +1665,6 @@ workflow {
 
     // grab parameters
     in_data = "${params.in_data}".trim()
-    sex = "${params.sex}".trim()
     parbed = "${params.parbed}".trim()
     in_data_format = "${params.in_data_format}".trim()
     in_data_format_override = "${params.in_data_format_override}".trim()
@@ -1764,9 +1760,6 @@ workflow {
         if (mode != 'singleton') {
             exit 1, "Haploid-aware mode is only supported in singleton mode, mode = '${mode}' provided."
         }
-        if (sex != "XY") {
-            exit 1, "Haploid-aware mode is only supported when sex = 'XY', sex = '${sex}' provided."
-        }
         if (parbed == "NONE") {
             exit 1, "In haploid-aware mode, provide a valid PAR BED file, parbed = 'NONE' provided."
         }
@@ -1776,7 +1769,6 @@ workflow {
         }
     }
     else if (haploidaware == "no") {
-        // sex can be anything, including unset
         if (parbed != "NONE") {
             exit 1, "When not in haploid-aware mode, set the PAR BED file to 'NONE', haploidaware = '${haploidaware}' and parbed = '${parbed}' provided."
         }
@@ -1905,18 +1897,19 @@ workflow {
             row
         }
         .multiMap { row ->
-            in_data:                     tuple(row.sample_id, row.family_id, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
+            in_data:                     tuple(row.sample_id, row.family_id, row.file, row.data_type, row.regions_of_interest, row.clair3_model, row.sex)
             id:                          tuple(row.sample_id, row.family_id)
             family_position:             tuple(row.sample_id, row.family_id, row.family_position)
             extension:                   tuple(row.sample_id, row.family_id, file(row.file).getExtension())
             files:                       tuple(row.sample_id, row.family_id, file(row.file))
             index:                       tuple(row.sample_id, row.family_id, file("${row.file}.bai"))
             data_type:                   tuple(row.sample_id, row.family_id, row.data_type)
+            sex:                         tuple(row.sample_id, row.family_id, row.sex)
             regions_of_interest:         tuple(row.sample_id, row.family_id, row.regions_of_interest != 'NONE' ? file(row.regions_of_interest) : [])
             clair3_model:                tuple(row.sample_id, row.family_id, row.clair3_model != 'NONE' ? file(row.clair3_model) : [])
             clairs_to_platform:          tuple(row.sample_id, row.family_id, row.clairs_to_platform)
             clairs_to_validation:        tuple(row.sample_id, row.family_id, row.clairs_to_platform)
-            row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
+            row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model, row.sex)
             family_validation:           tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
             sample_family_validation:    tuple(row.sample_id, row.family_id)
             family_data_type_validation: tuple(row.sample_id, row.family_id, row.data_type)
@@ -1925,16 +1918,16 @@ workflow {
 
     // build channels
     csv.in_data
-        .map { sample_id, family_id, files, data_type, regions_of_interest, clair3_model ->
-            if (haploidaware == 'yes' && regions_of_interest != 'NONE' && file(regions_of_interest).exists()) {
+        .map { sample_id, family_id, files, data_type, regions_of_interest, clair3_model, sex ->
+            if (haploidaware == 'yes' && sex == 'XY' && regions_of_interest != 'NONE' && file(regions_of_interest).exists()) {
                 def content = file(regions_of_interest).text
                 if (!content.contains(chr_x_seq) || !content.contains(chr_y_seq)) {
-                    exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${regions_of_interest}."
+                    exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${regions_of_interest} for XY sample '${sample_id}'."
                 }
             }
-            return tuple(sample_id, family_id, files, data_type, regions_of_interest, clair3_model)
+            return tuple(sample_id, family_id, files, data_type, regions_of_interest, clair3_model, sex)
         }
-        .groupTuple(by: [0,1,3,4,5])
+        .groupTuple(by: [0,1,3,4,5,6])
         .set { in_data_ch }
 
     csv.id
@@ -1961,6 +1954,10 @@ workflow {
         .groupTuple(by: [0,1,2])
         .set { data_type_ch }
 
+    csv.sex
+        .groupTuple(by: [0,1,2])
+        .set { sex_ch }
+
     csv.regions_of_interest
         .groupTuple(by: [0,1,2])
         .set { regions_of_interest_ch }
@@ -1975,10 +1972,10 @@ workflow {
 
     // check user provided in data
     csv.row_validation
-        .map { sample_id, family_id, family_position, in_file, data_type, regions_of_interest, clair3_model ->
+        .map { sample_id, family_id, family_position, in_file, data_type, regions_of_interest, clair3_model, sex ->
             // check for empty entries
             def required_cols = [sample_id: sample_id, data_type: data_type]
-            def optional_cols = [family_id: family_id, regions_of_interest: regions_of_interest, clair3_model: clair3_model]
+            def optional_cols = [family_id: family_id, regions_of_interest: regions_of_interest, clair3_model: clair3_model, sex: sex]
             required_cols.each { col, val ->
                 if (val.isEmpty()) {
                     exit 1, "There is an empty entry in the '${col}' column of '${in_data}'."
@@ -2046,13 +2043,22 @@ workflow {
                     exit 1, "Entries in the 'data_type' column of '${in_data}' should be 'ont' or 'pacbio', '${data_type}' provided."
                 }
             }
+            if (!(sex in ['XX', 'XY', 'NONE'])) {
+                exit 1, "Entries in the 'sex' column of '${in_data}' should be 'XX', 'XY' or 'NONE', '${sex}' provided."
+            }
+            if (haploidaware == 'yes' && sex == 'NONE') {
+                exit 1, "In haploid-aware mode, set the 'sex' column of '${in_data}' to 'XX' or 'XY' for every sample, 'NONE' provided for sample '${sample_id}'."
+            }
         }
 
     csv.row_validation
         .groupTuple(by: 0)
-        .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
+        .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models, sexes ->
             if (family_ids.unique().size() > 1) {
                 exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'family_id', conflicting 'family_id' values '${family_ids}' provided for sample '${sample_id}'."
+            }
+            if (sexes.unique().size() > 1) {
+                exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'sex', conflicting 'sex' values '${sexes}' provided for sample '${sample_id}'."
             }
         }
 
@@ -2168,7 +2174,7 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
@@ -2188,20 +2194,24 @@ workflow {
         }
         // snp/indel calling
         if (snp_indel_caller == 'clair3') {
-            if (haploidaware == 'no' || sex == 'XX') {
-                (snp_indel_vcf_bam, gvcf) = clair3(bam.join(data_type_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
-            }
-            else if (haploidaware == 'yes' && sex == 'XY') {
-                bam_diploid_haploid_bed = clair3_pre_processing(bam.join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, parbed_file)
+            // in haploid-aware mode xy samples get haploid-aware calling, everything else standard diploid calling
+            bam_sex = bam.join(sex_ch, by: [0,1])
+            diploid_bam = bam_sex.filter { haploidaware == 'no' || it[4] != 'XY' }.map { it[0..3] }
+            (snp_indel_vcf_bam, gvcf) = clair3(diploid_bam.join(data_type_ch, by: [0,1]).join(regions_of_interest_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
+            if (haploidaware == 'yes') {
+                haploid_bam = bam_sex.filter { it[4] == 'XY' }.map { it[0..3] }
+                bam_diploid_haploid_bed = clair3_pre_processing(haploid_bam.join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, parbed_file)
                 haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
-                (snp_indel_vcf_bam, gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
+                (haploid_snp_indel_vcf_bam, haploid_gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
+                snp_indel_vcf_bam = snp_indel_vcf_bam.mix(haploid_snp_indel_vcf_bam)
+                gvcf = gvcf.mix(haploid_gvcf)
             }
         }
         else if (snp_indel_caller in ['deepvariant', 'deeptrio']) {
-            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]), ref_file, ref_index_file, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
+            dv_commands = deepvariant_dry_run(bam.join(data_type_ch, by: [0,1]).join(sex_ch, by: [0,1]), ref_file, ref_index_file, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
             dv_examples = deepvariant_make_examples(dv_commands.join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, parbed_file)
             dv_calls = deepvariant_call_variants(dv_examples)
-            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller, sex, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
+            (snp_indel_raw_vcf_bam, snp_indel_gvcf_bam, gvcf) = deepvariant_post_processing(dv_calls.join(family_position_ch, by: [0,1]).join(sex_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller, haploidaware, parbed_file, chr_x_seq, chr_y_seq)
             // filter refcall variants
             snp_indel_vcf_bam = filter_ref_call(snp_indel_raw_vcf_bam)
         }

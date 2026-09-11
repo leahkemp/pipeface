@@ -198,16 +198,16 @@ wget -r -np -nH --cut-dirs=2 -R "index.html*" ./clair3_models/hifi_revio/ https:
 
 ### Singleton mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
+Specify the sample ID, family ID, family position, sex, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
 
 ```csv
-sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
-sample_01,NONE,NONE,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_01,NONE,NONE,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_02,NONE,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
-sample_03,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
-sample_04,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
-sample_04,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
+sample_id,family_id,family_position,sex,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_01,NONE,NONE,XY,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_01,NONE,NONE,XY,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_02,NONE,NONE,XX,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
+sample_03,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
+sample_04,NONE,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
+sample_04,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 ```
 
 > [!NOTE]
@@ -222,23 +222,24 @@ Requirements:
 - for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
 - set `family_id` to 'NONE' if not required
 - `family_position` can be any value (set to 'NONE' if not required)
+- `sex` must be 'XX', 'XY' or 'NONE'; in haploid-aware mode it must be 'XX' or 'XY' for every sample, and all entries for a given `sample_id` must agree
 - set `regions_of_interest` to 'NONE' if not required
 - set `clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
 - set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
 
 ### Duo/Trio mode
 
-Specify the sample ID, family ID, family position, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
+Specify the sample ID, family ID, family position, sex, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
 
 ```csv
-sample_id,family_id,family_position,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
-sample_01,family01,proband,/path/to/sample_01_1.bam,ont,NONE,NONE,NONE
-sample_01,family01,proband,/path/to/sample_01_2.bam,ont,NONE,NONE,NONE
-sample_02,family01,father,/path/to/sample_02.bam,ont,NONE,NONE,NONE
-sample_03,family01,mother,/path/to/sample_03.bam,ont,NONE,NONE,NONE
-sample_04,family02,proband,/path/to/sample_04.bam,ont,NONE,NONE,NONE
-sample_05,family02,father,/path/to/sample_05.bam,ont,NONE,NONE,NONE
-sample_06,family02,mother,/path/to/sample_06.bam,ont,NONE,NONE,NONE
+sample_id,family_id,family_position,sex,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_01,family01,proband,XY,/path/to/sample_01_1.bam,ont,NONE,NONE,NONE
+sample_01,family01,proband,XY,/path/to/sample_01_2.bam,ont,NONE,NONE,NONE
+sample_02,family01,father,XY,/path/to/sample_02.bam,ont,NONE,NONE,NONE
+sample_03,family01,mother,XX,/path/to/sample_03.bam,ont,NONE,NONE,NONE
+sample_04,family02,proband,NONE,/path/to/sample_04.bam,ont,NONE,NONE,NONE
+sample_05,family02,father,XY,/path/to/sample_05.bam,ont,NONE,NONE,NONE
+sample_06,family02,mother,XX,/path/to/sample_06.bam,ont,NONE,NONE,NONE
 ```
 
 > [!NOTE]
@@ -253,6 +254,7 @@ Requirements:
 - if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
 - for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
 - provide all entries for a given `sample_id` the same `family_id`
+- `sex` must be 'XX', 'XY' or 'NONE', and all entries for a given `sample_id` must agree
 - in duo mode, exactly 2 unique `sample_id` values are required per `family_id`, with a `proband` and either a `father` or `mother` in the `family_position` column
 - in trio mode, exactly 3 unique `sample_id` values are required per `family_id`, with a `proband`, `father` and `mother` in the `family_position` column
 - set `regions_of_interest` to 'NONE' if not required
@@ -292,12 +294,11 @@ Optionally turn on haploid-aware mode. Eg:
 
 ```json
     "haploidaware": "yes",
-    "sex": "XY",
     "parbed": "/path/to/par.bed",
 ```
 
 > [!NOTE]
-> - Haploid-aware mode is only available for singleton XY samples.
+> - Haploid-aware mode is only available in singleton mode. Each sample's sex comes from the `sex` column of `in_data_pipeface.csv`: XY samples get haploid-aware calling of chrX/chrY, XX samples are called as diploid.
 > - Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
 
 Optionally specify the path to the tandem repeat bed file (used by the SV caller to improve SV calling in tandem repeat regions). Set to 'NONE' if not required. Eg:
