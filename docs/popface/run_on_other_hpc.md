@@ -17,7 +17,8 @@
       - [ClinVar](#clinvar-1)
       - [SpliceAI](#spliceai-1)
       - [AlphaMissense](#alphamissense-1)
-  - [2. Modify nextflow\_popface\_container.config](#2-modify-nextflow_popface_containerconfig)
+    - [Dfam](#dfam)
+  - [2. Modify nextflow\_popface.config](#2-modify-nextflow_popfaceconfig)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
   - [4. Run popface](#4-run-popface)
   - [Information](#information)
@@ -265,15 +266,15 @@ Expected md5sums
 #### SpliceAI
 
 > [!IMPORTANT]
-> The SpliceAI scores that were lifted over to chm13 are made available by Illumina for academic and not-for-profit research use only. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+> The SpliceAI scores that were lifted over to chm13 are made available by Illumina for academic and not-for-profit research use only. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/popface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
 Get local copies of the SpliceAI SNV and indel databases (Illumina SpliceAI v1.3 scores lifted over from hg38 to chm13)
 
 ```bash
-wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz
-wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz.tbi
-wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.indel.chm13.vcf.gz
-wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.indel.chm13.vcf.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.snv.chm13.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.snv.chm13.vcf.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.indel.chm13.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.indel.chm13.vcf.gz.tbi
 ```
 
 Expected md5sums
@@ -288,13 +289,13 @@ b9105deba6662ae980676b612f119207  spliceai_scores.raw.indel.chm13.vcf.gz
 #### AlphaMissense
 
 > [!IMPORTANT]
-> The AlphaMissense predictions that were lifted over to chm13 are made available by Google DeepMind under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+> The AlphaMissense predictions that were lifted over to chm13 are made available by Google DeepMind under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/popface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
 Get a local copy of the AlphaMissense database
 
 ```bash
-wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz
-wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/AlphaMissense_chm13.tsv.gz
+wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/AlphaMissense_chm13.tsv.gz.tbi
 ```
 
 Expected md5sums
@@ -304,7 +305,18 @@ Expected md5sums
 3c57d7ce3f7a699cb9471d8c9ce5601c  AlphaMissense_chm13.tsv.gz.tbi
 ```
 
-## 2. Modify nextflow_popface_container.config
+### Dfam
+
+Get a local copy of the Dfam 3.9 Mammalia partition (used for both hg38 and chm13) and put it in a directory of its own. Eg.
+
+```bash
+mkdir -p /path/to/dfam
+cd /path/to/dfam
+curl -O https://www.dfam.org/releases/Dfam_3.9/families/FamDB/dfam39_full.7.h5.gz
+gunzip dfam39_full.7.h5.gz
+```
+
+## 2. Modify nextflow_popface.config
 
 Specify the paths to your local copies of the variant databases. Eg:
 
@@ -329,9 +341,12 @@ params.alphamissense_chm13_db = '/path/to/AlphaMissense_chm13.tsv.gz'
 params.gnomad_genomes_chm13_db = '/path/to/gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz'
 params.gnomad_exomes_chm13_db = '/path/to/gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz'
 params.clinvar_chm13_db = '/path/to/chm13v2.0_ClinVar20220313.vcf.gz'
+
+// sv repeat annotation database
+params.dfam_db = '/path/to/dfam/'
 ```
 
-Modify the rest of the `nextflow_popface_container.config` for your specific HPC/job scheduler.
+Modify the rest of the `nextflow_popface.config` for your specific HPC/job scheduler: the `executor`, `queue`, `project` and `storage` settings in the `process` block, the `cacheDir` the software containers are pulled to, and per-process resources where needed. Alternatively keep `nextflow_popface.config` untouched and put your settings in a small config that starts with `includeConfig 'nextflow_popface.config'`, as `nextflow_popface_nci.config` does for NCI.
 
 > [!NOTE]
 > The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPUs
@@ -348,19 +363,19 @@ You'll need access to nextflow and singularity. Tested on:
 Run the pipeline. Eg:
 
 ```bash
-nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 Or run a dry run to validate parameters without executing processes. Eg:
 
 ```bash
-nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 If you need to resume a pipeline run, use the `-resume` flag. Eg:
 
 ```bash
-nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 ## Information

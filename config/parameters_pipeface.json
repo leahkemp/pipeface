@@ -7,7 +7,6 @@
     "ref_index": "",
     "ref_name": "",
     "haploidaware": "",
-    "sex": "",
     "parbed": "",
     "tandem_repeat": "",
     "mode": "",
@@ -21,6 +20,8 @@
     "tr_call_regions": "",
     "check_relatedness": "",
     "sites": "",
+    "somatic_calling": "",
+    "prepare_for_puzzleapp": "",
     "outdir": ""
 
 }

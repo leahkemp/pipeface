@@ -17,7 +17,8 @@
       - [ClinVar](#clinvar-1)
       - [SpliceAI](#spliceai-1)
       - [AlphaMissense](#alphamissense-1)
-  - [2. Modify nextflow\_pipeface\_container.config](#2-modify-nextflow_pipeface_containerconfig)
+    - [Dfam](#dfam)
+  - [2. Modify nextflow\_pipeface.config](#2-modify-nextflow_pipefaceconfig)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
   - [4. Run pipeface](#4-run-pipeface)
   - [Information](#information)
@@ -304,7 +305,18 @@ Expected md5sums
 3c57d7ce3f7a699cb9471d8c9ce5601c  AlphaMissense_chm13.tsv.gz.tbi
 ```
 
-## 2. Modify nextflow_pipeface_container.config
+### Dfam
+
+Get a local copy of the Dfam 3.9 Mammalia partition (used for both hg38 and chm13) and put it in a directory of its own. Eg.
+
+```bash
+mkdir -p /path/to/dfam
+cd /path/to/dfam
+curl -O https://www.dfam.org/releases/Dfam_3.9/families/FamDB/dfam39_full.7.h5.gz
+gunzip dfam39_full.7.h5.gz
+```
+
+## 2. Modify nextflow_pipeface.config
 
 Specify the paths to your local copies of the variant databases. Eg:
 
@@ -329,9 +341,12 @@ params.alphamissense_chm13_db = '/path/to/AlphaMissense_chm13.tsv.gz'
 params.gnomad_genomes_chm13_db = '/path/to/gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz'
 params.gnomad_exomes_chm13_db = '/path/to/gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz'
 params.clinvar_chm13_db = '/path/to/chm13v2.0_ClinVar20220313.vcf.gz'
+
+// sv repeat annotation database
+params.dfam_db = '/path/to/dfam/'
 ```
 
-Modify the rest of the `nextflow_pipeface_container.config` for your specific HPC/job scheduler.
+Modify the rest of the `nextflow_pipeface.config` for your specific HPC/job scheduler: the `executor`, `queue`, `project` and `storage` settings in the `process` block, the `cacheDir` the software containers are pulled to, and per-process resources where needed. Alternatively keep `nextflow_pipeface.config` untouched and put your settings in a small config that starts with `includeConfig 'nextflow_pipeface.config'`, as `nextflow_pipeface_nci.config` does for NCI.
 
 > [!NOTE]
 > The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPUs
@@ -348,19 +363,19 @@ You'll need access to nextflow and singularity. Tested on:
 Run the pipeline. Eg:
 
 ```bash
-nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface_container.config
+nextflow run pipeface.nf -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
 ```
 
 Or run a dry run to validate parameters without executing processes. Eg:
 
 ```bash
-nextflow run pipeface.nf -stub -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface_container.config
+nextflow run pipeface.nf -stub -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
 ```
 
 If you need to resume a pipeline run, use the `-resume` flag. Eg:
 
 ```bash
-nextflow run pipeface.nf -resume -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface_container.config
+nextflow run pipeface.nf -resume -params-file ./config/parameters_pipeface.json -config ./config/nextflow_pipeface.config
 ```
 
 ## Information
