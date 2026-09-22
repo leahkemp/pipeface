@@ -229,7 +229,9 @@ Expected md5sums
 
 #### gnomAD
 
-Get a local copy of the gnomAD joint (genomes and exomes) database lifted over to chm13. No pre-lifted joint file is published for chm13, so lift over the hg38 release yourself: download the per-chromosome gnomAD v4.1 joint sites VCFs, lift each over with the [bcftools +liftover plugin](https://github.com/freeseek/score) and the UCSC [hg38ToHs1](http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHs1.over.chain.gz) chain, concatenate in reference contig order, sort and index with tabix. Keep the INFO fields used for annotation (`AF_joint`, `AF_exomes`, `AF_genomes`, `nhomalt_joint`, `nhomalt_exomes`, `nhomalt_genomes`).
+No pre-lifted joint gnomAD file is published for chm13, so lift the hg38 release over yourself. This needs [bcftools](https://github.com/samtools/bcftools) built with plugins, the [bcftools +liftover plugin](https://github.com/freeseek/score), the hg38 no-alt reference (`hg38.analysisSet.fa`) and the chm13 reference, both indexed.
+
+Get the per-chromosome gnomAD v4.1 joint (genomes and exomes) sites VCFs
 
 ```bash
 for c in chr{1..22} chrX chrY; do
@@ -237,6 +239,34 @@ for c in chr{1..22} chrX chrY; do
     wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/joint/gnomad.joint.v4.1.sites.${c}.vcf.bgz.tbi
 done
 ```
+
+Get the UCSC hg38 to hs1 (chm13) chain file
+
+```bash
+wget http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHs1.over.chain.gz
+```
+
+Lift over each chromosome, keeping the rejected records for the retention check
+
+```bash
+for c in chr{1..22} chrX chrY; do
+    bcftools view -Ou gnomad.joint.v4.1.sites.${c}.vcf.bgz \
+    | bcftools +liftover -Ou -- -s /path/to/hg38.analysisSet.fa -f /path/to/chm13.fa -c hg38ToHs1.over.chain.gz --reject gnomad.joint.v4.1.sites.${c}.rejected.vcf.gz --reject-type z --write-reject \
+    | bcftools sort -Oz -o gnomad.joint.v4.1.sites.${c}.chm13.vcf.gz
+    bcftools index -t gnomad.joint.v4.1.sites.${c}.chm13.vcf.gz
+done
+```
+
+Concatenate in chm13 reference contig order, sort and index
+
+```bash
+bcftools concat --naive-force -Oz -o gnomad.joint.v4.1.sites.chm13t2t.unsorted.vcf.gz $(for c in $(cut -f1 /path/to/chm13.fa.fai); do ls gnomad.joint.v4.1.sites.${c}.chm13.vcf.gz 2>/dev/null; done)
+bcftools sort -m 480G -T ./sort_tmp -Oz -o gnomad.joint.v4.1.sites.chm13t2t.vcf.gz gnomad.joint.v4.1.sites.chm13t2t.unsorted.vcf.gz
+tabix -p vcf gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
+```
+
+> [!NOTE]
+> The whole-genome sort needs a machine with several hundred GB of memory, or a smaller `-m` with more temporary files. The INFO fields pipeface annotates with (`AF_joint`, `AF_exomes`, `AF_genomes`, `nhomalt_joint`, `nhomalt_exomes`, `nhomalt_genomes`) are carried through the liftover unchanged.
 
 #### ClinVar
 
