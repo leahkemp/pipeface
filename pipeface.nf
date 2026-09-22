@@ -5,7 +5,6 @@ def pipeface_version = "0.11.1"
 
 // set defaults for undocumented params
 params.outdir2 = ""
-params.annotate_override = ""
 params.in_data_format_override = ""
 
 // default values for chrX and chrY contig names. Used when sex = 'XY' and 
@@ -24,6 +23,7 @@ process scrape_settings {
         val in_data_format
         val ref
         val ref_index
+        val ref_name
         val tandem_repeat
         val mode
         val snp_indel_caller
@@ -64,6 +64,7 @@ process scrape_settings {
             echo "In data csv path: $in_data"
             echo "Reference genome: $ref"
             echo "Reference genome index: $ref_index"
+            echo "Reference name: $ref_name"
             echo "Haploid-aware: $haploidaware"
             echo "Sex: $sex"
             echo "PAR regions: $parbed"
@@ -92,6 +93,7 @@ process scrape_settings {
             echo "In data format: $reported_in_data_format"
             echo "Input data file/files: $files"
             echo "In data csv path: $in_data"
+            echo "Reference name: $ref_name"
             echo "Annotate: $annotate"
             echo "Outdir: $outdir"
         } > pipeface_settings.txt
@@ -1036,6 +1038,13 @@ process vep_snp_indel {
         val spliceai_snv_db
         val spliceai_indel_db
         val alphamissense_db
+        val vep_gff
+        val gnomad_genomes_chm13_db
+        val gnomad_exomes_chm13_db
+        val clinvar_chm13_db
+        val spliceai_snv_chm13_db
+        val spliceai_indel_chm13_db
+        val alphamissense_chm13_db
         val outdir
         val outdir2
         val ref_name
@@ -1046,6 +1055,7 @@ process vep_snp_indel {
         tuple val(sample_id), val(family_id), path("snp_indel.phased.annotated.vcf.gz"), path("snp_indel.phased.annotated.vcf.gz.tbi")
 
     script:
+        if (ref_name == "hg38")
         """
         # run vep
         vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
@@ -1056,6 +1066,19 @@ process vep_snp_indel {
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
         --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
         --plugin AlphaMissense,file=$alphamissense_db
+        # index vcf
+        tabix snp_indel.phased.annotated.vcf.gz
+        """
+        else if (ref_name == "chm13")
+        """
+        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
+        --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
+        --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
+        --plugin SpliceAI,snv=$spliceai_snv_chm13_db,indel=$spliceai_indel_chm13_db \
+        --plugin AlphaMissense,file=$alphamissense_chm13_db \
+        --custom file=$gnomad_genomes_chm13_db,short_name=gnomAD_genomes,format=vcf,type=exact,fields=AF%nhomalt%AF_afr%AF_amr%AF_asj%AF_eas%AF_fin%AF_mid%AF_nfe%AF_sas%AF_remaining%AF_grpmax%grpmax%fafmax_faf95_max \
+        --custom file=$gnomad_exomes_chm13_db,short_name=gnomAD_exomes,format=vcf,type=exact,fields=AF%nhomalt%AF_afr%AF_amr%AF_asj%AF_eas%AF_fin%AF_mid%AF_nfe%AF_sas%AF_remaining%AF_grpmax%grpmax%fafmax_faf95_max \
+        --custom file=$clinvar_chm13_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG
         # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
         """
@@ -1421,6 +1444,7 @@ process vep_sv {
         val vep_db
         val gnomad_db
         val cadd_sv_db
+        val vep_gff
         val outdir
         val outdir2
         val ref_name
@@ -1432,11 +1456,21 @@ process vep_sv {
     script:
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        if (ref_name == "hg38")
         """
         # run vep
         vep -i $sv_vcf -o ${out_vcf}.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
-            --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
+            --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
             --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
+        # index vcf
+        tabix ${out_vcf}.vcf.gz
+        """
+        else if (ref_name == "chm13")
+        """
+        # run vep
+        vep -i $sv_vcf -o ${out_vcf}.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
+            --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
+            --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip
         # index vcf
         tabix ${out_vcf}.vcf.gz
         """
@@ -1460,6 +1494,7 @@ workflow {
     in_data_format_override = "${params.in_data_format_override}".trim()
     ref = "${params.ref}".trim()
     ref_index = "${params.ref_index}".trim()
+    ref_name = "${params.ref_name}".trim()
     tandem_repeat = "${params.tandem_repeat}".trim()
     mode = "${params.mode}".trim()
     snp_indel_caller = "${params.snp_indel_caller}".trim()
@@ -1468,7 +1503,6 @@ workflow {
     sv_mapq = "${params.sv_mapq}".trim()
     annotate = "${params.annotate}".trim()
     haploidaware = "${params.haploidaware}".trim()
-    annotate_override = "${params.annotate_override}".trim()
     calculate_depth = "${params.calculate_depth}".trim()
     analyse_base_mods = "${params.analyse_base_mods}".trim()
     tr_calling = "${params.tr_calling}".trim()
@@ -1487,11 +1521,17 @@ workflow {
     spliceai_snv_db = "${params.spliceai_snv_db}".trim()
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
-    ref_name = file(ref).getSimpleName()
+    vep_gff = "${params.vep_gff}".trim()
+    gnomad_genomes_chm13_db = "${params.gnomad_genomes_chm13_db}".trim()
+    gnomad_exomes_chm13_db = "${params.gnomad_exomes_chm13_db}".trim()
+    clinvar_chm13_db = "${params.clinvar_chm13_db}".trim()
+    spliceai_snv_chm13_db = "${params.spliceai_snv_chm13_db}".trim()
+    spliceai_indel_chm13_db = "${params.spliceai_indel_chm13_db}".trim()
+    alphamissense_chm13_db = "${params.alphamissense_chm13_db}".trim()
 
     // check user provided parameters
     // check for empty entries
-    [in_data: in_data, ref: ref, ref_index: ref_index, outdir: outdir].each { param, val ->
+    [in_data: in_data, ref: ref, ref_index: ref_index, ref_name: ref_name, outdir: outdir].each { param, val ->
         if (!val) {
             exit 1, "No value provided for '${param}'."
         }
@@ -1515,7 +1555,17 @@ workflow {
         }
     }
     if (annotate == 'yes') {
-        [vep_db: vep_db, revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db].each { param, val ->
+        if (!(ref_name in ['hg38', 'chm13'])) {
+            exit 1, "Only hg38 and chm13 are supported for annotation. ref_name = '${ref_name}' provided. Set ref_name to 'hg38' or 'chm13'."
+        }
+        def annotation_dbs
+        if (ref_name == 'chm13') {
+            annotation_dbs = [vep_gff: vep_gff, gnomad_genomes_chm13_db: gnomad_genomes_chm13_db, gnomad_exomes_chm13_db: gnomad_exomes_chm13_db, clinvar_chm13_db: clinvar_chm13_db, spliceai_snv_chm13_db: spliceai_snv_chm13_db, spliceai_indel_chm13_db: spliceai_indel_chm13_db, alphamissense_chm13_db: alphamissense_chm13_db]
+        }
+        else {
+            annotation_dbs = [vep_db: vep_db, revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, cadd_sv_db: cadd_sv_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db]
+        }
+        annotation_dbs.each { param, val ->
             if (!file(val).exists()) {
                 exit 1, "Annotation database file does not exist, ${param} = '${val}' provided."
             }
@@ -1569,11 +1619,6 @@ workflow {
         }
         if (sv_mapq != 'NONE' && !(sv_mapq.isInteger() && sv_mapq.toInteger() <= 60)) {
             exit 1, "sv_mapq should be a positive integer (maximum 60) or 'NONE', sv_mapq = '${sv_mapq}' provided."
-        }
-    }
-    if (annotate == 'yes') {
-        if (!ref.toLowerCase().contains('hg38') && !ref.toLowerCase().contains('grch38') && annotate_override != 'yes') {
-            exit 1, "Only hg38/GRCh38 is supported for annotation. It looks like you may not be passing a hg38/GRCh38 reference genome based on the filename of the reference genome. ref = '${ref}' provided. Pass '--annotate_override yes' on the command line to override this error."
         }
     }
     if (tr_calling == 'yes' && tr_call_regions == 'NONE') {
@@ -1873,7 +1918,7 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, ref_name, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, outdir, outdir2, haploidaware, sex, parbed, sv_mapq)
     // merge runs and alignment
     if (in_data_format == 'ubam_fastq') {
         merged = merge_runs(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]))
@@ -1972,7 +2017,7 @@ workflow {
         if (mode in ['duo', 'trio']) {
             // joint snp/indel annotation
             if (annotate == 'yes') {
-                vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
+                vep_snp_indel(joint_snp_indel_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, vep_gff, gnomad_genomes_chm13_db, gnomad_exomes_chm13_db, clinvar_chm13_db, spliceai_snv_chm13_db, spliceai_indel_chm13_db, alphamissense_chm13_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
             }
         }
         // sv calling
@@ -2008,7 +2053,7 @@ workflow {
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
         if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
-            vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
+            vep_snp_indel(snp_indel_split_phased_vcf, ref, ref_index, vep_db, revel_db, gnomad_db, clinvar_db, cadd_snv_db, cadd_indel_db, spliceai_snv_db, spliceai_indel_db, alphamissense_db, vep_gff, gnomad_genomes_chm13_db, gnomad_exomes_chm13_db, clinvar_chm13_db, spliceai_snv_chm13_db, spliceai_indel_chm13_db, alphamissense_chm13_db, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     if (mode in ['duo', 'trio']) {
@@ -2056,6 +2101,6 @@ workflow {
                 sv_vcf_for_vep = sv_vcf_for_vep.mix(joint_sv_vcf_cutesv)
             }
         }
-        vep_sv(sv_vcf_for_vep, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, outdir, outdir2, ref_name, mode)
+        vep_sv(sv_vcf_for_vep, ref, ref_index, vep_db, gnomad_db, cadd_sv_db, vep_gff, outdir, outdir2, ref_name, mode)
     }
 }

@@ -69,11 +69,12 @@ Specify the path to `in_data_popface.csv`. Eg:
     "in_data": "/path/to/in_data_popface.csv",
 ```
 
-Specify the path to the reference genome and its index. Eg:
+Specify the path to the reference genome, its index and the reference build ('hg38' or 'chm13'). Eg:
 
 ```json
     "ref": "/path/to/hg38.fa",
     "ref_index": "/path/to/hg38.fa.fai",
+    "ref_name": "hg38",
 ```
 
 Specify the SNP/indel caller used to generate the gVCF files ('clair3', 'deepvariant', or 'NONE' if no gVCF files are provided). Eg:
@@ -107,7 +108,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 ```
 
 > [!NOTE]
-> Variant annotation is only available for hg38.
+> Variant annotation is only available for hg38 and chm13.
 
 Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file. Set to 'NONE' if not required. Eg:
 
