@@ -229,22 +229,13 @@ Expected md5sums
 
 #### gnomAD
 
-Get local copies of the gnomAD genomes and exomes databases
+Get a local copy of the gnomAD joint (genomes and exomes) database lifted over to chm13. No pre-lifted joint file is published for chm13, so lift over the hg38 release yourself: download the per-chromosome gnomAD v4.1 joint sites VCFs, lift each over with the [bcftools +liftover plugin](https://github.com/freeseek/score) and the UCSC [hg38ToHs1](http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHs1.over.chain.gz) chain, concatenate in reference contig order, sort and index with tabix. Keep the INFO fields used for annotation (`AF_joint`, `AF_exomes`, `AF_genomes`, `nhomalt_joint`, `nhomalt_exomes`, `nhomalt_genomes`).
 
 ```bash
-wget https://ftp.ensembl.org/pub/rapid-release/species/Homo_sapiens/GCA_009914755.4/ensembl/variation/2022_10/vcf/2024_07/gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz
-wget https://ftp.ensembl.org/pub/rapid-release/species/Homo_sapiens/GCA_009914755.4/ensembl/variation/2022_10/vcf/2024_07/gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz.tbi
-wget https://ftp.ensembl.org/pub/rapid-release/species/Homo_sapiens/GCA_009914755.4/ensembl/variation/2022_10/vcf/2024_07/gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz
-wget https://ftp.ensembl.org/pub/rapid-release/species/Homo_sapiens/GCA_009914755.4/ensembl/variation/2022_10/vcf/2024_07/gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz.tbi
-```
-
-Expected md5sums
-
-```bash
-00eb20709202bfa7ca9d1fa6d62b42fd  gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz
-1712544dfffa9fd571ea758e216aa4e8  gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz.tbi
-c9839f4250c1a3a6a14a8351f532c2eb  gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz
-4683504ffb0b926f4f2a07e2add07ce4  gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz.tbi
+for c in chr{1..22} chrX chrY; do
+    wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/joint/gnomad.joint.v4.1.sites.${c}.vcf.bgz
+    wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/joint/gnomad.joint.v4.1.sites.${c}.vcf.bgz.tbi
+done
 ```
 
 #### ClinVar
@@ -338,8 +329,7 @@ params.vep_gff = '/path/to/chm13v2.0_GENCODEv35_CAT_Liftoff.vep.gff3.gz'
 params.spliceai_snv_chm13_db = '/path/to/spliceai_scores.raw.snv.chm13.vcf.gz'
 params.spliceai_indel_chm13_db = '/path/to/spliceai_scores.raw.indel.chm13.vcf.gz'
 params.alphamissense_chm13_db = '/path/to/AlphaMissense_chm13.tsv.gz'
-params.gnomad_genomes_chm13_db = '/path/to/gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz'
-params.gnomad_exomes_chm13_db = '/path/to/gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz'
+params.gnomad_chm13_db = '/path/to/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz'
 params.clinvar_chm13_db = '/path/to/chm13v2.0_ClinVar20220313.vcf.gz'
 
 // sv repeat annotation database

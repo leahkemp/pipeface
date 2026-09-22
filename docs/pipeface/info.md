@@ -164,7 +164,7 @@ hg38:
 chm13:
 
 - [VEP GFF](https://github.com/marbl/CHM13#gene-annotation) (GENCODE v35 CAT/Liftoff gene annotation)
-- [gnomAD](https://gnomad.broadinstitute.org/) (genomes and exomes, lifted over by Ensembl)
+- [gnomAD](https://gnomad.broadinstitute.org/) (joint genomes and exomes, lifted over from hg38)
 - [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/) (lifted over by the T2T consortium)
 - [SpliceAI](https://github.com/Illumina/SpliceAI) (lifted over from hg38)
 - [AlphaMissense](https://github.com/google-deepmind/alphamissense) (lifted over from hg38)

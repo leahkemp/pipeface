@@ -1073,10 +1073,8 @@ process vep_snp_indel {
         path alphamissense_db_index
         path vep_gff
         path vep_gff_index
-        path gnomad_genomes_chm13_db
-        path gnomad_genomes_chm13_db_index
-        path gnomad_exomes_chm13_db
-        path gnomad_exomes_chm13_db_index
+        path gnomad_chm13_db
+        path gnomad_chm13_db_index
         path clinvar_chm13_db
         path clinvar_chm13_db_index
         path spliceai_snv_chm13_db
@@ -1117,8 +1115,7 @@ process vep_snp_indel {
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
         --plugin SpliceAI,snv=$spliceai_snv_chm13_db,indel=$spliceai_indel_chm13_db \
         --plugin AlphaMissense,file=$alphamissense_chm13_db \
-        --custom file=$gnomad_genomes_chm13_db,short_name=gnomAD_genomes,format=vcf,type=exact,fields=AF%nhomalt%AF_afr%AF_amr%AF_asj%AF_eas%AF_fin%AF_mid%AF_nfe%AF_sas%AF_remaining%AF_grpmax%grpmax%fafmax_faf95_max \
-        --custom file=$gnomad_exomes_chm13_db,short_name=gnomAD_exomes,format=vcf,type=exact,fields=AF%nhomalt%AF_afr%AF_amr%AF_asj%AF_eas%AF_fin%AF_mid%AF_nfe%AF_sas%AF_remaining%AF_grpmax%grpmax%fafmax_faf95_max \
+        --custom file=$gnomad_chm13_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_chm13_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG
         # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
@@ -1695,8 +1692,7 @@ workflow {
     alphamissense_db = "${params.alphamissense_db}".trim()
     dfam_db = "${params.dfam_db}".trim()
     vep_gff = "${params.vep_gff}".trim()
-    gnomad_genomes_chm13_db = "${params.gnomad_genomes_chm13_db}".trim()
-    gnomad_exomes_chm13_db = "${params.gnomad_exomes_chm13_db}".trim()
+    gnomad_chm13_db = "${params.gnomad_chm13_db}".trim()
     clinvar_chm13_db = "${params.clinvar_chm13_db}".trim()
     spliceai_snv_chm13_db = "${params.spliceai_snv_chm13_db}".trim()
     spliceai_indel_chm13_db = "${params.spliceai_indel_chm13_db}".trim()
@@ -1741,7 +1737,7 @@ workflow {
         def annotation_dbs
         def annotation_dirs
         if (ref_name == 'chm13') {
-            annotation_dbs = [vep_gff: vep_gff, gnomad_genomes_chm13_db: gnomad_genomes_chm13_db, gnomad_exomes_chm13_db: gnomad_exomes_chm13_db, clinvar_chm13_db: clinvar_chm13_db, spliceai_snv_chm13_db: spliceai_snv_chm13_db, spliceai_indel_chm13_db: spliceai_indel_chm13_db, alphamissense_chm13_db: alphamissense_chm13_db]
+            annotation_dbs = [vep_gff: vep_gff, gnomad_chm13_db: gnomad_chm13_db, clinvar_chm13_db: clinvar_chm13_db, spliceai_snv_chm13_db: spliceai_snv_chm13_db, spliceai_indel_chm13_db: spliceai_indel_chm13_db, alphamissense_chm13_db: alphamissense_chm13_db]
             annotation_dirs = [dfam_db: dfam_db]
         }
         else {
@@ -1898,10 +1894,8 @@ workflow {
     dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
     vep_gff_file = annotate == 'yes' && ref_name == 'chm13' ? file(vep_gff) : []
     vep_gff_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${vep_gff}.tbi") : []
-    gnomad_genomes_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(gnomad_genomes_chm13_db) : []
-    gnomad_genomes_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${gnomad_genomes_chm13_db}.tbi") : []
-    gnomad_exomes_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(gnomad_exomes_chm13_db) : []
-    gnomad_exomes_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${gnomad_exomes_chm13_db}.tbi") : []
+    gnomad_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(gnomad_chm13_db) : []
+    gnomad_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${gnomad_chm13_db}.tbi") : []
     clinvar_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(clinvar_chm13_db) : []
     clinvar_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${clinvar_chm13_db}.tbi") : []
     spliceai_snv_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(spliceai_snv_chm13_db) : []
@@ -2314,7 +2308,7 @@ workflow {
         if (mode in ['duo', 'trio']) {
             // joint snp/indel annotation
             if (annotate == 'yes') {
-                annotated_snp_indel_vcf = vep_snp_indel(joint_snp_indel_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_genomes_chm13_db_file, gnomad_genomes_chm13_db_index_file, gnomad_exomes_chm13_db_file, gnomad_exomes_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
+                annotated_snp_indel_vcf = vep_snp_indel(joint_snp_indel_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
             }
         }
         // sv calling
@@ -2350,7 +2344,7 @@ workflow {
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
         // annotation
         if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
-            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_split_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_genomes_chm13_db_file, gnomad_genomes_chm13_db_index_file, gnomad_exomes_chm13_db_file, gnomad_exomes_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
+            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_split_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     if (mode in ['duo', 'trio']) {
