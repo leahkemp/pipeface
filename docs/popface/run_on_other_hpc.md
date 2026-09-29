@@ -229,44 +229,22 @@ Expected md5sums
 
 #### gnomAD
 
-No pre-lifted joint gnomAD file is published for chm13, so lift the hg38 release over yourself. This needs [bcftools](https://github.com/samtools/bcftools) built with plugins, the [bcftools +liftover plugin](https://github.com/freeseek/score), the hg38 no-alt reference (`hg38.analysisSet.fa`) and the chm13 reference, both indexed.
+> [!IMPORTANT]
+> The gnomAD data that was lifted over to chm13 is made available by the Genome Aggregation Database consortium under the Open Data Commons Open Database License (ODbL) v1.0. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
-Get the per-chromosome gnomAD v4.1 joint (genomes and exomes) sites VCFs
-
-```bash
-for c in chr{1..22} chrX chrY; do
-    wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/joint/gnomad.joint.v4.1.sites.${c}.vcf.bgz
-    wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/joint/gnomad.joint.v4.1.sites.${c}.vcf.bgz.tbi
-done
-```
-
-Get the UCSC hg38 to hs1 (chm13) chain file
+Get a local copy of the gnomAD joint (genomes and exomes) database (gnomAD v4.1 joint sites lifted over from hg38 to chm13, see [how the chm13 databases were made](../chm13_liftover.md))
 
 ```bash
-wget http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHs1.over.chain.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz.tbi
 ```
 
-Lift over each chromosome, keeping the rejected records for the retention check
+Expected md5sums
 
 ```bash
-for c in chr{1..22} chrX chrY; do
-    bcftools view -Ou gnomad.joint.v4.1.sites.${c}.vcf.bgz \
-    | bcftools +liftover -Ou -- -s /path/to/hg38.analysisSet.fa -f /path/to/chm13.fa -c hg38ToHs1.over.chain.gz --reject gnomad.joint.v4.1.sites.${c}.rejected.vcf.gz --reject-type z --write-reject \
-    | bcftools sort -Oz -o gnomad.joint.v4.1.sites.${c}.chm13.vcf.gz
-    bcftools index -t gnomad.joint.v4.1.sites.${c}.chm13.vcf.gz
-done
+5fa2ee21536b85ff400539b275471855  gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
+3c796ba0a5e17bff57cd89b94d589500  gnomad.joint.v4.1.sites.chm13t2t.vcf.gz.tbi
 ```
-
-Concatenate in chm13 reference contig order, sort and index
-
-```bash
-bcftools concat --naive-force -Oz -o gnomad.joint.v4.1.sites.chm13t2t.unsorted.vcf.gz $(for c in $(cut -f1 /path/to/chm13.fa.fai); do ls gnomad.joint.v4.1.sites.${c}.chm13.vcf.gz 2>/dev/null; done)
-bcftools sort -m 480G -T ./sort_tmp -Oz -o gnomad.joint.v4.1.sites.chm13t2t.vcf.gz gnomad.joint.v4.1.sites.chm13t2t.unsorted.vcf.gz
-tabix -p vcf gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
-```
-
-> [!NOTE]
-> The whole-genome sort needs a machine with several hundred GB of memory, or a smaller `-m` with more temporary files. The INFO fields pipeface annotates with (`AF_joint`, `AF_exomes`, `AF_genomes`, `nhomalt_joint`, `nhomalt_exomes`, `nhomalt_genomes`) are carried through the liftover unchanged.
 
 #### ClinVar
 
@@ -287,15 +265,15 @@ Expected md5sums
 #### SpliceAI
 
 > [!IMPORTANT]
-> The SpliceAI scores that were lifted over to chm13 are made available by Illumina for academic and not-for-profit research use only. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/popface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+> The SpliceAI scores that were lifted over to chm13 are made available by Illumina for academic and not-for-profit research use only. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
-Get local copies of the SpliceAI SNV and indel databases (Illumina SpliceAI v1.3 scores lifted over from hg38 to chm13)
+Get local copies of the SpliceAI SNV and indel databases (Illumina SpliceAI v1.3 scores lifted over from hg38 to chm13, see [how the chm13 databases were made](../chm13_liftover.md))
 
 ```bash
-wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.snv.chm13.vcf.gz
-wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.snv.chm13.vcf.gz.tbi
-wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.indel.chm13.vcf.gz
-wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/spliceai_scores.raw.indel.chm13.vcf.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.indel.chm13.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.indel.chm13.vcf.gz.tbi
 ```
 
 Expected md5sums
@@ -310,13 +288,13 @@ b9105deba6662ae980676b612f119207  spliceai_scores.raw.indel.chm13.vcf.gz
 #### AlphaMissense
 
 > [!IMPORTANT]
-> The AlphaMissense predictions that were lifted over to chm13 are made available by Google DeepMind under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/popface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+> The AlphaMissense predictions that were lifted over to chm13 are made available by Google DeepMind under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
-Get a local copy of the AlphaMissense database
+Get a local copy of the AlphaMissense database (lifted over from hg38 to chm13, see [how the chm13 databases were made](../chm13_liftover.md))
 
 ```bash
-wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/AlphaMissense_chm13.tsv.gz
-wget https://s3.ap-southeast-2.wasabisys.com/popface-anno/AlphaMissense_chm13.tsv.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz.tbi
 ```
 
 Expected md5sums
