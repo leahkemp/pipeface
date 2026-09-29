@@ -218,6 +218,7 @@ Requirements:
 
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 - entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
+- all rows for a given `sample_id` must have the same `family_id`, `family_position`, `sex`, `data_type`, `regions_of_interest`, `clair3_model` and `clairs_to_platform`; only `file` may differ between rows
 - for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - set `family_id` to 'NONE' if not required
 - `family_position` can be any value (set to 'NONE' if not required)
@@ -250,6 +251,7 @@ Requirements:
 - `family_id` must not be 'NONE'
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate) and must be the same for a given `family_id`
 - entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
+- all rows for a given `sample_id` must have the same `family_id`, `family_position`, `sex`, `data_type`, `regions_of_interest`, `clair3_model` and `clairs_to_platform`; only `file` may differ between rows
 - for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - provide all entries for a given `sample_id` the same `family_id`
 - `sex` must be 'XX', 'XY' or 'NONE', and all entries for a given `sample_id` must agree

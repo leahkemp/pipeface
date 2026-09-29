@@ -2008,11 +2008,10 @@ workflow {
     csv.row_validation
         .groupTuple(by: 0)
         .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models, sexes ->
-            if (family_ids.unique().size() > 1) {
-                exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'family_id', conflicting 'family_id' values '${family_ids}' provided for sample '${sample_id}'."
-            }
-            if (sexes.unique().size() > 1) {
-                exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'sex', conflicting 'sex' values '${sexes}' provided for sample '${sample_id}'."
+            [family_id: family_ids, family_position: family_positions, sex: sexes, data_type: data_types, regions_of_interest: regions_of_interests, clair3_model: clair3_models].each { col, vals ->
+                if (vals.unique().size() > 1) {
+                    exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same '${col}', conflicting '${col}' values '${vals}' provided for sample '${sample_id}'."
+                }
             }
             if (in_data_format == 'aligned_bam' && files.size() > 1) {
                 exit 1, "When the in data format is aligned BAM, provide one row per 'sample_id' in '${in_data}' (merge the BAM files of a sample first), ${files.size()} rows provided for sample '${sample_id}'."
@@ -2033,6 +2032,14 @@ workflow {
             }
             else if (clairs_to_platform != 'NONE') {
                 exit 1, "Set the 'clairs_to_platform' column of '${in_data}' to 'NONE' when somatic_calling is not 'yes', '${clairs_to_platform}' provided."
+            }
+        }
+
+    csv.clairs_to_validation
+        .groupTuple(by: [0,1])
+        .map { sample_id, family_id, clairs_to_platforms ->
+            if (clairs_to_platforms.unique().size() > 1) {
+                exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'clairs_to_platform', conflicting 'clairs_to_platform' values '${clairs_to_platforms}' provided for sample '${sample_id}'."
             }
         }
 
