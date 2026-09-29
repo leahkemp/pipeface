@@ -2261,7 +2261,7 @@ workflow {
         if (check_relatedness == 'yes' && mode == 'singleton') {
             somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
         }
-        if (mode == 'trio') {
+        if (mode == 'trio' && snp_indel_caller == 'deeptrio') {
             family_bam_by_position = haplotagged_bam_fam.groupTuple(by: 1).transpose()
             proband_bam = family_bam_by_position.filter { tuple -> tuple[2].contains("proband") }
             father_bam = family_bam_by_position.filter { tuple -> tuple[2].contains("father") }
