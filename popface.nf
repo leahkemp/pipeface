@@ -412,13 +412,7 @@ process concat_sv_vcf {
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        VCFS=(*sv*.vcf.gz)
-        # concat vcfs (or pass through if only one) and sort
-        if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz \${VCFS[0]}
-        else
-            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
-        fi
+        bcftools concat -a *sv*.vcf.gz --threads ${task.cpus} | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
         tabix ${out_vcf}.vcf.gz
         """
 
@@ -533,13 +527,8 @@ process concat_tr_vcf {
 
     script:
         """
-        VCFS=(tr.*.vcf.gz)
-        # concat vcfs (or use single vcf), reorder samples since longtr sorts samples alphabetically, then naturally sort variants
-        if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools view -s ${sample_ids.join(',')} \${VCFS[0]} | bcftools sort -T ./ -Oz -o tr.vcf.gz
-        else
-            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
-        fi
+        # reorder samples since longtr sorts samples alphabetically
+        bcftools concat -a tr.*.vcf.gz --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         tabix tr.vcf.gz
         """
 
@@ -665,13 +654,7 @@ process concat_snp_indel_vcf {
 
     script:
         """
-        VCFS=(*.snp_indel.phased.annotated.vcf.gz)
-        # concat vcfs (or pass through if only one) and sort
-        if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools sort -T ./ -Oz -o snp_indel.phased.annotated.vcf.gz \${VCFS[0]}
-        else
-            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o snp_indel.phased.annotated.vcf.gz -
-        fi
+        bcftools concat -a *.snp_indel.phased.annotated.vcf.gz --threads ${task.cpus} | bcftools sort -T ./ -Oz -o snp_indel.phased.annotated.vcf.gz -
         tabix snp_indel.phased.annotated.vcf.gz
         """
 

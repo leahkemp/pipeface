@@ -1233,13 +1233,7 @@ process concat_tr_vcf {
 
     script:
         """
-        VCFS=(tr.*.vcf.gz)
-        # concat vcfs (or use single vcf), then naturally sort variants
-        if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools sort -T ./ \${VCFS[0]} -Oz -o tr.vcf.gz
-        else
-            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o tr.vcf.gz
-        fi
+        bcftools concat -a tr.*.vcf.gz --threads ${task.cpus} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         tabix tr.vcf.gz
         """
 
@@ -1266,13 +1260,8 @@ process concat_tr_vcf_family {
 
     script:
         """
-        VCFS=(tr.*.vcf.gz)
-        # concat vcfs (or use single vcf), reorder samples since longtr sorts samples alphabetically, then naturally sort variants
-        if [[ \${#VCFS[@]} -eq 1 ]]; then
-            bcftools view -s ${sample_ids.join(',')} \${VCFS[0]} | bcftools sort -T ./ -Oz -o tr.vcf.gz
-        else
-            bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
-        fi
+        # reorder samples since longtr sorts samples alphabetically
+        bcftools concat -a tr.*.vcf.gz --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         tabix tr.vcf.gz
         """
 
