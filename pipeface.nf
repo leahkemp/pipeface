@@ -1316,7 +1316,7 @@ process sniffles {
     output:
         tuple val(sample_id), val(family_id), path("sv.phased.vcf.gz")
         tuple val(sample_id), val(family_id), path("sv.phased.vcf.gz"), path("sv.phased.vcf.gz.tbi")
-        tuple val(sample_id), val(family_id), val(family_position), path("sv.phased.vcf.gz"), path(haplotagged_bam)
+        tuple val(sample_id), val(family_id), val(family_position), path("sv.phased.vcf.gz")
 
     script:
         // optionally pass tandem repeat bed file
@@ -1353,7 +1353,7 @@ process cutesv {
     output:
         tuple val(sample_id), val(family_id), path("sv.vcf.gz")
         tuple val(sample_id), val(family_id), path("sv.vcf.gz"), path("sv.vcf.gz.tbi")
-        tuple val(sample_id), val(family_id), val(family_position), path("sv.vcf.gz"), path(haplotagged_bam)
+        tuple val(sample_id), val(family_id), val(family_position), path("sv.vcf.gz")
 
     script:
         // conditionally define platform specific settings
@@ -1383,7 +1383,7 @@ process jasmine {
     publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$family_id.$ref_name.${sv_caller}.jasmine.$filename" }, pattern: '*.vcf.gz*'
 
     input:
-        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(sv_vcfs, stageAs: 'sv?.vcf.gz'), path(bams, stageAs: 'bam?.bam'), val(data_type), val(sv_caller)
+        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(sv_vcfs, stageAs: 'sv?.vcf.gz'), val(sv_caller)
         path ref
         path ref_index
         val outdir
@@ -1396,19 +1396,17 @@ process jasmine {
 
     script:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
-        // conditionally define iris arguments (by default, iris will pass minimap -x map-ont, the --pacbio flag passed to iris will pass minimap -x map-pb)
-        def iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants' + (data_type == 'pacbio' ? ',--pacbio' : '')
         """
-        # gunzip vcfs and create file lists (proband first for --require_first_sample)
+        # gunzip vcfs and create file list (proband first for --require_first_sample)
         FAMILY_POSITIONS=(${family_positions.join(' ')})
         for i in \${!FAMILY_POSITIONS[@]}; do
-            [[ \${FAMILY_POSITIONS[\$i]} == "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; realpath bam\$((i+1)).bam >> bams.txt; }
+            [[ \${FAMILY_POSITIONS[\$i]} == "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; }
         done
         for i in \${!FAMILY_POSITIONS[@]}; do
-            [[ \${FAMILY_POSITIONS[\$i]} != "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; realpath bam\$((i+1)).bam >> bams.txt; }
+            [[ \${FAMILY_POSITIONS[\$i]} != "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; }
         done
         # run jasmine
-        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype $iris_args
+        jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' ${out_vcf}.tmp.vcf > ${out_vcf}.vcf
         grep '#CHROM' ${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${out_vcf}.vcf
@@ -2101,7 +2099,7 @@ workflow {
     def group_family_sv = { ch, sv_caller_val ->
         ch
             .groupTuple(by: 1)
-            .map { sample_ids, family_id, family_positions, sv_vcfs, bams ->
+            .map { sample_ids, family_id, family_positions, sv_vcfs ->
                 def position_order = ['proband', 'father', 'mother']
                 def indices = family_positions.collect { position_order.indexOf(it) }
                     .withIndex()
@@ -2112,11 +2110,7 @@ workflow {
                     indices.collect { sample_ids[it] },
                     indices.collect { family_positions[it] },
                     indices.collect { sv_vcfs[it] },
-                    indices.collect { bams[it] })
-            }
-            .join(data_type_ch, by: [0, 1])
-            .map { proband_sample_id, family_id, sample_ids, family_positions, sv_vcfs, bams, data_type ->
-                tuple(proband_sample_id, family_id, sample_ids, family_positions, sv_vcfs, bams, data_type, sv_caller_val)
+                    sv_caller_val)
             }
     }
     // sort bams proband first (then father, then mother) for joint longtr
@@ -2247,10 +2241,10 @@ workflow {
         }
         // sv calling
         if (sv_caller in ['sniffles', 'both']) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_haplotagged_bam_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
+            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
         }
         if (sv_caller in ['cutesv', 'both']) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_haplotagged_bam_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
         }
         if (tr_calling == 'yes') {
             split_beds = longtr_pre_processing(tr_call_regions_file)
@@ -2284,10 +2278,10 @@ workflow {
     if (mode in ['duo', 'trio']) {
         // sv vcf merging
         if (sv_caller in ['sniffles', 'both']) {
-            family_sv_sniffles = group_family_sv(sv_vcf_haplotagged_bam_fam_sniffles, 'sniffles')
+            family_sv_sniffles = group_family_sv(sv_vcf_fam_sniffles, 'sniffles')
         }
         if (sv_caller in ['cutesv', 'both']) {
-            family_sv_cutesv = group_family_sv(sv_vcf_haplotagged_bam_fam_cutesv, 'cutesv')
+            family_sv_cutesv = group_family_sv(sv_vcf_fam_cutesv, 'cutesv')
         }
         family_sv_all = sv_caller == 'both' ? family_sv_sniffles.mix(family_sv_cutesv) :
                         sv_caller == 'sniffles' ? family_sv_sniffles : family_sv_cutesv
