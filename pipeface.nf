@@ -1687,7 +1687,7 @@ workflow {
     }
     // check parameter constraints and cross-parameter compatibility
     if (!(in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf', 'sv_vcf'])) {
-        exit 1, "In data format should be 'ubam_fastq', 'aligned_bam', 'snp_indel_vcf' or 'sv_vcf', in_data_format = '${in_data_format}' provided."
+        exit 1, "In data format should be 'ubam_fastq', in_data_format = '${in_data_format}' provided."
     }
     [haploidaware: haploidaware, annotate: annotate, calculate_depth: calculate_depth, analyse_base_mods: analyse_base_mods, tr_calling: tr_calling, check_relatedness: check_relatedness, somatic_calling: somatic_calling, prepare_for_puzzleapp: prepare_for_puzzleapp].each { param, val ->
         if (!(val in ['yes', 'no'])) {

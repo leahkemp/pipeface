@@ -4,7 +4,7 @@
 
 Nextflow pipelines to process long read [ONT](https://nanoporetech.com/) and/or [pacbio](https://www.pacb.com/) HiFi data.
 
-Pipeface takes unaligned BAMs, FASTQs or aligned BAMs and generates variant calls for singletons, duos or trios. Popface takes the outputs of pipeface to generate quad to population variant calls for up to 1000 individuals.
+Pipeface takes unaligned BAMs or FASTQs and generates variant calls for singletons, duos or trios. Popface takes the outputs of pipeface to generate quad to population variant calls for up to 1000 individuals.
 
 See more information about [pipeface](./docs/pipeface/info.md) and [popface](./docs/popface/info.md).
 

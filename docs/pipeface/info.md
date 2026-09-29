@@ -151,7 +151,7 @@ depth-.->puzzleapp_preprocessing
 
 ### Required
 
-- ONT/pacbio HiFi FASTQ (gzipped or uncompressed), unaligned BAM or aligned BAM
+- ONT/pacbio HiFi FASTQ (gzipped or uncompressed) or unaligned BAM
 - Indexed reference genome
 - Clair3 models (if running Clair3)
 

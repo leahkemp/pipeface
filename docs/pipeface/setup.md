@@ -212,15 +212,13 @@ sample_04,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_mo
 
 > [!NOTE]
 > - In singleton mode, `family_id` is only used to define the output directory structure.
-> - For uBAM/FASTQ input, files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample. For aligned BAM input, provide one row per `sample_id`.
+> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
-- if `in_data_format` is `ubam_fastq`, entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
-- if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
-- if `in_data_format` is `aligned_bam`, there must be one row per `sample_id` (merge the BAM files of a sample first)
-- for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
+- entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
+- for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - set `family_id` to 'NONE' if not required
 - `family_position` can be any value (set to 'NONE' if not required)
 - `sex` must be 'XX', 'XY' or 'NONE'; in haploid-aware mode it must be 'XX' or 'XY' for every sample, and all entries for a given `sample_id` must agree
@@ -245,16 +243,14 @@ sample_06,family02,mother,XX,/path/to/sample_06.bam,ont,NONE,NONE,NONE
 
 > [!NOTE]
 > - In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
-> - For uBAM/FASTQ input, files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample. For aligned BAM input, provide one row per `sample_id`.
+> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
 
 Requirements:
 
 - `family_id` must not be 'NONE'
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate) and must be the same for a given `family_id`
-- if `in_data_format` is `ubam_fastq`, entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
-- if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
-- if `in_data_format` is `aligned_bam`, there must be one row per `sample_id` (merge the BAM files of a sample first)
-- for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
+- entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
+- for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - provide all entries for a given `sample_id` the same `family_id`
 - `sex` must be 'XX', 'XY' or 'NONE', and all entries for a given `sample_id` must agree
 - in duo mode, exactly 2 unique `sample_id` values are required per `family_id`, with a `proband` and either a `father` or `mother` in the `family_position` column
@@ -271,16 +267,11 @@ Specify the path to `in_data_pipeface.csv`. Eg:
     "in_data": "/path/to/in_data_pipeface.csv",
 ```
 
-Specify the input data format ('ubam_fastq' or 'aligned_bam'). Eg:
+Specify the input data format ('ubam_fastq'). Eg:
 
 ```json
     "in_data_format": "ubam_fastq",
 ```
-
-> [!NOTE]
-> - If you provide an aligned BAM and set `in_data_format` to `aligned_bam`, the pipeline will start from post-alignment processes.
-> - If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
-> - Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
 
 Specify the path to the reference genome, its index and the reference build ('hg38' or 'chm13'). Eg:
 
