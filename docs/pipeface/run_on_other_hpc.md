@@ -232,7 +232,7 @@ Expected md5sums
 > [!IMPORTANT]
 > The gnomAD data that was lifted over to chm13 is made available by the Genome Aggregation Database consortium under the Open Data Commons Open Database License (ODbL) v1.0. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
-Get a local copy of the gnomAD joint (genomes and exomes) database (gnomAD v4.1 joint sites lifted over from hg38 to chm13, see [how the chm13 databases were made](../chm13_liftover.md))
+Get a local copy of the gnomAD joint (genomes and exomes) database (gnomAD v4.1 joint sites lifted over from hg38 to chm13)
 
 ```bash
 wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
@@ -267,7 +267,7 @@ Expected md5sums
 > [!IMPORTANT]
 > The SpliceAI scores that were lifted over to chm13 are made available by Illumina for academic and not-for-profit research use only. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
-Get local copies of the SpliceAI SNV and indel databases (Illumina SpliceAI v1.3 scores lifted over from hg38 to chm13, see [how the chm13 databases were made](../chm13_liftover.md))
+Get local copies of the SpliceAI SNV and indel databases (Illumina SpliceAI v1.3 scores lifted over from hg38 to chm13)
 
 ```bash
 wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz
@@ -290,7 +290,7 @@ b9105deba6662ae980676b612f119207  spliceai_scores.raw.indel.chm13.vcf.gz
 > [!IMPORTANT]
 > The AlphaMissense predictions that were lifted over to chm13 are made available by Google DeepMind under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
 
-Get a local copy of the AlphaMissense database (lifted over from hg38 to chm13, see [how the chm13 databases were made](../chm13_liftover.md))
+Get a local copy of the AlphaMissense database (lifted over from hg38 to chm13)
 
 ```bash
 wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz
