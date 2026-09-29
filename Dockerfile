@@ -65,26 +65,10 @@ RUN wget "https://github.com/brentp/somalier/releases/download/v0.3.2/somalier" 
     chmod a+x somalier && \
     mv somalier /usr/local/bin/
 
-# spectre
-RUN pip install spectre-cnv==0.2.1 --break-system-packages
-
-# snf2json
-RUN pip install snf2json==0.1.0 --break-system-packages
-
 # bedtools
 RUN wget "https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools.static" && \
     chmod a+x bedtools.static && \
     mv bedtools.static /usr/local/bin/bedtools
-
-# racon
-RUN git clone --recursive https://github.com/lbcb-sci/racon.git racon && \
-    cd racon && \
-    git checkout tags/1.4.3 && \
-    git submodule update --init --recursive && \
-    mkdir build && \
-    cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release .. && \
-    make
 
 # jasmine
 RUN git clone --recurse-submodules https://github.com/bioinfomethods/Jasmine.git && \
@@ -102,7 +86,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py39_25.9.1-3-Linux-x86_
     conda config --add channels conda-forge && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda install -c conda-forge -c bioconda longtr && \
+    conda install -c conda-forge -c bioconda longtr=1.2 && \
     cp /root/miniconda3/bin/LongTR /usr/local/bin/LongTR
 
 # GNU parallel
@@ -147,10 +131,7 @@ COPY --from=build \
     /usr/local/bin/cuteSV \
     /usr/local/bin/sniffles \
     /usr/local/bin/somalier \
-    /usr/local/bin/spectre \
-    /usr/local/bin/snf2json \
     /usr/local/bin/bedtools \
-    /racon/build/bin/racon \
     /Jasmine/jasmine \
     /Jasmine/jasmine.jar \
     /Jasmine/jasmine_iris.jar \
