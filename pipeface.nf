@@ -856,7 +856,7 @@ process somalier_relate {
     publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$filename" }, pattern: 'somalier.*'
 
     input:
-        tuple val(proband_sample_id), val(family_id), path(somalier_files), val(sample_ids), val(family_positions)
+        tuple val(proband_sample_id), val(family_id), path(somalier_files), val(sample_ids), val(family_positions), val(sexes)
         val outdir
         val outdir2
         val ref_name
@@ -865,11 +865,11 @@ process somalier_relate {
         tuple val(proband_sample_id), path("somalier.samples.tsv"), path("somalier.pairs.tsv"), path("somalier.html")
 
     script:
-        // pedigree from the family positions: parents linked to the proband, sex from the position, phenotype unknown
+        // pedigree from the family positions and the sex column: parents linked to the proband, phenotype unknown
         def father = family_positions.contains('father') ? sample_ids[family_positions.indexOf('father')] : '0'
         def mother = family_positions.contains('mother') ? sample_ids[family_positions.indexOf('mother')] : '0'
-        def ped_lines = [sample_ids, family_positions].transpose().collect { sid, position ->
-            def sex = position == 'father' ? '1' : position == 'mother' ? '2' : '0'
+        def ped_lines = [sample_ids, family_positions, sexes].transpose().collect { sid, position, sex_val ->
+            def sex = sex_val == 'XY' ? '1' : sex_val == 'XX' ? '2' : '0'
             def parents = position == 'proband' ? [father, mother] : ['0', '0']
             "'" + ([family_id, sid] + parents + [sex, '-9']).join('\t') + "'"
         }.join(' ')
@@ -2295,10 +2295,11 @@ workflow {
                 somalier_files = somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
                 somalier_relate_input = somalier_files
                     .join(family_position_ch, by: [0,1])
+                    .join(sex_ch, by: [0,1])
                     .groupTuple(by: 1)
-                    .map { sample_ids, family_id, somalier_files_list, family_positions ->
+                    .map { sample_ids, family_id, somalier_files_list, family_positions, sexes ->
                         def proband_sample_id = sample_ids[family_positions.indexOf('proband')]
-                        tuple(proband_sample_id, family_id, somalier_files_list.flatten(), sample_ids, family_positions)
+                        tuple(proband_sample_id, family_id, somalier_files_list.flatten(), sample_ids, family_positions, sexes)
                     }
                 somalier_relate(somalier_relate_input, outdir, outdir2, ref_name)
             }
