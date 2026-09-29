@@ -1634,7 +1634,7 @@ workflow {
             exit 1, "No value provided for '${param}'."
         }
     }
-    [tandem_repeat: tandem_repeat, clair3_config: clair3_config, sites: sites].each { param, val ->
+    [tandem_repeat: tandem_repeat, tr_call_regions: tr_call_regions, parbed: parbed, clair3_config: clair3_config, sites: sites].each { param, val ->
         if (!val) {
             exit 1, "No value provided for '${param}'. Set to 'NONE' if not required."
         }
@@ -1721,7 +1721,7 @@ workflow {
         if (mode == 'trio' && !(snp_indel_caller in ['clair3', 'deeptrio'])) {
             exit 1, "When in trio mode, the SNP/indel caller should be either 'clair3' or 'deeptrio', mode = '${mode}' and snp_indel_caller = '${snp_indel_caller}' provided."
         }
-        if (snp_indel_caller == 'clair3' && !clair3_config) {
+        if (snp_indel_caller == 'clair3' && clair3_config == 'NONE' && mode in ['duo', 'trio']) {
             exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 config file for GLnexus (clair3_config), snp_indel_caller = '${snp_indel_caller}' provided."
         }
         if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
@@ -1847,6 +1847,12 @@ workflow {
         .map { row ->
             if (row.file.isEmpty()) {
                 exit 1, "There is an empty entry in the 'file' column of '${in_data}'."
+            }
+            // these columns are wrapped in file() below, so catch empty cells first
+            ['regions_of_interest', 'clair3_model'].each { col ->
+                if (row[col].isEmpty()) {
+                    exit 1, "There is an empty entry in the '${col}' column of '${in_data}'. Set to 'NONE' if not required."
+                }
             }
             row
         }
