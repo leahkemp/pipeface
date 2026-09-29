@@ -32,7 +32,7 @@ cd pipeface
 ### Reference genome
 
 > [!NOTE]
-> Variant annotation is only available for hg38.
+> Variant annotation is only available for hg38 and chm13.
 
 #### hg38
 
@@ -280,11 +280,12 @@ Specify the input data format ('ubam_fastq' or 'aligned_bam'). Eg:
 > - If you provide an aligned BAM but set `in_data_format` to `ubam_fastq`, the data will start from the beginning and the aligned BAM will be re-aligned.
 > - Providing an aligned BAM assumes that the file was generated with minimap2 and the minimap2 `-Y` flag was used (soft clipping for supplementary alignments).
 
-Specify the path to the reference genome and its index. Eg:
+Specify the path to the reference genome, its index and the reference build ('hg38' or 'chm13'). Eg:
 
 ```json
     "ref": "/path/to/hg38.fa",
     "ref_index": "/path/to/hg38.fa.fai",
+    "ref_name": "hg38",
 ```
 
 > [!NOTE]
@@ -350,7 +351,7 @@ Specify whether variant annotation should be carried out ('yes' or 'no'). Eg:
 ```
 
 > [!NOTE]
-> Variant annotation is only available for hg38.
+> Variant annotation is only available for hg38 and chm13.
 
 Specify whether alignment depth should be calculated ('yes' or 'no'). Eg:
 

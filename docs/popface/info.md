@@ -14,12 +14,12 @@ joint_split_multiallele("Split multiallelic variants into biallelic variants")
 split_vcf("Split joint VCF")
 snp_indel_phasing("SNP/indel phasing")
 merge_vcf("Merge VCF")
-joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
+joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 and chm13)")
 split_sv_vcf("Split SV VCF")
 sv_vcf_merging("Structural variant VCF merging")
 concat_sv_vcf("Concatenate SV VCFs")
-joint_sv_annotation("Joint structural variant annotation (hg38 only)")
-sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+joint_sv_annotation("Joint structural variant annotation (hg38 and chm13)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 and chm13)")
 joint_tr_calling("Joint TR calling")
 concat_tr_vcf("Concatenate TR VCFs")
 input_somalier("Somalier extracted files")
@@ -49,7 +49,9 @@ input_somalier-.->joint_somalier
 
 ## Main annotation databases
 
-Used when variant annotation is turned on (hg38 only):
+Used when variant annotation is turned on.
+
+hg38:
 
 - [VEP cache](https://www.ensembl.org/info/docs/tools/vep/script/vep_cache.html) (merged Ensembl/RefSeq)
 - [REVEL](https://sites.google.com/site/revelgenomics/)
@@ -58,6 +60,17 @@ Used when variant annotation is turned on (hg38 only):
 - [CADD](https://cadd.gs.washington.edu/) (SNVs and indels) and [CADD-SV](https://cadd-sv.bihealth.org/)
 - [SpliceAI](https://github.com/Illumina/SpliceAI)
 - [AlphaMissense](https://github.com/google-deepmind/alphamissense)
+
+chm13:
+
+- [VEP GFF](https://github.com/marbl/CHM13#gene-annotation) (GENCODE v35 CAT/Liftoff gene annotation)
+- [gnomAD](https://gnomad.broadinstitute.org/) (joint genomes and exomes, lifted over from hg38)
+- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/) (lifted over by the T2T consortium)
+- [SpliceAI](https://github.com/Illumina/SpliceAI) (lifted over from hg38)
+- [AlphaMissense](https://github.com/google-deepmind/alphamissense) (lifted over from hg38)
+
+hg38 and chm13:
+
 - [Dfam](https://www.dfam.org/) (repeat annotation of SVs by SVscanner)
 - [STRchive](https://strchive.org/) (bundled with SVscanner)
 
@@ -79,10 +92,10 @@ Used when variant annotation is turned on (hg38 only):
 ## Main output files
 
 - Joint phased Clair3 or DeepVariant SNP/indel VCF file
-- Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
+- Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 and chm13)
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
-- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
+- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 and chm13)
 - Joint phased tandem repeat VCF file
 - Joint relatedness and quality control somalier TSV and HTML files
 

@@ -15,14 +15,14 @@ snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
 split_multiallele("Split multiallelic variants into biallelic variants")
 snp_indel_phasing("SNP/indel phasing")
-snp_indel_annotation("SNP/indel annotation (hg38 only)")
+snp_indel_annotation("SNP/indel annotation (hg38 and chm13)")
 haplotagging("Haplotagging bams")
 calculate_base_mod_freqs("Calculate base modification frequencies (uBAMs containing base modifications only)")
 somalier("Somalier extract")
 tr_calling("TR calling")
 sv_calling("Structural variant calling")
-sv_annotation("Structural variant annotation (hg38 only)")
-sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+sv_annotation("Structural variant annotation (hg38 and chm13)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 and chm13)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
@@ -55,15 +55,15 @@ joint_somalier("Joint somalier relatedness/quality control check")
 gvcf_merging("gVCF merging")
 joint_split_multiallele("Split multiallelic variants into biallelic variants")
 joint_snp_indel_phasing("Joint SNP/indel phasing")
-joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
+joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 and chm13)")
 haplotagging("Haplotagging bams")
 calculate_base_mod_freqs("Calculate base modification frequencies (uBAMs containing base modifications only)")
 tr_calling("TR calling")
 joint_tr_calling("Joint TR calling")
 sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
-joint_sv_annotation("Joint structural variant annotation (hg38 only)")
-sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+joint_sv_annotation("Joint structural variant annotation (hg38 and chm13)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 and chm13)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
@@ -98,15 +98,15 @@ joint_somalier("Joint somalier relatedness/quality control check")
 gvcf_merging("gVCF merging")
 joint_split_multiallele("Split multiallelic variants into biallelic variants")
 joint_snp_indel_phasing("Joint SNP/indel phasing")
-joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 only)")
+joint_snp_indel_annotation("Joint SNP/indel annotation (hg38 and chm13)")
 haplotagging("Haplotagging bams")
 calculate_base_mod_freqs("Calculate base modification frequencies (uBAMs containing base modifications only)")
 tr_calling("TR calling")
 joint_tr_calling("Joint TR calling")
 sv_calling("Structural variant calling")
 sv_vcf_merging("Structural variant VCF merging")
-joint_sv_annotation("Joint structural variant annotation (hg38 only)")
-sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
+joint_sv_annotation("Joint structural variant annotation (hg38 and chm13)")
+sv_repeat_annotation("Structural variant repeat annotation (hg38 and chm13)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
 input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
@@ -149,7 +149,9 @@ depth-.->puzzleapp_preprocessing
 
 ## Main annotation databases
 
-Used when variant annotation is turned on (hg38 only):
+Used when variant annotation is turned on.
+
+hg38:
 
 - [VEP cache](https://www.ensembl.org/info/docs/tools/vep/script/vep_cache.html) (merged Ensembl/RefSeq)
 - [REVEL](https://sites.google.com/site/revelgenomics/)
@@ -158,6 +160,17 @@ Used when variant annotation is turned on (hg38 only):
 - [CADD](https://cadd.gs.washington.edu/) (SNVs and indels) and [CADD-SV](https://cadd-sv.bihealth.org/)
 - [SpliceAI](https://github.com/Illumina/SpliceAI)
 - [AlphaMissense](https://github.com/google-deepmind/alphamissense)
+
+chm13:
+
+- [VEP GFF](https://github.com/marbl/CHM13#gene-annotation) (GENCODE v35 CAT/Liftoff gene annotation)
+- [gnomAD](https://gnomad.broadinstitute.org/) (joint genomes and exomes, lifted over from hg38)
+- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/) (lifted over by the T2T consortium)
+- [SpliceAI](https://github.com/Illumina/SpliceAI) (lifted over from hg38)
+- [AlphaMissense](https://github.com/google-deepmind/alphamissense) (lifted over from hg38)
+
+hg38 and chm13:
+
 - [Dfam](https://www.dfam.org/) (repeat annotation of SVs by SVscanner)
 - [STRchive](https://strchive.org/) (bundled with SVscanner)
 
@@ -186,13 +199,13 @@ Used when variant annotation is turned on (hg38 only):
 - Aligned, sorted and haplotagged bam
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - Phased Clair3 or DeepVariant SNP/indel VCF file
-- Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 only)
+- Phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 and chm13)
 - Clair3 or DeepVariant SNP/indel gVCF file
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
-- SVscanner text diagrams of the repeat elements annotated in each SV (hg38 only)
+- Phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- SVscanner text diagrams of the repeat elements annotated in each SV (hg38 and chm13)
 - Puzzleapp SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Somalier extracted files
 - ClairS-TO somatic SNV/indel VCF files
@@ -203,12 +216,12 @@ Used when variant annotation is turned on (hg38 only):
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - DeepVariant SNP/indel gVCF file
 - Joint phased DeepVariant SNP/indel VCF file
-- Joint phased and annotated DeepVariant SNP/indel VCF file (hg38 only)
+- Joint phased and annotated DeepVariant SNP/indel VCF file (hg38 and chm13)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
-- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
+- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 and chm13)
 - Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
@@ -221,12 +234,12 @@ Used when variant annotation is turned on (hg38 only):
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
 - DeepVariant SNP/indel gVCF file
 - Joint phased DeepTrio SNP/indel VCF file
-- Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 only)
+- Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 and chm13)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 only)
-- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 only)
+- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 and chm13)
 - Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files

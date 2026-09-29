@@ -9,4 +9,10 @@ SpliceAI SNV database: 1.3
 SpliceAI indel database: 1.3
 AlphaMissense database: GRCh38
 Dfam mammalia partition database: 3.9
+VEP GFF (chm13): chm13v2.0 GENCODE v35 CAT/Liftoff
+gnomAD joint database (chm13 liftover): 4.1
+ClinVar database (chm13 liftover): 2022-03-13
+SpliceAI SNV database (chm13 liftover): 1.3
+SpliceAI indel database (chm13 liftover): 1.3
+AlphaMissense database (chm13 liftover): GRCh38 liftover
 STRchive database: 2.2.0/hg38
