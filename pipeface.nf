@@ -2014,6 +2014,9 @@ workflow {
             if (sexes.unique().size() > 1) {
                 exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'sex', conflicting 'sex' values '${sexes}' provided for sample '${sample_id}'."
             }
+            if (in_data_format == 'aligned_bam' && files.size() > 1) {
+                exit 1, "When the in data format is aligned BAM, provide one row per 'sample_id' in '${in_data}' (merge the BAM files of a sample first), ${files.size()} rows provided for sample '${sample_id}'."
+            }
         }
 
     csv.clairs_to_validation

@@ -212,13 +212,14 @@ sample_04,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_mo
 
 > [!NOTE]
 > - In singleton mode, `family_id` is only used to define the output directory structure.
-> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+> - For uBAM/FASTQ input, files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample. For aligned BAM input, provide one row per `sample_id`.
 
 Requirements:
 
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 - if `in_data_format` is `ubam_fastq`, entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
 - if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
+- if `in_data_format` is `aligned_bam`, there must be one row per `sample_id` (merge the BAM files of a sample first)
 - for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
 - set `family_id` to 'NONE' if not required
 - `family_position` can be any value (set to 'NONE' if not required)
@@ -244,7 +245,7 @@ sample_06,family02,mother,XX,/path/to/sample_06.bam,ont,NONE,NONE,NONE
 
 > [!NOTE]
 > - In duo/trio mode, `family_id` and `family_position` are required for defining the joint SNP/indel gVCF merging, the SV VCF merging and the joint somalier relatedness/quality control checks.
-> - Files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample.
+> - For uBAM/FASTQ input, files with the same value in the `sample_id` column will be merged, this is used to handle multiple sequencing runs of the same sample. For aligned BAM input, provide one row per `sample_id`.
 
 Requirements:
 
@@ -252,6 +253,7 @@ Requirements:
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate) and must be the same for a given `family_id`
 - if `in_data_format` is `ubam_fastq`, entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
 - if `in_data_format` is `aligned_bam`, entries in the `file` column must be indexed BAM files (a `.bai` index must exist alongside each BAM)
+- if `in_data_format` is `aligned_bam`, there must be one row per `sample_id` (merge the BAM files of a sample first)
 - for entries in the `file` column, files containing methylation data should be provided in uBAM/aligned BAM format (and not FASTQ format)
 - provide all entries for a given `sample_id` the same `family_id`
 - `sex` must be 'XX', 'XY' or 'NONE', and all entries for a given `sample_id` must agree
