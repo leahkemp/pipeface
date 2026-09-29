@@ -147,35 +147,6 @@ depth-.->puzzleapp_preprocessing
 - [puzzleapp](https://github.com/GenTechGp/puzzleapp)
 - [ClairS-TO](https://github.com/HKU-BAL/ClairS-TO)
 
-## Main annotation databases
-
-Used when variant annotation is turned on.
-
-hg38:
-
-- [VEP cache](https://www.ensembl.org/info/docs/tools/vep/script/vep_cache.html) (merged Ensembl/RefSeq)
-- [REVEL](https://sites.google.com/site/revelgenomics/)
-- [gnomAD](https://gnomad.broadinstitute.org/)
-- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/)
-- [CADD](https://cadd.gs.washington.edu/) (SNVs and indels) and [CADD-SV](https://cadd-sv.bihealth.org/)
-- [SpliceAI](https://github.com/Illumina/SpliceAI)
-- [AlphaMissense](https://github.com/google-deepmind/alphamissense)
-
-chm13:
-
-- [VEP GFF](https://github.com/marbl/CHM13#gene-annotation) (GENCODE v35 CAT/Liftoff gene annotation)
-- [gnomAD](https://gnomad.broadinstitute.org/) (joint genomes and exomes, lifted over from hg38)
-- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/) (lifted over by the T2T consortium)
-- [SpliceAI](https://github.com/Illumina/SpliceAI) (lifted over from hg38)
-- [AlphaMissense](https://github.com/google-deepmind/alphamissense) (lifted over from hg38)
-
-hg38 and chm13:
-
-- [Dfam](https://www.dfam.org/) (repeat annotation of SVs by SVscanner)
-- [STRchive](https://strchive.org/) (bundled with SVscanner)
-
-*[See the list of software and their versions used by this version of pipeface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](../../config/nextflow_pipeface.config) file is used).*
-
 ## Main input files
 
 ### Required
@@ -250,8 +221,32 @@ hg38 and chm13:
 > - Running DeepVariant/DeepTrio on ONT data assumes r10 data
 > - Running base modification analyses assumes the input data is in uBAM format and base modifications are present in these data
 
+## Main annotation databases
+
+Used when variant annotation is turned on.
+
+hg38 and chm13:
+
+- [gnomAD](https://gnomad.broadinstitute.org/)
+- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/)
+- [SpliceAI](https://github.com/Illumina/SpliceAI)
+- [AlphaMissense](https://github.com/google-deepmind/alphamissense)
+- [Dfam](https://www.dfam.org/)
+- [STRchive](https://strchive.org/)
+
+hg38:
+
+- [VEP cache](https://www.ensembl.org/info/docs/tools/vep/script/vep_cache.html)
+- [REVEL](https://sites.google.com/site/revelgenomics/)
+- [CADD](https://cadd.gs.washington.edu/) and [CADD-SV](https://cadd-sv.bihealth.org/)
+
+chm13:
+
+- [VEP GFF](https://github.com/marbl/CHM13#gene-annotation)
+
+*[See the list of software and their versions used by this version of pipeface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is undertaken*
+
 ## Haploid Aware Mode
 
 - Enables correct handling of the haploid nature of chrX and chrY for XY samples, along with PAR regions
 - Only supported for singletons at the moment
-
