@@ -1293,7 +1293,7 @@ process sniffles {
         tuple val(sample_id), val(family_id), val(family_position), path("sv.phased.vcf.gz")
 
     script:
-        // optionally pass tandem repeat bed file
+        // optionally pass tandem repeat bed file and set mapq filter threshold
         def tandem_repeat_optional = tandem_repeat ? "--tandem-repeats $tandem_repeat" : ''
         // optionally set mapq filter threshold
         def mapq_optional = sv_mapq != 'NONE' ? "--mapq ${sv_mapq}" : ''
@@ -1788,7 +1788,7 @@ workflow {
         exit 1, "Choice of publishing mode should be 'copy', 'copyNoFollow', 'link', 'move', 'rellink' or 'symlink', publish_mode = '$params.publish_mode' provided."
     }
 
-    // build file objects so files are staged into (and tracked for resume in) each task directory
+    // build file objects so files are staged into each task directory
     // the string versions above are kept for validation messages and the settings file
     // files which can be set to 'NONE' are passed as an empty list, which stages nothing and evaluates as false in the process script
     ref_file = file(ref)
@@ -2321,7 +2321,6 @@ workflow {
     }
     // puzzleapp preprocessing
     if (prepare_for_puzzleapp == 'yes') {
-        // pedigree keyed like the annotated vcfs (proband sample_id in duo/trio): sample ids, kinships and mosdepth summaries in matching order
         if (mode in ['duo', 'trio']) {
             pedigree_ch = family_position_ch
                 .join(depth_ch, by: [0,1])
@@ -2331,7 +2330,6 @@ workflow {
                 }
         }
         else {
-            // a singleton is the proband of its own pedigree
             pedigree_ch = family_position_ch
                 .join(depth_ch, by: [0,1])
                 .map { sample_id, family_id, family_position, depth ->
@@ -2339,7 +2337,6 @@ workflow {
                 }
         }
         puzzleapp_preprocess_snp_indel(annotated_snp_indel_vcf.join(pedigree_ch, by: [0,1]), outdir, outdir2, ref_name, snp_indel_caller, mode)
-        // combine rather than join: with sv_caller 'both' there are two annotated sv vcfs per key
         sv_pedigree_ch = pedigree_ch.map { sample_id, family_id, sample_ids, kinships, depths -> tuple(sample_id, family_id, sample_ids, kinships) }
         puzzleapp_preprocess_sv(annotated_sv_vcf.combine(sv_pedigree_ch, by: [0,1]), outdir, outdir2, ref_name, mode)
     }

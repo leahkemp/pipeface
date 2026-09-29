@@ -863,7 +863,8 @@ workflow {
         exit 1, "When not calling tandem repeats, set tandem repeat call regions file to 'NONE', tr_calling = '${tr_calling}' and tr_call_regions = '${tr_call_regions}' provided."
     }
 
-    // build file objects so files are staged into (and tracked for resume in) each task directory
+
+    // build file objects so files are staged into each task directory
     // the string versions above are kept for validation messages and the settings file
     // files which can be set to 'NONE' are passed as an empty list, which stages nothing and evaluates as false in the process script
     ref_file = file(ref)
@@ -1128,7 +1129,6 @@ workflow {
             }
         snp_indel_vcf = split_vcf(joint_snp_indel_vcf_id)
         (snp_indel_phased_vcfs, stats) = whatshap_phase(snp_indel_vcf.join(gvcfs_bams_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
-        // sort phased vcfs by csv row index to preserve in data sample order in the merged vcf
         vcfs = snp_indel_phased_vcfs
             .join(gvcfs_ch.map { pop_id, sample_id, gvcf, index -> tuple(pop_id, sample_id, index as Integer) }, by: [0,1])
             .map { pop_id, sample_id, vcf, vcf_index, index -> tuple(pop_id, index, vcf, vcf_index) }
@@ -1173,7 +1173,6 @@ workflow {
     // annotation
     if (annotate == 'yes') {
         if (snp_indel_caller != 'NONE') {
-            // annotate per chromosome and concat back into a single vcf
             chromosomes = list_chromosomes(joint_snp_indel_phased_vcf)
                 .flatMap { pop_id, chrom_file -> chrom_file.readLines().collect { chrom -> tuple(pop_id, chrom) } }
             annotated_snp_indel_vcfs = vep_snp_indel(joint_snp_indel_phased_vcf.combine(chromosomes, by: 0), ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller)
