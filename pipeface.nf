@@ -896,11 +896,11 @@ process glnexus {
     script:
         if (snp_indel_caller == 'clair3')
         """
-        glnexus_cli --config $clair3_config $gvcfs > snp_indel.bcf
+        glnexus_cli --threads ${task.cpus} --mem-gbytes ${task.memory.toGiga()} --config $clair3_config $gvcfs > snp_indel.bcf
         """
         else if (snp_indel_caller in ['deepvariant', 'deeptrio'])
         """
-        glnexus_cli --config DeepVariant $gvcfs > snp_indel.bcf
+        glnexus_cli --threads ${task.cpus} --mem-gbytes ${task.memory.toGiga()} --config DeepVariant $gvcfs > snp_indel.bcf
         """
 
     stub:
