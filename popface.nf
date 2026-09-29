@@ -277,7 +277,7 @@ process split_sv_vcfs {
         val chunks
 
     output:
-        tuple val(pop_id), val(sv_caller), path("*.vcf")
+        tuple val(pop_id), val(sv_caller), val(sample_ids), path("*.vcf")
 
     script:
         """
@@ -373,7 +373,7 @@ process split_sv_vcfs {
 process jasmine {
 
     input:
-        tuple val(pop_id), val(partition), val(sv_caller), path(split_sv_vcfs), val(sample_ids), path(bams), path(bams_indices), val(data_type), val(related)
+        tuple val(pop_id), val(partition), val(sv_caller), path(split_sv_vcfs), val(sample_ids), val(related)
         path ref
         path ref_index
 
@@ -382,32 +382,20 @@ process jasmine {
 
     script:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
-        // conditionally define iris arguments (by default, iris will pass minimap -x map-ont, the --pacbio flag passed to iris will pass minimap -x map-pb)
-        def iris_args = '--run_iris iris_args=min_ins_length=20,--rerunracon,--keep_long_variants' + (data_type == 'pacbio' ? ',--pacbio' : '') + ",threads=${task.cpus}"
         // conditionally define require first flag
         def require_first_sample_optional = related == 'yes' ? '--require_first_sample' : ''
         """
-        # create file lists in in_data_pipeface.csv row order (sample_ids and bams are pre-sorted by csv index)
-        SAMPLES=(${sample_ids.join(' ')})
-        BAMS=(${bams.join(' ')})
-        for i in \${!SAMPLES[@]}; do
-            realpath \${SAMPLES[\$i]}.${sv_caller}.${partition}.vcf >> vcfs.txt
-            realpath \${BAMS[\$i]} >> bams.txt
+        # create file list in in_data_popface.csv row order (sample_ids are pre-sorted by csv index)
+        for SAMPLE in ${sample_ids.join(' ')}; do
+            realpath \${SAMPLE}.${sv_caller}.${partition}.vcf >> vcfs.txt
         done
         # run jasmine
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
-        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt bam_list=bams.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype $iris_args
+        jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds)
         grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
         grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
         grep -v '#' ${partition}.${out_vcf}.tmp.vcf >> ${partition}.${out_vcf}.vcf
-        # add iris info tags if iris didn't process or refine any variants in current chunk
-        if ! grep -q '##INFO=<ID=IRIS_PROCESSED' ${partition}.${out_vcf}.vcf; then
-            sed -i '/^#CHROM/i ##INFO=<ID=IRIS_PROCESSED,Number=1,Type=String,Description="Whether or not a variant has been considered by Iris for refinement">' ${partition}.${out_vcf}.vcf
-        fi
-        if ! grep -q '##INFO=<ID=IRIS_REFINED' ${partition}.${out_vcf}.vcf; then
-            sed -i '/^#CHROM/i ##INFO=<ID=IRIS_REFINED,Number=1,Type=String,Description="Whether or not a variant has been refined by Iris">' ${partition}.${out_vcf}.vcf
-        fi
         # sort
         bcftools sort ${partition}.${out_vcf}.vcf -o ${partition}.${out_vcf}.vcf
         # compress and index vcf
@@ -913,7 +901,7 @@ workflow {
             ids:                tuple(row.pop_id, row.sample_id)
             gvcfs:              tuple(row.pop_id, row.sample_id, row.gvcf, index)
             gvcfs_bams:         tuple(row.pop_id, row.sample_id, row.gvcf, row.bam)
-            svs:                tuple(row.pop_id, row.sample_id, row.sniffles, row.cutesv)
+            svs:                tuple(row.pop_id, row.sample_id, row.sniffles, row.cutesv, index)
             somaliers:          tuple(row.pop_id, row.somalier)
             bams_data_type:     tuple(row.pop_id, row.sample_id, row.bam, row.data_type, index)
             related:            tuple(row.pop_id, row.related)
@@ -943,10 +931,10 @@ workflow {
         .set { gvcfs_bams_ch }
 
     csv.svs
-        .flatMap { pop_id, sample_id, sniffles, cutesv ->
+        .flatMap { pop_id, sample_id, sniffles, cutesv, index ->
             def tuples = []
-            if (sniffles != 'NONE') tuples << tuple(pop_id, sample_id, 'sniffles', file(sniffles), file("${sniffles}.tbi"))
-            if (cutesv != 'NONE') tuples << tuple(pop_id, sample_id, 'cutesv', file(cutesv), file("${cutesv}.tbi"))
+            if (sniffles != 'NONE') tuples << tuple(pop_id, sample_id, 'sniffles', file(sniffles), file("${sniffles}.tbi"), index)
+            if (cutesv != 'NONE') tuples << tuple(pop_id, sample_id, 'cutesv', file(cutesv), file("${cutesv}.tbi"), index)
             return tuples
         }
         .set { svs_ch }
@@ -1020,12 +1008,6 @@ workflow {
             }
             if (gvcf != 'NONE' && bam == 'NONE') {
                 exit 1, "When a gVCF file is provided in the 'gvcf' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. gvcf = '${gvcf}' and bam = '${bam}' provided."
-            }
-            if (sniffles != 'NONE' && bam == 'NONE') {
-                exit 1, "When a Sniffles SV VCF is provided in the 'sniffles' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. sniffles = '${sniffles}' and bam = '${bam}' provided."
-            }
-            if (cutesv != 'NONE' && bam == 'NONE') {
-                exit 1, "When a cuteSV VCF is provided in the 'cutesv' column of '${in_data}', the associated BAM file must be provided in the 'bam' column. cutesv = '${cutesv}' and bam = '${bam}' provided."
             }
         }
 
@@ -1136,18 +1118,22 @@ workflow {
     }
     // sv vcf merging
     sv_vcfs_grouped = svs_ch
-        .map { pop_id, sample_id, sv_caller, vcf, tbi -> tuple(pop_id, sv_caller, sample_id, vcf, tbi) }
+        .map { pop_id, sample_id, sv_caller, vcf, tbi, index -> tuple(pop_id, sv_caller, sample_id, vcf, tbi, index) }
         .groupTuple(by: [0,1])
+        .map { pop_id, sv_caller, sample_ids, vcfs, tbis, indices ->
+            def sorted = [indices, sample_ids, vcfs, tbis].transpose().sort { a, b -> a[0] <=> b[0] }
+            tuple(pop_id, sv_caller, sorted.collect { it[1] }, sorted.collect { it[2] }, sorted.collect { it[3] })
+        }
     split_sv_vcfs_ch = split_sv_vcfs(sv_vcfs_grouped, ref_index_file, min_gap, chunks)
     jasmine_input = split_sv_vcfs_ch
-        .flatMap { pop_id, sv_caller, vcfs ->
+        .flatMap { pop_id, sv_caller, sample_ids, vcfs ->
             vcfs.collectMany { vcf ->
                 def partition = vcf.baseName.tokenize('.')[-1]
-                [ tuple(pop_id, partition, sv_caller, vcf) ]
+                [ tuple(pop_id, partition, sv_caller, vcf, sample_ids) ]
             }
         }
         .groupTuple(by: [0,1,2])
-        .combine(bams_data_type_ch, by: 0)
+        .map { pop_id, partition, sv_caller, vcfs, sample_ids -> tuple(pop_id, partition, sv_caller, vcfs, sample_ids[0]) }
         .combine(related_ch, by: 0)
     merged_sv_vcfs = jasmine(jasmine_input, ref_file, ref_index_file)
     (joint_sv_vcf, joint_sv_vcf_indexed) = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
