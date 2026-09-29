@@ -54,7 +54,6 @@ Requirements:
 - when `related` is 'no', `family_position` must be 'NONE'
 - when `related` is 'yes', `family_position` must not be 'NONE'
 - when `gvcf` is provided, `bam` must also be provided
-- when `sniffles` or `cutesv` is provided, `bam` must also be provided
 - `bam` files must have an associated `.bai` index in the same directory
 - `sniffles` and `cutesv` VCF files must have an associated `.tbi` index in the same directory
 - each `pop_id` must have 2 or more samples

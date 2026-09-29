@@ -9,8 +9,7 @@
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging("Merge runs (if needed)")
-alignment("bam to fastq conversion (if needed), alignment, sorting")
+alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -26,7 +25,7 @@ sv_annotation("Structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->somatic_calling
 alignment-.->haplotagging
@@ -46,8 +45,7 @@ depth-.->puzzleapp_preprocessing
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging("Merge runs (if needed)")
-alignment("bam to fastq conversion (if needed), alignment, sorting")
+alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -68,7 +66,7 @@ joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->somatic_calling
 alignment-.->haplotagging
@@ -89,8 +87,7 @@ depth-.->puzzleapp_preprocessing
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-merging("Merge runs (if needed)")
-alignment("bam to fastq conversion (if needed), alignment, sorting")
+alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -112,7 +109,7 @@ joint_sv_annotation("Joint structural variant annotation (hg38 only)")
 sv_repeat_annotation("Structural variant repeat annotation (hg38 only)")
 puzzleapp_preprocessing("Puzzleapp preprocessing (hg38 only)")
 
-input_data-.->merging-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
+input_data-.->alignment-.->snp_indel_calling-.->split_multiallele-.->snp_indel_phasing-.->haplotagging-.->sv_calling
 alignment-.->depth
 alignment-.->somatic_calling
 alignment-.->haplotagging
@@ -149,6 +146,20 @@ depth-.->puzzleapp_preprocessing
 - [SVscanner](https://github.com/GenTechGp/SVscanner)
 - [puzzleapp](https://github.com/GenTechGp/puzzleapp)
 - [ClairS-TO](https://github.com/HKU-BAL/ClairS-TO)
+
+## Main annotation databases
+
+Used when variant annotation is turned on (hg38 only):
+
+- [VEP cache](https://www.ensembl.org/info/docs/tools/vep/script/vep_cache.html) (merged Ensembl/RefSeq)
+- [REVEL](https://sites.google.com/site/revelgenomics/)
+- [gnomAD](https://gnomad.broadinstitute.org/)
+- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/)
+- [CADD](https://cadd.gs.washington.edu/) (SNVs and indels) and [CADD-SV](https://cadd-sv.bihealth.org/)
+- [SpliceAI](https://github.com/Illumina/SpliceAI)
+- [AlphaMissense](https://github.com/google-deepmind/alphamissense)
+- [Dfam](https://www.dfam.org/) (repeat annotation of SVs by SVscanner)
+- [STRchive](https://strchive.org/) (bundled with SVscanner)
 
 *[See the list of software and their versions used by this version of pipeface](../software_versions.txt) as well as the [list of variant databases and their versions](../database_versions.txt) if variant annotation is carried out (assuming the default [nextflow_pipeface.config](../../config/nextflow_pipeface.config) file is used).*
 
