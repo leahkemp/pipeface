@@ -1780,8 +1780,8 @@ workflow {
         if (sv_caller == 'NONE') {
             exit 1, "When the in data format is SV VCF, pass the SV calling software which was used to generate the input data (not 'NONE'), sv_caller = '${sv_caller}' provided."
         }
-        if (sv_caller != 'NONE' && !(sv_caller in ['sniffles', 'cutesv', 'both'])) {
-            exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
+        if (!(sv_caller in ['sniffles', 'cutesv'])) {
+            exit 1, "When the in data format is SV VCF, set the SV calling software to the caller which generated the input data ('sniffles' or 'cutesv'), sv_caller = '${sv_caller}' provided."
         }
     }
     if (!(params.publish_mode in ['copy', 'copyNoFollow', 'link', 'move', 'rellink', 'symlink'])) {
