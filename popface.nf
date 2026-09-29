@@ -81,7 +81,7 @@ process glnexus_pre_processing {
             bcftools view -h "$gvcf" | grep '#CHROM'
         } > ${sample_id}.amended.g.vcf
         # convert lower cases of soft-masked sequences to upper case to avoid this issue: https://github.com/HKU-BAL/Clair3/issues/359
-        zgrep -v '#' $gvcf | awk -F'\\t' -v OFS='\\t' '{ if(\$0 !~ /^#/) { \$4=toupper(\$4); \$5=toupper(\$5) } print }' >> ${sample_id}.amended.g.vcf
+        bcftools view -H $gvcf | awk -F'\\t' -v OFS='\\t' '{ if(\$0 !~ /^#/) { \$4=toupper(\$4); \$5=toupper(\$5) } print }' >> ${sample_id}.amended.g.vcf
         # compress vcf
         bgzip -@ ${task.cpus} ${sample_id}.amended.g.vcf
         """
@@ -393,14 +393,8 @@ process jasmine {
         # run jasmine
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
         jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype
-        # fix vcf header (remove prefix to sample names that jasmine adds)
-        grep '##' ${partition}.${out_vcf}.tmp.vcf > ${partition}.${out_vcf}.vcf
-        grep '#CHROM' ${partition}.${out_vcf}.tmp.vcf | sed -E 's/\t[0-9]+_/\t/g' >> ${partition}.${out_vcf}.vcf
-        grep -v '#' ${partition}.${out_vcf}.tmp.vcf >> ${partition}.${out_vcf}.vcf
-        # sort
-        bcftools sort ${partition}.${out_vcf}.vcf -o ${partition}.${out_vcf}.vcf
-        # compress and index vcf
-        bgzip -@ ${task.cpus} ${partition}.${out_vcf}.vcf
+        # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
+        sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' ${partition}.${out_vcf}.tmp.vcf | bcftools sort -T ./ -Oz -o ${partition}.${out_vcf}.vcf.gz -
         tabix ${partition}.${out_vcf}.vcf.gz
         """
 
