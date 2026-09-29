@@ -191,7 +191,7 @@ wget -r -np -nH --cut-dirs=2 -R "index.html*" -P ./clair3_models/ont/ https://ww
 #### Pacbio HiFi revio
 
 ```bash
-wget -r -np -nH --cut-dirs=2 -R "index.html*" ./clair3_models/hifi_revio/ https://www.bio8.cs.hku.hk/clair3/clair3_models_pytorch/hifi_revio/
+wget -r -np -nH --cut-dirs=2 -R "index.html*" -P ./clair3_models/ https://www.bio8.cs.hku.hk/clair3/clair3_models_pytorch/hifi_revio/
 ```
 
 ## 3. Modify in_data_pipeface.csv
@@ -204,8 +204,8 @@ Specify the sample ID, family ID, family position, sex, file path to the data, d
 sample_id,family_id,family_position,sex,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
 sample_01,NONE,NONE,XY,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
 sample_01,NONE,NONE,XY,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_02,NONE,NONE,XX,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
-sample_03,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,NONE
+sample_02,NONE,NONE,XX,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_03,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
 sample_04,NONE,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 sample_04,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 ```
