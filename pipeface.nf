@@ -125,8 +125,13 @@ process minimap2 {
         def preset = data_type == 'ont' ? 'lr:hq' : 'map-hifi'
         if (extension == 'bam')
         """
-        # concatenate multiple runs of a sample on the fly and align
-        samtools cat ${files} | samtools fastq -@ ${task.cpus} -T '*' - | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
+        # carry the read group, program and comment header lines of the input bams into the aligned bam (sample name set to the sample id, program ids suffixed per run when there are several)
+        FILES=(${files})
+        for i in \${!FILES[@]}; do samtools view --no-PG -H \${FILES[\$i]} | awk -v sm=${sample_id} -v k=\$((i+1)) -v n=\${#FILES[@]} 'BEGIN { FS = OFS = "\\t" } /^@RG/ { for (i = 1; i <= NF; i++) if (\$i ~ /^SM:/) \$i = "SM:" sm; if (\$0 !~ /\\tSM:/) \$0 = \$0 OFS "SM:" sm } /^@PG/ && n > 1 { for (i = 1; i <= NF; i++) if (\$i ~ /^(ID|PP):/) \$i = \$i "." k } /^@RG|^@PG|^@CO/ { print }'; done | awk '!seen[\$0]++' > header_lines.txt
+        # only add a read group when the input bams have none (-y carries the existing RG tag of each read)
+        RG=(); grep -q '^@RG' header_lines.txt || RG=(-R "@RG\\tID:${sample_id}\\tSM:${sample_id}")
+        # concatenate multiple runs of a sample on the fly, align and insert the carried header lines before sorting
+        samtools cat ${files} | samtools fastq -@ ${task.cpus} -T '*' - | minimap2 "\${RG[@]}" -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | awk -v hdr=header_lines.txt 'BEGIN { while ((getline line < hdr) > 0) extra[++n] = line } /^@/ { print; next } !done { for (i = 1; i <= n; i++) print extra[i]; done = 1 } { print }' | samtools sort -@ ${task.cpus} -o sorted.bam -
         # index bam
         samtools index -@ ${task.cpus} sorted.bam
         # check bam integrity
