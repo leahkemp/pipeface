@@ -82,7 +82,6 @@ process glnexus_pre_processing {
         } > ${sample_id}.amended.g.vcf
         # convert lower cases of soft-masked sequences to upper case to avoid this issue: https://github.com/HKU-BAL/Clair3/issues/359
         bcftools view -H $gvcf | awk -F'\\t' -v OFS='\\t' '{ if(\$0 !~ /^#/) { \$4=toupper(\$4); \$5=toupper(\$5) } print }' >> ${sample_id}.amended.g.vcf
-        # compress vcf
         bgzip -@ ${task.cpus} ${sample_id}.amended.g.vcf
         """
 
@@ -157,12 +156,7 @@ process split_multiallele {
 
     script:
         """
-        # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.unsorted.vcf
-        # sort
-        bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
-        # compress and index vcf
-        bgzip -@ ${task.cpus} snp_indel.split.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf | bcftools sort -T ./ -Oz -o snp_indel.split.vcf.gz -
         tabix snp_indel.split.vcf.gz
         """
 
@@ -216,13 +210,9 @@ process whatshap_phase {
 
     script:
         """
-        # run whatshap phase
         whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --sample $sample_id --ignore-read-groups $snp_indel_vcf $bam
-        # index vcf
         tabix snp_indel.phased.vcf.gz
-        # run whatshap stats
         whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf --sample $sample_id
-        # tag vcf with sample_id for downstream vcf merge
         ln -s snp_indel.phased.vcf.gz ${sample_id}.snp_indel.phased.vcf.gz
         ln -s snp_indel.phased.vcf.gz.tbi ${sample_id}.snp_indel.phased.vcf.gz.tbi
         """
@@ -255,9 +245,7 @@ process merge_vcf {
         """
         # create file list in in_data_popface.csv row order (vcfs are pre-sorted by csv index)
         printf '%s\\n' ${snp_indel_phased_vcfs.join(' ')} > vcf_list.txt
-        # merge vcf
         bcftools merge -Oz -o snp_indel.phased.vcf.gz -l vcf_list.txt --threads ${task.cpus}
-        # index vcf
         tabix snp_indel.phased.vcf.gz
         """
 
@@ -390,7 +378,6 @@ process jasmine {
         for SAMPLE in ${sample_ids.join(' ')}; do
             realpath \${SAMPLE}.${sv_caller}.${partition}.vcf >> vcfs.txt
         done
-        # run jasmine
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
         jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
@@ -425,7 +412,6 @@ process concat_sv_vcf {
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        # get list of vcfs
         VCFS=(*sv*.vcf.gz)
         # concat vcfs (or pass through if only one) and sort
         if [[ \${#VCFS[@]} -eq 1 ]]; then
@@ -433,7 +419,6 @@ process concat_sv_vcf {
         else
             bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
         fi
-        # index vcf
         tabix ${out_vcf}.vcf.gz
         """
 
@@ -471,9 +456,7 @@ process somalier {
             "'" + ([family_id, sid] + parents + [sex, '-9']).join('\t') + "'"
         }.join(' ')
         """
-        # write pedigree
         printf '%s\\n' ${ped_lines} > somalier.ped
-        # run somalier
         somalier relate --ped somalier.ped $somalier_files
         """
 
@@ -496,7 +479,6 @@ process longtr_pre_processing {
 
     script:
         """
-        # split up bed
         split -l 10000 $tr_call_regions split. --additional-suffix=.bed
         """
 
@@ -523,10 +505,8 @@ process longtr {
         // define alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
         """
-        # run longtr
         ID=\$(echo $split_bed | sed 's/split.//;s/.bed//')
         LongTR --bams $bams_csv --bam-samps $samples_csv --bam-libs $samples_csv --fasta $ref --regions $split_bed --tr-vcf tr.\${ID}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.log
-        # index vcf
         tabix tr.\${ID}.vcf.gz
         """
 
@@ -553,7 +533,6 @@ process concat_tr_vcf {
 
     script:
         """
-        # get list of vcfs
         VCFS=(tr.*.vcf.gz)
         # concat vcfs (or use single vcf), reorder samples since longtr sorts samples alphabetically, then naturally sort variants
         if [[ \${#VCFS[@]} -eq 1 ]]; then
@@ -561,7 +540,6 @@ process concat_tr_vcf {
         else
             bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         fi
-        # index vcf
         tabix tr.vcf.gz
         """
 
@@ -583,7 +561,6 @@ process list_chromosomes {
 
     script:
         """
-        # list chromosomes with variants to annotate per chromosome
         tabix -l $joint_snp_indel_phased_vcf > chromosomes.txt
         """
 
@@ -640,9 +617,7 @@ process vep_snp_indel {
     script:
         if (ref_name == "hg38")
         """
-        # extract chromosome
         tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
-        # run vep
         vep -i ${chr}.snp_indel.phased.vcf.gz -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
         --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
@@ -651,14 +626,11 @@ process vep_snp_indel {
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
         --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
         --plugin AlphaMissense,file=$alphamissense_db
-        # index vcf
         tabix ${chr}.snp_indel.phased.annotated.vcf.gz
         """
         else if (ref_name == "chm13")
         """
-        # extract chromosome
         tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
-        # run vep
         vep -i ${chr}.snp_indel.phased.vcf.gz -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
         --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
@@ -666,7 +638,6 @@ process vep_snp_indel {
         --plugin AlphaMissense,file=$alphamissense_chm13_db \
         --custom file=$gnomad_chm13_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_chm13_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG
-        # index vcf
         tabix ${chr}.snp_indel.phased.annotated.vcf.gz
         """
 
@@ -694,7 +665,6 @@ process concat_snp_indel_vcf {
 
     script:
         """
-        # get list of vcfs
         VCFS=(*.snp_indel.phased.annotated.vcf.gz)
         # concat vcfs (or pass through if only one) and sort
         if [[ \${#VCFS[@]} -eq 1 ]]; then
@@ -702,7 +672,6 @@ process concat_snp_indel_vcf {
         else
             bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o snp_indel.phased.annotated.vcf.gz -
         fi
-        # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
         """
 
@@ -735,14 +704,12 @@ process vep_sv {
     script:
         if (ref_name == "hg38")
         """
-        # run vep
         vep -i $sv_vcf -o sv.vep_annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
             --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
             --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
         """
         else if (ref_name == "chm13")
         """
-        # run vep
         vep -i $sv_vcf -o sv.vep_annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
             --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
             --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip
@@ -776,9 +743,7 @@ process sv_scanner {
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         """
-        # run svscanner
         svscanner --out out --vcf $vep_annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
-        # rename files
         ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
         ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
         ln -s out/diagram.txt ${out_vcf}.diagram.txt

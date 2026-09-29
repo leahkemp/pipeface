@@ -125,20 +125,14 @@ process minimap2 {
         def preset = data_type == 'ont' ? 'lr:hq' : 'map-hifi'
         if (extension == 'bam')
         """
-        # concatenate multiple runs of a sample on the fly and align
         samtools cat ${files} | samtools fastq -@ ${task.cpus} -T '*' - | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -y -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
-        # index bam
         samtools index -@ ${task.cpus} sorted.bam
-        # check bam integrity
         samtools quickcheck sorted.bam
         """
         else if (extension in ['gz', 'fastq'])
         """
-        # concatenate multiple runs of a sample on the fly and align
         cat ${files} | minimap2 -R '@RG\\tID:${sample_id}\\tSM:${sample_id}' -Y --secondary=no --MD -a -x $preset -t ${task.cpus} $ref - | samtools sort -@ ${task.cpus} -o sorted.bam -
-        # index bam
         samtools index -@ ${task.cpus} sorted.bam
-        # check bam integrity
         samtools quickcheck sorted.bam
         """
 
@@ -167,9 +161,7 @@ process mosdepth {
         // optionally pass regions of interest bed file
         def regions_of_interest_optional = regions_of_interest ? "-b $regions_of_interest" : ''
         """
-        # run mosdepth
         mosdepth depth $bam $regions_of_interest_optional --no-per-base -t ${task.cpus}
-        # rename file
         ln -s depth.mosdepth.summary.txt depth.txt
         """
 
@@ -245,9 +237,7 @@ process clair3 {
         // conditionally define platform
         def platform = data_type == 'ont' ? 'ont' : 'hifi'
         """
-        # run clair3
         run_clair3.sh --bam_fn=$bam --ref_fn=$ref --output=./ --threads=${task.cpus} --platform=$platform --model_path=$clair3_model --sample_name=$sample_id --gvcf --include_all_ctgs $regions_of_interest_optional
-        # rename files
         ln -s merge_output.vcf.gz snp_indel.vcf.gz
         ln -s merge_output.vcf.gz.tbi snp_indel.vcf.gz.tbi
         ln -s merge_output.gvcf.gz snp_indel.g.vcf.gz
@@ -284,11 +274,8 @@ process clair3_haploid_aware {
         def platform = data_type == 'ont' ? 'ont' : 'hifi'
         """
         mkdir -p {haploid,diploid}
-        # run clair3 (haploid)
         run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="haploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="${haploid_bed}" --haploid_precise
-        # run clair3 (diploid)
         run_clair3.sh --bam_fn="${bam}" --ref_fn="${ref}" --output="diploid" --threads=${task.cpus} --platform=${platform} --model_path="${clair3_model}" --sample_name="${sample_id}" --gvcf --bed_fn="${diploid_bed}"
-        # rename files
         ln -s haploid/merge_output.vcf.gz haploid_snp_indel.vcf.gz
         ln -s haploid/merge_output.vcf.gz.tbi haploid_snp_indel.vcf.gz.tbi
         ln -s diploid/merge_output.vcf.gz diploid_snp_indel.vcf.gz
@@ -330,19 +317,16 @@ process clair3_post_processing {
 
     script:
         """
-        # merge diploid and haploid vcf & gvcf files
-        bcftools +fixploidy $haploid_snp_indel_vcf -- -f 2 -t GT > haploid_ploidyfixed.vcf
-        bcftools +fixploidy $haploid_snp_indel_gvcf -- -f 2 -t GT > haploid_ploidyfixed.g.vcf
-        bgzip -@ ${task.cpus} haploid_ploidyfixed.vcf
-        bgzip -@ ${task.cpus} haploid_ploidyfixed.g.vcf
-        tabix -p vcf haploid_ploidyfixed.vcf.gz
-        tabix -p vcf haploid_ploidyfixed.g.vcf.gz
-        bcftools concat -a -Oz -o unsorted.vcf.gz $diploid_snp_indel_vcf haploid_ploidyfixed.vcf.gz
-        bcftools sort -Oz -o snp_indel.vcf.gz unsorted.vcf.gz
-        tabix -p vcf snp_indel.vcf.gz
-        bcftools concat -a -Oz -o unsorted.g.vcf.gz $diploid_snp_indel_gvcf haploid_ploidyfixed.g.vcf.gz
-        bcftools sort -Oz -o snp_indel.g.vcf.gz unsorted.g.vcf.gz
-        tabix -p vcf snp_indel.g.vcf.gz
+        # set the haploid calls to diploid ploidy, compress and index
+        bcftools +fixploidy $haploid_snp_indel_vcf -- -f 2 -t GT | bgzip -@ ${task.cpus} > haploid_ploidyfixed.vcf.gz
+        bcftools +fixploidy $haploid_snp_indel_gvcf -- -f 2 -t GT | bgzip -@ ${task.cpus} > haploid_ploidyfixed.g.vcf.gz
+        tabix haploid_ploidyfixed.vcf.gz
+        tabix haploid_ploidyfixed.g.vcf.gz
+        # merge diploid and haploid vcf & gvcf files, sort, compress and index
+        bcftools concat -a $diploid_snp_indel_vcf haploid_ploidyfixed.vcf.gz | bcftools sort -T ./ -Oz -o snp_indel.vcf.gz -
+        tabix snp_indel.vcf.gz
+        bcftools concat -a $diploid_snp_indel_gvcf haploid_ploidyfixed.g.vcf.gz | bcftools sort -T ./ -Oz -o snp_indel.g.vcf.gz -
+        tabix snp_indel.g.vcf.gz
         """
 
     stub:
@@ -414,10 +398,8 @@ process deepvariant_dry_run {
             parbedparameter = ""
         }
         """
-        # do a dry-run of deepvariant
         run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --nophase_vcf --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
-        # extract arguments for make_examples and call_variants stages
         make_examples_args=\$(grep "/opt/deepvariant/bin/make_examples" commands.txt | awk -F'/opt/deepvariant/bin/make_examples' '{print \$2}' | sed 's/--mode calling//g' | sed 's/--ref "[^"]*"//g' | sed 's/--reads "[^"]*"//g' | sed 's/--sample_name "[^"]*"//g' | sed 's/--examples "[^"]*"//g' | sed 's/--gvcf "[^"]*"//g')
         call_variants_args=\$(grep "/opt/deepvariant/bin/call_variants" commands.txt | awk -F'/opt/deepvariant/bin/call_variants' '{print \$2}' | sed 's/--outfile "[^"]*"//g' | sed 's/--examples "[^"]*"//g')
         """
@@ -522,10 +504,8 @@ process deepvariant_post_processing {
             parbedparameter = ""
         }
         """
-        # postprocess_variants and vcf_stats_report stages in deepvariant
         postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}" ${haploidparameter} ${parbedparameter}
         vcf_stats_report --input_vcf "snp_indel.vcf.gz" --outfile_base "snp_indel"
-        # tag bam and gvcf with family_position for downstream glnexus
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
         ln -s $bam ${family_position}.sorted.bam
         ln -s $bam_index ${family_position}.sorted.bam.bai
@@ -554,9 +534,7 @@ process filter_ref_call {
 
     script:
         """
-        # filter out refcall variants
         bcftools view -f 'PASS' $snp_indel_vcf -o snp_indel.filtered.vcf.gz
-        # index vcf
         tabix snp_indel.filtered.vcf.gz
         """
     stub:
@@ -579,12 +557,7 @@ process split_multiallele {
 
     script:
         """
-        # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.unsorted.vcf
-        # sort
-        bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
-        # compress and index vcf
-        bgzip -@ ${task.cpus} snp_indel.split.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf | bcftools sort -T ./ -Oz -o snp_indel.split.vcf.gz -
         tabix snp_indel.split.vcf.gz
         """
 
@@ -620,11 +593,8 @@ process whatshap_phase {
 
     script:
         """
-        # run whatshap phase
         whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --sample $sample_id --ignore-read-groups $snp_indel_split_vcf $bam
-        # index vcf
         tabix snp_indel.phased.vcf.gz
-        # run whatshap stats
         whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf --sample $sample_id 
         """
 
@@ -657,11 +627,8 @@ process whatshap_haplotag {
 
     script:
         """
-        # run whatshap haplotag
         whatshap haplotag --reference $ref --output sorted.haplotagged.bam --sample $sample_id --tag-supplementary --ignore-read-groups --output-threads ${task.cpus} --output-haplotag-list sorted.haplotagged.tsv $snp_indel_split_vcf $bam
-        # index bam
         samtools index -@ ${task.cpus} sorted.haplotagged.bam
-        # tag bam with family_position for downstream deeptrio
         ln -s sorted.haplotagged.bam ${family_position}.sorted.haplotagged.bam
         ln -s sorted.haplotagged.bam.bai ${family_position}.sorted.haplotagged.bam.bai
         """
@@ -874,9 +841,7 @@ process somalier_relate {
             "'" + ([family_id, sid] + parents + [sex, '-9']).join('\t') + "'"
         }.join(' ')
         """
-        # write pedigree
         printf '%s\\n' ${ped_lines} > somalier.ped
-        # run somalier
         somalier relate --ped somalier.ped $somalier_files
         """
 
@@ -908,7 +873,6 @@ process glnexus_pre_processing {
         } > ${sample_id}.amended.g.vcf
         # convert lower cases of soft-masked sequences to upper case to avoid this issue: https://github.com/HKU-BAL/Clair3/issues/359
         bcftools view -H $gvcf | awk -F'\\t' -v OFS='\\t' '{ if(\$0 !~ /^#/) { \$4=toupper(\$4); \$5=toupper(\$5) } print }' >> ${sample_id}.amended.g.vcf
-        # compress vcf
         bgzip -@ ${task.cpus} ${sample_id}.amended.g.vcf
         """
 
@@ -981,12 +945,7 @@ process split_multiallele_family {
 
     script:
         """
-        # run bcftools norm
-        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf > snp_indel.split.unsorted.vcf
-        # sort
-        bcftools sort -o snp_indel.split.vcf snp_indel.split.unsorted.vcf
-        # compress and index vcf
-        bgzip -@ ${task.cpus} snp_indel.split.vcf
+        bcftools norm --threads ${task.cpus} -m -any -f $ref $snp_indel_vcf | bcftools sort -T ./ -Oz -o snp_indel.split.vcf.gz -
         tabix snp_indel.split.vcf.gz
         """
 
@@ -1027,11 +986,8 @@ process whatshap_phase_family {
             [[ \${FAMILY_POSITIONS[\$i]} == "mother" ]] && MOTHER_ID=\${SAMPLE_IDS[\$i]}
         done
         printf "$family_id\t$proband_sample_id\t\${FATHER_ID}\t\${MOTHER_ID}\t0\t1\n" > pedigree.ped
-        # run whatshap phase
         whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --ped pedigree.ped $snp_indel_split_vcf ${bams.join(' ')}
-        # index vcf
         tabix snp_indel.phased.vcf.gz
-        # run whatshap stats
         whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf
         """
 
@@ -1106,7 +1062,6 @@ process vep_snp_indel {
     script:
         if (ref_name == "hg38")
         """
-        # run vep
         vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
         --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
@@ -1115,12 +1070,10 @@ process vep_snp_indel {
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
         --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
         --plugin AlphaMissense,file=$alphamissense_db
-        # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
         """
         else if (ref_name == "chm13")
         """
-        # run vep
         vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
         --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
@@ -1128,7 +1081,6 @@ process vep_snp_indel {
         --plugin AlphaMissense,file=$alphamissense_chm13_db \
         --custom file=$gnomad_chm13_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_chm13_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG
-        # index vcf
         tabix snp_indel.phased.annotated.vcf.gz
         """
 
@@ -1157,7 +1109,6 @@ process minimod {
 
     script:
         """
-        # run minimod
         minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary --insertions -o modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # separate haplotypes
@@ -1195,7 +1146,6 @@ process longtr_pre_processing {
 
     script:
         """
-        # split up bed
         split -l 10000 $tr_call_regions split. --additional-suffix=.bed
         """
 
@@ -1283,7 +1233,6 @@ process concat_tr_vcf {
 
     script:
         """
-        # get list of vcfs
         VCFS=(tr.*.vcf.gz)
         # concat vcfs (or use single vcf), then naturally sort variants
         if [[ \${#VCFS[@]} -eq 1 ]]; then
@@ -1291,7 +1240,6 @@ process concat_tr_vcf {
         else
             bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         fi
-        # index vcf
         tabix tr.vcf.gz
         """
 
@@ -1318,7 +1266,6 @@ process concat_tr_vcf_family {
 
     script:
         """
-        # get list of vcfs
         VCFS=(tr.*.vcf.gz)
         # concat vcfs (or use single vcf), reorder samples since longtr sorts samples alphabetically, then naturally sort variants
         if [[ \${#VCFS[@]} -eq 1 ]]; then
@@ -1326,7 +1273,6 @@ process concat_tr_vcf_family {
         else
             bcftools concat -a \${VCFS[@]} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
         fi
-        # index vcf
         tabix tr.vcf.gz
         """
 
@@ -1363,7 +1309,6 @@ process sniffles {
         // optionally set mapq filter threshold
         def mapq_optional = sv_mapq != 'NONE' ? "--mapq ${sv_mapq}" : ''
         """
-        # run sniffles
         sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional $mapq_optional
         """
 
@@ -1402,9 +1347,7 @@ process cutesv {
         // optionally set mapq filter threshold
         def mapq_optional = sv_mapq != 'NONE' ? "--min_mapq ${sv_mapq}" : ''
         """
-        # run cuteSV
         cuteSV $haplotagged_bam $ref sv.vcf ./ --sample ${sample_id} -t ${task.cpus} --genotype --report_readid --min_size 50 $settings $mapq_optional
-        # compress and index vcf
         bgzip -@ ${task.cpus} sv.vcf
         tabix sv.vcf.gz
         """
@@ -1444,7 +1387,6 @@ process jasmine {
         for i in \${!FAMILY_POSITIONS[@]}; do
             [[ \${FAMILY_POSITIONS[\$i]} != "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; }
         done
-        # run jasmine
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
         sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' ${out_vcf}.tmp.vcf | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
@@ -1481,14 +1423,12 @@ process vep_sv {
     script:
         if (ref_name == "hg38")
         """
-        # run vep
         vep -i $sv_vcf -o sv.vep_annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
             --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
             --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip --plugin CADD,sv=$cadd_sv_db
         """
         else if (ref_name == "chm13")
         """
-        # run vep
         vep -i $sv_vcf -o sv.vep_annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
             --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
             --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip
@@ -1535,9 +1475,7 @@ process sv_scanner {
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         """
-        # run svscanner
         svscanner --out out --vcf $vep_annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
-        # rename files
         ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
         ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
         ln -s out/diagram.txt ${out_vcf}.diagram.txt
@@ -1588,12 +1526,10 @@ process puzzleapp_preprocess_snp_indel {
             "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\", coverage: \"depth${i + 1}.txt\"}"
         }.join(', ')
         """
-        # create puzzleapp config
         cat > config.yaml << 'EOF'
         samples: [$samples_yaml]
         paths: {snvs_vcf: "$snp_indel_annotated_vcf", snvs_tsv: "snp_indel.phased.annotated.tsv", coverage_vaf_html: "coverage_vaf.html"}
         EOF
-        # run_preprocess
         Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
         """
 
@@ -1639,12 +1575,10 @@ process puzzleapp_preprocess_sv {
             "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\"}"
         }.join(', ')
         """
-        # create puzzleapp config
         cat > config.yaml << 'EOF'
         samples: [$samples_yaml]
         paths: {svs_vcf: "$sv_annotated_vcf", svs_tsv: "${out_tsv}.tsv"}
         EOF
-        # run_preprocess
         Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
         """
 
