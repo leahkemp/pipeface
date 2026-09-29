@@ -408,8 +408,6 @@ process deepvariant_dry_run {
         """
         make_examples_args=""
         call_variants_args=""
-        touch sorted.bam
-        touch sorted.bam.bai
         """
 
 }
@@ -505,7 +503,6 @@ process deepvariant_post_processing {
         }
         """
         postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}" ${haploidparameter} ${parbedparameter}
-        vcf_stats_report --input_vcf "snp_indel.vcf.gz" --outfile_base "snp_indel"
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
         ln -s $bam ${family_position}.sorted.bam
         ln -s $bam_index ${family_position}.sorted.bam.bai
@@ -774,13 +771,10 @@ process deeptrio_postprocessing {
         def num_shards = gvcf_matcher[0][2] as int
         """
         postprocess_variants --ref "${ref}" --sample_name "${sample_id}" --infile "call_variants_output.tfrecord.gz" --nonvariant_site_tfrecord_path "${gvcf_name}@${num_shards}.gz" --small_model_cvo_records "${cvo_name}@${num_shards}.gz" --cpus "${task.cpus}" --outfile "${family_position}_snp_indel.vcf.gz" --gvcf_outfile "${family_position}_snp_indel.g.vcf.gz"
-        vcf_stats_report --input_vcf "${family_position}_snp_indel.vcf.gz" --outfile_base "${family_position}_snp_indel"
         """
 
     stub:
         """
-        touch ${family_position}_snp_indel.vcf.gz
-        touch ${family_position}_snp_indel.vcf.gz.tbi
         touch ${family_position}_snp_indel.g.vcf.gz
         """
 
@@ -1132,6 +1126,7 @@ process minimod {
         touch modfreqs_hap2.bw
         touch modfreqs_combined.bed
         touch modfreqs_combined.bw
+        touch modfreqs_unphased.bed
         """
 
 }

@@ -192,8 +192,8 @@ process split_vcf {
 
 process whatshap_phase {
 
-    publishDir "$outdir/$pop_id/$outdir2/phasing", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.read_list.txt'
-    publishDir "$outdir/$pop_id/$outdir2/phasing", mode: 'copy', overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.stats.gtf'
+    publishDir "$outdir/$pop_id/$outdir2/phasing", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.read_list.txt'
+    publishDir "$outdir/$pop_id/$outdir2/phasing", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename"}, pattern: '*.stats.gtf'
 
     input:
         tuple val(pop_id), val(sample_id), path(snp_indel_vcf), path(snp_indel_vcf_index), path(bam), path(bam_index)
