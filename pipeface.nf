@@ -1329,8 +1329,7 @@ process jasmine {
         val ref_name
 
     output:
-        tuple val(proband_sample_id), val(family_id), val(sv_caller), path("*.vcf.gz")
-        tuple val(family_id), val(sv_caller), path("*.vcf.gz"), path("*.vcf.gz.tbi")
+        tuple val(proband_sample_id), val(family_id), val(sv_caller), path("*.vcf.gz"), path("*.vcf.gz.tbi")
 
     script:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
@@ -2263,7 +2262,8 @@ workflow {
         }
         family_sv_all = sv_caller == 'both' ? family_sv_sniffles.mix(family_sv_cutesv) :
                         sv_caller == 'sniffles' ? family_sv_sniffles : family_sv_cutesv
-        (joint_sv_vcfs, joint_sv_vcfs_indexed) = jasmine(family_sv_all, ref_file, ref_index_file, outdir, outdir2, ref_name)
+        joint_sv_vcfs = jasmine(family_sv_all, ref_file, ref_index_file, outdir, outdir2, ref_name)
+            .map { proband_sample_id, family_id, sv_caller_val, vcf, tbi -> tuple(proband_sample_id, family_id, sv_caller_val, vcf) }
         if (sv_caller in ['sniffles', 'both']) {
             joint_sv_vcf_sniffles = joint_sv_vcfs
                 .filter { it[2] == 'sniffles' }
