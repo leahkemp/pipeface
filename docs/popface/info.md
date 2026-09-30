@@ -6,7 +6,7 @@
 %%{init:{'theme':'dark','themeVariables':{'fontSize':'11px'}}}%%
 flowchart TB
 
-input_gvcf("DeepVariant gVCFs")
+input_gvcf("Clair3 or DeepVariant gVCFs")
 input_bam("Aligned BAMs")
 input_svs("Structural Variant VCFs")
 gvcf_merging("gVCF merging")

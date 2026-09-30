@@ -933,6 +933,11 @@ workflow {
         .set { csv }
 
     // build channels
+    // reorder lists by csv row index so grouped inputs keep in data order
+    def sort_by_index = { indices, lists ->
+        def order = indices.withIndex().sort { a, b -> a[0] <=> b[0] }.collect { it[1] }
+        lists.collect { list -> order.collect { list[it] } }
+    }
     csv.in_data
         .groupTuple(by: [0,2,9])
         .set { in_data_ch }
@@ -971,8 +976,8 @@ workflow {
         .map { pop_id, sample_id, bam, data_type, index -> tuple(pop_id, sample_id, file(bam), file("${bam}.bai"), data_type, index) }
         .groupTuple(by: [0,4])
         .map { pop_id, sample_ids, bams, bais, data_type, indices ->
-            def sorted = [indices, sample_ids, bams, bais].transpose().sort { a, b -> a[0] <=> b[0] }
-            tuple(pop_id, sorted.collect { it[1] }, sorted.collect { it[2] }, sorted.collect { it[3] }, data_type)
+            def (s, b, bi) = sort_by_index(indices, [sample_ids, bams, bais])
+            tuple(pop_id, s, b, bi, data_type)
         }
         .set { bams_data_type_ch }
 
@@ -1085,13 +1090,6 @@ workflow {
             }
     }
 
-    // helpers
-    // sort gvcfs by csv row index to preserve in data sample order
-    def sort_by_index = { pop_id, indices, sample_ids, gvcfs_list ->
-        def sorted = [indices, sample_ids, gvcfs_list].transpose().sort { a, b -> a[0] <=> b[0] }
-        tuple(pop_id, sorted.collect { it[1] }, sorted.collect { it[2] })
-    }
-
     // workflow
     // pre process
     scrape_settings(in_data_ch, popface_version, in_data, ref, ref_index, ref_name, snp_indel_caller, tr_calling, tr_call_regions, annotate, outdir, outdir2)
@@ -1103,13 +1101,19 @@ workflow {
                 .join(gvcfs_ch.map { pop_id, sample_id, gvcf, index -> tuple(pop_id, sample_id, index) }, by: [0,1])
                 .map { pop_id, sample_id, amended_gvcf, index -> tuple(pop_id, index as Integer, sample_id, amended_gvcf) }
                 .groupTuple(by: 0)
-                .map(sort_by_index)
+                .map { pop_id, indices, sample_ids, gvcfs_list ->
+                    def (s, g) = sort_by_index(indices, [sample_ids, gvcfs_list])
+                    tuple(pop_id, s, g)
+                }
         }
         else if (snp_indel_caller == 'deepvariant') {
             gvcfs = gvcfs_ch
                 .map { pop_id, sample_id, gvcf, index -> tuple(pop_id, index as Integer, sample_id, gvcf) }
                 .groupTuple(by: 0)
-                .map(sort_by_index)
+                .map { pop_id, indices, sample_ids, gvcfs_list ->
+                    def (s, g) = sort_by_index(indices, [sample_ids, gvcfs_list])
+                    tuple(pop_id, s, g)
+                }
         }
         joint_snp_indel_bcf = glnexus(gvcfs, snp_indel_caller, clair3_config_file)
         joint_snp_indel_vcf = glnexus_post_processing(joint_snp_indel_bcf)
@@ -1117,13 +1121,8 @@ workflow {
         joint_snp_indel_split_vcf = split_multiallele(joint_snp_indel_vcf, ref_file, ref_index_file)
         // phasing
         joint_snp_indel_vcf_id = joint_snp_indel_split_vcf
-            .combine(id_ch)
-            .map { pop_id, joint_vcf, joint_vcf_index, pop_id2, sample_id ->
-                if (pop_id != pop_id2) {
-                    return null
-                }
-                tuple(pop_id, sample_id, joint_vcf, joint_vcf_index)
-            }
+            .combine(id_ch, by: 0)
+            .map { pop_id, joint_vcf, joint_vcf_index, sample_id -> tuple(pop_id, sample_id, joint_vcf, joint_vcf_index) }
         snp_indel_vcf = split_vcf(joint_snp_indel_vcf_id)
         (snp_indel_phased_vcfs, stats) = whatshap_phase(snp_indel_vcf.join(gvcfs_bams_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
         vcfs = snp_indel_phased_vcfs
@@ -1131,8 +1130,8 @@ workflow {
             .map { pop_id, sample_id, vcf, vcf_index, index -> tuple(pop_id, index, vcf, vcf_index) }
             .groupTuple(by: 0)
             .map { pop_id, indices, vcf_files, vcf_indices ->
-                def sorted = [indices, vcf_files, vcf_indices].transpose().sort { a, b -> a[0] <=> b[0] }
-                tuple(pop_id, sorted.collect { it[1] }, sorted.collect { it[2] })
+                def (v, t) = sort_by_index(indices, [vcf_files, vcf_indices])
+                tuple(pop_id, v, t)
             }
         joint_snp_indel_phased_vcf = merge_vcf(vcfs, outdir, outdir2, ref_name, snp_indel_caller)
     }
@@ -1141,8 +1140,8 @@ workflow {
         .map { pop_id, sample_id, sv_caller, vcf, tbi, index -> tuple(pop_id, sv_caller, sample_id, vcf, tbi, index) }
         .groupTuple(by: [0,1])
         .map { pop_id, sv_caller, sample_ids, vcfs, tbis, indices ->
-            def sorted = [indices, sample_ids, vcfs, tbis].transpose().sort { a, b -> a[0] <=> b[0] }
-            tuple(pop_id, sv_caller, sorted.collect { it[1] }, sorted.collect { it[2] }, sorted.collect { it[3] })
+            def (s, v, t) = sort_by_index(indices, [sample_ids, vcfs, tbis])
+            tuple(pop_id, sv_caller, s, v, t)
         }
     split_sv_vcfs_ch = split_sv_vcfs(sv_vcfs_grouped, ref_index_file, min_gap, chunks)
     jasmine_input = split_sv_vcfs_ch

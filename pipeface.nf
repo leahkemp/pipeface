@@ -1542,6 +1542,9 @@ workflow {
             exit 1, "No value provided for '${param}'."
         }
     }
+    if (!(ref_name ==~ /[A-Za-z0-9._-]+/)) {
+        exit 1, "ref_name is used in output file names and should contain only letters, digits, '.', '_' or '-', ref_name = '${ref_name}' provided."
+    }
     [tandem_repeat: tandem_repeat, tr_call_regions: tr_call_regions, parbed: parbed, clair3_config: clair3_config, sites: sites].each { param, val ->
         if (!val) {
             exit 1, "No value provided for '${param}'. Set to 'NONE' if not required."
@@ -1635,7 +1638,7 @@ workflow {
         if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
             exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
         }
-        if (sv_mapq != 'NONE' && !(sv_mapq.isInteger() && sv_mapq.toInteger() <= 60)) {
+        if (sv_mapq != 'NONE' && !(sv_mapq.isInteger() && sv_mapq.toInteger() >= 0 && sv_mapq.toInteger() <= 60)) {
             exit 1, "sv_mapq should be a positive integer (maximum 60) or 'NONE', sv_mapq = '${sv_mapq}' provided."
         }
     }
@@ -1676,9 +1679,6 @@ workflow {
         }
         if (snp_indel_caller == 'NONE') {
             exit 1, "When the in data format is SNP/indel VCF, pass the SNP/indel calling software which was used to generate the input data (not 'NONE'), snp_indel_caller = '${snp_indel_caller}' provided."
-        }
-        if (ref == 'NONE' || ref_index == 'NONE') {
-            exit 1, "When the in data format is SNP/indel VCF, pass the reference genome and its index which was used to generate the input data (not 'NONE'), ref = '${ref}' and ref_index = '${ref_index}' provided."
         }
     }
     else if (in_data_format == 'sv_vcf') {
@@ -1779,25 +1779,14 @@ workflow {
             regions_of_interest:         tuple(row.sample_id, row.family_id, row.regions_of_interest != 'NONE' ? file(row.regions_of_interest) : [])
             clair3_model:                tuple(row.sample_id, row.family_id, row.clair3_model != 'NONE' ? file(row.clair3_model) : [])
             clairs_to_platform:          tuple(row.sample_id, row.family_id, row.clairs_to_platform)
-            clairs_to_validation:        tuple(row.sample_id, row.family_id, row.clairs_to_platform)
             row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model, row.sex)
-            family_validation:           tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model)
-            sample_family_validation:    tuple(row.sample_id, row.family_id)
+            family_validation:           tuple(row.sample_id, row.family_id, row.family_position)
             family_data_type_validation: tuple(row.sample_id, row.family_id, row.data_type)
         }
         .set { csv }
 
     // build channels
     csv.in_data
-        .map { sample_id, family_id, files, data_type, regions_of_interest, clair3_model, sex ->
-            if (haploidaware == 'yes' && sex == 'XY' && regions_of_interest != 'NONE' && file(regions_of_interest).exists()) {
-                def content = file(regions_of_interest).text
-                if (!content.contains(chr_x_seq) || !content.contains(chr_y_seq)) {
-                    exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${regions_of_interest} for XY sample '${sample_id}'."
-                }
-            }
-            return tuple(sample_id, family_id, files, data_type, regions_of_interest, clair3_model, sex)
-        }
         .groupTuple(by: [0,1,3,4,5,6])
         .set { in_data_ch }
 
@@ -1857,7 +1846,7 @@ workflow {
                     exit 1, "There is an empty entry in the '${col}' column of '${in_data}'. Set to 'NONE' if not required."
                 }
             }
-            if (mode == 'singleton' && family_position.isEmpty()) {
+            if (family_position.isEmpty()) {
                 exit 1, "There is an empty entry in the 'family_position' column of '${in_data}'. Set to 'NONE' if not required."
             }
             // check file existence
@@ -1920,6 +1909,12 @@ workflow {
             if (haploidaware == 'yes' && sex == 'NONE') {
                 exit 1, "In haploid-aware mode, set the 'sex' column of '${in_data}' to 'XX' or 'XY' for every sample, 'NONE' provided for sample '${sample_id}'."
             }
+            if (haploidaware == 'yes' && sex == 'XY' && regions_of_interest != 'NONE') {
+                def content = file(regions_of_interest).text
+                if (!content.contains(chr_x_seq) || !content.contains(chr_y_seq)) {
+                    exit 1, "Haploid-aware mode requires both chrX and chrY to be present in ${regions_of_interest} for XY sample '${sample_id}'."
+                }
+            }
         }
 
     csv.row_validation
@@ -1935,7 +1930,7 @@ workflow {
             }
         }
 
-    csv.clairs_to_validation
+    csv.clairs_to_platform
         .map { sample_id, family_id, clairs_to_platform ->
             // check for empty entries
             if (clairs_to_platform.isEmpty()) {
@@ -1952,7 +1947,7 @@ workflow {
             }
         }
 
-    csv.clairs_to_validation
+    csv.clairs_to_platform
         .groupTuple(by: [0,1])
         .map { sample_id, family_id, clairs_to_platforms ->
             if (clairs_to_platforms.unique().size() > 1) {
@@ -1960,18 +1955,10 @@ workflow {
             }
         }
 
-    csv.sample_family_validation
-        .groupTuple(by: 0)
-        .map { sample_id, family_ids ->
-            if (family_ids.unique().size() > 1) {
-                exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same 'family_id', conflicting 'family_id' values '${family_ids}' provided for sample '${sample_id}'."
-            }
-        }
-
     csv.family_data_type_validation
         .groupTuple(by: 1)
         .map { sample_ids, family_id, data_types ->
-            if (family_id != 'NONE' && data_types.unique().size() > 1) {
+            if (mode in ['duo', 'trio'] && data_types.unique().size() > 1) {
                 exit 1, "All entries for a given 'family_id' in '${in_data}' should have the same 'data_type', conflicting 'data_type' values '${data_types}' provided for family '${family_id}'."
             }
         }
@@ -1979,7 +1966,7 @@ workflow {
     if (mode in ['duo', 'trio']) {
         csv.family_validation
             .groupTuple(by: 1)
-            .map { sample_ids, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models ->
+            .map { sample_ids, family_ids, family_positions ->
                 def unique_positions = family_positions.unique()
                 if (mode == "duo") {
                     if (sample_ids.unique().size() != 2) {
@@ -2096,9 +2083,9 @@ workflow {
         if (analyse_base_mods == 'yes') {
             minimod(haplotagged_bam.join(data_type_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
         }
-        // somalier extract (singleton mode)
-        if (check_relatedness == 'yes' && mode == 'singleton') {
-            somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
+        // somalier extract (relate follows in duo/trio mode)
+        if (check_relatedness == 'yes') {
+            somalier_files = somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
         }
         if (mode == 'trio' && snp_indel_caller == 'deeptrio') {
             family_bam_by_position = haplotagged_bam_fam.groupTuple(by: 1).transpose()
@@ -2129,9 +2116,8 @@ workflow {
                     .groupTuple(by: 1)
                     .map(group_to_proband)
             }
-            // somalier extract and relate (duo/trio mode)
+            // somalier relate
             if (check_relatedness == 'yes') {
-                somalier_files = somalier_extract(haplotagged_bam, ref_file, ref_index_file, sites_file, outdir, outdir2, ref_name)
                 somalier_relate_input = somalier_files
                     .join(family_position_ch, by: [0,1])
                     .join(sex_ch, by: [0,1])
@@ -2149,12 +2135,6 @@ workflow {
             joint_snp_indel_split_vcf_bam = split_multiallele_family(joint_snp_indel_vcf_bam, ref_file, ref_index_file)
             // joint phasing
             (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_phase_family(joint_snp_indel_split_vcf_bam, ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
-        }
-        if (mode in ['duo', 'trio']) {
-            // joint snp/indel annotation
-            if (annotate == 'yes') {
-                annotated_snp_indel_vcf = vep_snp_indel(joint_snp_indel_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
-            }
         }
         // sv calling
         if (sv_caller in ['sniffles', 'both']) {
@@ -2190,9 +2170,10 @@ workflow {
         snp_indel_split_phased_vcf = id_ch.join(files_ch, by: [0,1])
     }
     if (in_data_format in ['ubam_fastq', 'aligned_bam', 'snp_indel_vcf']) {
-        // annotation
-        if (annotate == 'yes' && !(mode in ['duo', 'trio'])) {
-            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_split_phased_vcf,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
+        // annotation of the joint (duo/trio) or per-sample phased snp/indel vcf
+        if (annotate == 'yes') {
+            snp_indel_for_vep = mode in ['duo', 'trio'] ? joint_snp_indel_phased_vcf : snp_indel_split_phased_vcf
+            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_for_vep,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     if (mode in ['duo', 'trio']) {

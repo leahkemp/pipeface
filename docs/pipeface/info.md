@@ -9,7 +9,7 @@
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
+alignment("Bam to fastq conversion (if needed), alignment (multiple sequencing runs of a sample streamed together), sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -45,7 +45,7 @@ depth-.->puzzleapp_preprocessing
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
+alignment("Bam to fastq conversion (if needed), alignment (multiple sequencing runs of a sample streamed together), sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -87,7 +87,7 @@ depth-.->puzzleapp_preprocessing
 flowchart TB
 
 input_data("ONT fastq.gz <br> and/or <br> ONT fastq <br> and/or <br> ONT uBAM <br> and/or <br> pacbio HiFi uBAM")
-alignment("Merge runs (if needed), bam to fastq conversion (if needed), alignment, sorting")
+alignment("Bam to fastq conversion (if needed), alignment (multiple sequencing runs of a sample streamed together), sorting")
 depth("Calculate alignment depth")
 snp_indel_calling("SNP/indel variant calling")
 somatic_calling("Somatic SNV/indel variant calling")
@@ -185,9 +185,9 @@ depth-.->puzzleapp_preprocessing
 
 - Aligned, sorted and haplotagged bam
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
-- DeepVariant SNP/indel gVCF file
-- Joint phased DeepVariant SNP/indel VCF file
-- Joint phased and annotated DeepVariant SNP/indel VCF file (hg38 and chm13)
+- Clair3 or DeepVariant SNP/indel gVCF file
+- Joint phased Clair3 or DeepVariant SNP/indel VCF file
+- Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 and chm13)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
@@ -203,9 +203,9 @@ depth-.->puzzleapp_preprocessing
 
 - Aligned, sorted and haplotagged bam
 - Alignment depth per chromosome (and per region in the case of targeted sequencing)
-- DeepVariant SNP/indel gVCF file
-- Joint phased DeepTrio SNP/indel VCF file
-- Joint phased and annotated DeepTrio SNP/indel VCF file (hg38 and chm13)
+- Clair3 or DeepTrio SNP/indel gVCF file
+- Joint phased Clair3 or DeepTrio SNP/indel VCF file
+- Joint phased and annotated Clair3 or DeepTrio SNP/indel VCF file (hg38 and chm13)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
 - Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file

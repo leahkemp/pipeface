@@ -88,6 +88,9 @@ gunzip hs1.fa.gz
 samtools faidx hs1.fa
 ```
 
+> [!NOTE]
+> When running against hs1, set `ref_name` to 'chm13' in `parameters_pipeface.json`.
+
 ### Tandem repeat call regions file (if running tandem repeat calling)
 
 > [!NOTE]
@@ -258,7 +261,7 @@ Requirements:
 - in duo mode, exactly 2 unique `sample_id` values are required per `family_id`, with a `proband` and either a `father` or `mother` in the `family_position` column
 - in trio mode, exactly 3 unique `sample_id` values are required per `family_id`, with a `proband`, `father` and `mother` in the `family_position` column
 - set `regions_of_interest` to 'NONE' if not required
-- set `Clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
+- set `clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
 - set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
 
 ## 4. Modify parameters_pipeface.json
@@ -296,6 +299,7 @@ Optionally turn on haploid-aware mode. Eg:
 > [!NOTE]
 > - Haploid-aware mode is only available in singleton mode. Each sample's sex comes from the `sex` column of `in_data_pipeface.csv`: XY samples get haploid-aware calling of chrX/chrY, XX samples are called as diploid.
 > - Haploid-aware mode requires both chrX and chrY to be present in the reference genome and, if provided, in the `regions_of_interest` file.
+> - Set `parbed` to 'NONE' when haploid-aware mode is off.
 
 Optionally specify the path to the tandem repeat bed file (used by the SV caller to improve SV calling in tandem repeat regions). Set to 'NONE' if not required. Eg:
 
@@ -363,7 +367,7 @@ Specify whether base modifications should be analysed ('yes' or 'no'). Eg:
 > [!NOTE]
 > Processing base modifications assumes base modifications are present in the input data and the input data is in unaligned BAM (uBAM) format.
 
-Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file (used by TRGT and LongTR to define the tandem repeat regions to genotype). Set to 'NONE' if not required. Eg:
+Optionally run tandem repeat calling and specify the path to an appropriate tandem repeat regions bed file (used by LongTR to define the tandem repeat regions to genotype). Set to 'NONE' if not required. Eg:
 
 ```json
     "tr_calling": "yes",

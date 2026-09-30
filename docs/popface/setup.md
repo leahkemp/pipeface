@@ -18,10 +18,10 @@ Specify the population ID, sample ID, relatedness, family position, file path to
 
 ```csv
 pop_id,sample_id,related,family_position,gvcf,bam,sniffles,cutesv,somalier,data_type
-pop_01,sample_01,yes,proband,/path/to/sample_01.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_01.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_01.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_01.somalier,ont
-pop_01,sample_02,yes,father,/path/to/sample_02.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_02.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_02.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_02.somalier,ont
-pop_01,sample_03,yes,mother,/path/to/sample_03.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_03.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_03.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_03.somalier,ont
-pop_01,sample_04,yes,grandfather,/path/to/sample_04.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_04.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_04.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_04.somalier,ont
+pop_01,sample_01,yes,proband,/path/to/sample_01.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_01.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_01.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_01.hg38.somalier,ont
+pop_01,sample_02,yes,father,/path/to/sample_02.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_02.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_02.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_02.hg38.somalier,ont
+pop_01,sample_03,yes,mother,/path/to/sample_03.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_03.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_03.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_03.hg38.somalier,ont
+pop_01,sample_04,yes,grandfather,/path/to/sample_04.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_04.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_04.hg38.sniffles.sv.phased.vcf.gz,NONE,/path/to/sample_04.hg38.somalier,ont
 pop_02,sample_05,no,NONE,/path/to/sample_05.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_05.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_05.hg38.sniffles.sv.phased.vcf.gz,/path/to/sample_05.hg38.cutesv.sv.vcf.gz,NONE,pacbio
 pop_02,sample_06,no,NONE,/path/to/sample_06.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_06.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_06.hg38.sniffles.sv.phased.vcf.gz,/path/to/sample_06.hg38.cutesv.sv.vcf.gz,NONE,pacbio
 pop_02,sample_07,no,NONE,/path/to/sample_07.hg38.deepvariant.snp_indel.g.vcf.gz,/path/to/sample_07.hg38.minimap2.whatshap.sorted.haplotagged.bam,/path/to/sample_07.hg38.sniffles.sv.phased.vcf.gz,/path/to/sample_07.hg38.cutesv.sv.vcf.gz,NONE,pacbio

@@ -26,7 +26,6 @@
 ## Assumptions
 
 - Running on a HPC
-- You have access to appropriate GPUs if running DeepVariant/DeepTrio
 
 ## 1. Download variant databases (optional)
 
@@ -345,9 +344,6 @@ params.dfam_db = '/path/to/dfam/'
 ```
 
 Modify the rest of the `nextflow_popface.config` for your specific HPC/job scheduler: the `executor`, `queue`, `project` and `storage` settings in the `process` block, the `cacheDir` the software containers are pulled to, and per-process resources where needed. Alternatively keep `nextflow_popface.config` untouched and put your settings in a small config that starts with `includeConfig 'nextflow_popface.config'`, as `nextflow_popface_nci.config` does for NCI.
-
-> [!NOTE]
-> The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPUs
 
 ## 3. Get pipeline dependencies
 
