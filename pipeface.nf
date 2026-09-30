@@ -1707,40 +1707,40 @@ workflow {
     clair3_config_file = clair3_config != 'NONE' ? file(clair3_config) : []
     sites_file = sites != 'NONE' ? file(sites) : []
     // annotation databases are staged only for the reference build in use, [] otherwise
-    def db = { path, build -> annotate == 'yes' && ref_name == build ? file(path) : [] }
-    def idx = { path, build -> db("${path}.tbi", build) }
-    vep_db_file = db(vep_db, 'hg38')
-    revel_db_file = db(revel_db, 'hg38')
-    revel_db_index_file = idx(revel_db, 'hg38')
-    gnomad_db_file = db(gnomad_db, 'hg38')
-    gnomad_db_index_file = idx(gnomad_db, 'hg38')
-    clinvar_db_file = db(clinvar_db, 'hg38')
-    clinvar_db_index_file = idx(clinvar_db, 'hg38')
-    cadd_snv_db_file = db(cadd_snv_db, 'hg38')
-    cadd_snv_db_index_file = idx(cadd_snv_db, 'hg38')
-    cadd_indel_db_file = db(cadd_indel_db, 'hg38')
-    cadd_indel_db_index_file = idx(cadd_indel_db, 'hg38')
-    cadd_sv_db_file = db(cadd_sv_db, 'hg38')
-    cadd_sv_db_index_file = idx(cadd_sv_db, 'hg38')
-    spliceai_snv_db_file = db(spliceai_snv_db, 'hg38')
-    spliceai_snv_db_index_file = idx(spliceai_snv_db, 'hg38')
-    spliceai_indel_db_file = db(spliceai_indel_db, 'hg38')
-    spliceai_indel_db_index_file = idx(spliceai_indel_db, 'hg38')
-    alphamissense_db_file = db(alphamissense_db, 'hg38')
-    alphamissense_db_index_file = idx(alphamissense_db, 'hg38')
+    def db_file = { path, build -> annotate == 'yes' && ref_name == build ? file(path) : [] }
+    def db_index = { path, build -> db_file("${path}.tbi", build) }
+    vep_db_file = db_file(vep_db, 'hg38')
+    revel_db_file = db_file(revel_db, 'hg38')
+    revel_db_index_file = db_index(revel_db, 'hg38')
+    gnomad_db_file = db_file(gnomad_db, 'hg38')
+    gnomad_db_index_file = db_index(gnomad_db, 'hg38')
+    clinvar_db_file = db_file(clinvar_db, 'hg38')
+    clinvar_db_index_file = db_index(clinvar_db, 'hg38')
+    cadd_snv_db_file = db_file(cadd_snv_db, 'hg38')
+    cadd_snv_db_index_file = db_index(cadd_snv_db, 'hg38')
+    cadd_indel_db_file = db_file(cadd_indel_db, 'hg38')
+    cadd_indel_db_index_file = db_index(cadd_indel_db, 'hg38')
+    cadd_sv_db_file = db_file(cadd_sv_db, 'hg38')
+    cadd_sv_db_index_file = db_index(cadd_sv_db, 'hg38')
+    spliceai_snv_db_file = db_file(spliceai_snv_db, 'hg38')
+    spliceai_snv_db_index_file = db_index(spliceai_snv_db, 'hg38')
+    spliceai_indel_db_file = db_file(spliceai_indel_db, 'hg38')
+    spliceai_indel_db_index_file = db_index(spliceai_indel_db, 'hg38')
+    alphamissense_db_file = db_file(alphamissense_db, 'hg38')
+    alphamissense_db_index_file = db_index(alphamissense_db, 'hg38')
     dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
-    vep_gff_file = db(vep_gff, 'chm13')
-    vep_gff_index_file = idx(vep_gff, 'chm13')
-    gnomad_chm13_db_file = db(gnomad_chm13_db, 'chm13')
-    gnomad_chm13_db_index_file = idx(gnomad_chm13_db, 'chm13')
-    clinvar_chm13_db_file = db(clinvar_chm13_db, 'chm13')
-    clinvar_chm13_db_index_file = idx(clinvar_chm13_db, 'chm13')
-    spliceai_snv_chm13_db_file = db(spliceai_snv_chm13_db, 'chm13')
-    spliceai_snv_chm13_db_index_file = idx(spliceai_snv_chm13_db, 'chm13')
-    spliceai_indel_chm13_db_file = db(spliceai_indel_chm13_db, 'chm13')
-    spliceai_indel_chm13_db_index_file = idx(spliceai_indel_chm13_db, 'chm13')
-    alphamissense_chm13_db_file = db(alphamissense_chm13_db, 'chm13')
-    alphamissense_chm13_db_index_file = idx(alphamissense_chm13_db, 'chm13')
+    vep_gff_file = db_file(vep_gff, 'chm13')
+    vep_gff_index_file = db_index(vep_gff, 'chm13')
+    gnomad_chm13_db_file = db_file(gnomad_chm13_db, 'chm13')
+    gnomad_chm13_db_index_file = db_index(gnomad_chm13_db, 'chm13')
+    clinvar_chm13_db_file = db_file(clinvar_chm13_db, 'chm13')
+    clinvar_chm13_db_index_file = db_index(clinvar_chm13_db, 'chm13')
+    spliceai_snv_chm13_db_file = db_file(spliceai_snv_chm13_db, 'chm13')
+    spliceai_snv_chm13_db_index_file = db_index(spliceai_snv_chm13_db, 'chm13')
+    spliceai_indel_chm13_db_file = db_file(spliceai_indel_chm13_db, 'chm13')
+    spliceai_indel_chm13_db_index_file = db_index(spliceai_indel_chm13_db, 'chm13')
+    alphamissense_chm13_db_file = db_file(alphamissense_chm13_db, 'chm13')
+    alphamissense_chm13_db_index_file = db_index(alphamissense_chm13_db, 'chm13')
 
     // check the in data csv header names every required column
     def required_columns = ['sample_id', 'family_id', 'family_position', 'sex', 'file', 'data_type', 'regions_of_interest', 'clair3_model', 'clairs_to_platform']
@@ -2002,13 +2002,13 @@ workflow {
 
     // helpers
     // sort family members proband first (then father, then mother) and key tuple by proband sample_id
+    // indices of a family's rows in proband, father, mother order (absent members skipped)
+    def order_by_position = { family_positions ->
+        ['proband', 'father', 'mother'].findAll { family_positions.contains(it) }.collect { family_positions.indexOf(it) }
+    }
     def group_to_proband = { sample_ids, family_id, family_positions, bams, bam_indices, gvcfs ->
         def proband_sample_id = sample_ids[family_positions.indexOf('proband')]
-        def position_order = ['proband', 'father', 'mother']
-        def indices = family_positions.collect { position_order.indexOf(it) }
-            .withIndex()
-            .sort { a, b -> a[0] <=> b[0] }
-            .collect { it[1] }
+        def indices = order_by_position(family_positions)
         tuple(proband_sample_id, family_id,
             indices.collect { sample_ids[it] },
             indices.collect { family_positions[it] },
@@ -2021,11 +2021,7 @@ workflow {
         ch
             .groupTuple(by: 1)
             .map { sample_ids, family_id, family_positions, sv_vcfs, sv_vcf_indices ->
-                def position_order = ['proband', 'father', 'mother']
-                def indices = family_positions.collect { position_order.indexOf(it) }
-                    .withIndex()
-                    .sort { a, b -> a[0] <=> b[0] }
-                    .collect { it[1] }
+                def indices = order_by_position(family_positions)
                 def proband_sample_id = sample_ids[family_positions.indexOf('proband')]
                 tuple(proband_sample_id, family_id,
                     indices.collect { sample_ids[it] },
@@ -2036,8 +2032,7 @@ workflow {
     }
     // sort bams proband first (then father, then mother) for joint longtr
     def sort_longtr_family = { family_id, sample_ids, bams, bam_indices, data_types, family_positions ->
-        def position_order = ['proband', 'father', 'mother']
-        def ordered_indices = position_order.findAll { family_positions.contains(it) }.collect { family_positions.indexOf(it) }
+        def ordered_indices = order_by_position(family_positions)
         tuple(family_id, family_id,
             ordered_indices.collect { sample_ids[it] },
             ordered_indices.collect { bams[it] },
