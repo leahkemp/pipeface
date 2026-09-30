@@ -1706,38 +1706,41 @@ workflow {
     parbed_file = parbed != 'NONE' ? file(parbed) : []
     clair3_config_file = clair3_config != 'NONE' ? file(clair3_config) : []
     sites_file = sites != 'NONE' ? file(sites) : []
-    vep_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(vep_db) : []
-    revel_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(revel_db) : []
-    revel_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${revel_db}.tbi") : []
-    gnomad_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(gnomad_db) : []
-    gnomad_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${gnomad_db}.tbi") : []
-    clinvar_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(clinvar_db) : []
-    clinvar_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${clinvar_db}.tbi") : []
-    cadd_snv_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(cadd_snv_db) : []
-    cadd_snv_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${cadd_snv_db}.tbi") : []
-    cadd_indel_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(cadd_indel_db) : []
-    cadd_indel_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${cadd_indel_db}.tbi") : []
-    cadd_sv_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(cadd_sv_db) : []
-    cadd_sv_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${cadd_sv_db}.tbi") : []
-    spliceai_snv_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(spliceai_snv_db) : []
-    spliceai_snv_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${spliceai_snv_db}.tbi") : []
-    spliceai_indel_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(spliceai_indel_db) : []
-    spliceai_indel_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${spliceai_indel_db}.tbi") : []
-    alphamissense_db_file = annotate == 'yes' && ref_name == 'hg38' ? file(alphamissense_db) : []
-    alphamissense_db_index_file = annotate == 'yes' && ref_name == 'hg38' ? file("${alphamissense_db}.tbi") : []
+    // annotation databases are staged only for the reference build in use, [] otherwise
+    def db = { path, build -> annotate == 'yes' && ref_name == build ? file(path) : [] }
+    def idx = { path, build -> db("${path}.tbi", build) }
+    vep_db_file = db(vep_db, 'hg38')
+    revel_db_file = db(revel_db, 'hg38')
+    revel_db_index_file = idx(revel_db, 'hg38')
+    gnomad_db_file = db(gnomad_db, 'hg38')
+    gnomad_db_index_file = idx(gnomad_db, 'hg38')
+    clinvar_db_file = db(clinvar_db, 'hg38')
+    clinvar_db_index_file = idx(clinvar_db, 'hg38')
+    cadd_snv_db_file = db(cadd_snv_db, 'hg38')
+    cadd_snv_db_index_file = idx(cadd_snv_db, 'hg38')
+    cadd_indel_db_file = db(cadd_indel_db, 'hg38')
+    cadd_indel_db_index_file = idx(cadd_indel_db, 'hg38')
+    cadd_sv_db_file = db(cadd_sv_db, 'hg38')
+    cadd_sv_db_index_file = idx(cadd_sv_db, 'hg38')
+    spliceai_snv_db_file = db(spliceai_snv_db, 'hg38')
+    spliceai_snv_db_index_file = idx(spliceai_snv_db, 'hg38')
+    spliceai_indel_db_file = db(spliceai_indel_db, 'hg38')
+    spliceai_indel_db_index_file = idx(spliceai_indel_db, 'hg38')
+    alphamissense_db_file = db(alphamissense_db, 'hg38')
+    alphamissense_db_index_file = idx(alphamissense_db, 'hg38')
     dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
-    vep_gff_file = annotate == 'yes' && ref_name == 'chm13' ? file(vep_gff) : []
-    vep_gff_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${vep_gff}.tbi") : []
-    gnomad_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(gnomad_chm13_db) : []
-    gnomad_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${gnomad_chm13_db}.tbi") : []
-    clinvar_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(clinvar_chm13_db) : []
-    clinvar_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${clinvar_chm13_db}.tbi") : []
-    spliceai_snv_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(spliceai_snv_chm13_db) : []
-    spliceai_snv_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${spliceai_snv_chm13_db}.tbi") : []
-    spliceai_indel_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(spliceai_indel_chm13_db) : []
-    spliceai_indel_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${spliceai_indel_chm13_db}.tbi") : []
-    alphamissense_chm13_db_file = annotate == 'yes' && ref_name == 'chm13' ? file(alphamissense_chm13_db) : []
-    alphamissense_chm13_db_index_file = annotate == 'yes' && ref_name == 'chm13' ? file("${alphamissense_chm13_db}.tbi") : []
+    vep_gff_file = db(vep_gff, 'chm13')
+    vep_gff_index_file = idx(vep_gff, 'chm13')
+    gnomad_chm13_db_file = db(gnomad_chm13_db, 'chm13')
+    gnomad_chm13_db_index_file = idx(gnomad_chm13_db, 'chm13')
+    clinvar_chm13_db_file = db(clinvar_chm13_db, 'chm13')
+    clinvar_chm13_db_index_file = idx(clinvar_chm13_db, 'chm13')
+    spliceai_snv_chm13_db_file = db(spliceai_snv_chm13_db, 'chm13')
+    spliceai_snv_chm13_db_index_file = idx(spliceai_snv_chm13_db, 'chm13')
+    spliceai_indel_chm13_db_file = db(spliceai_indel_chm13_db, 'chm13')
+    spliceai_indel_chm13_db_index_file = idx(spliceai_indel_chm13_db, 'chm13')
+    alphamissense_chm13_db_file = db(alphamissense_chm13_db, 'chm13')
+    alphamissense_chm13_db_index_file = idx(alphamissense_chm13_db, 'chm13')
 
     // check the in data csv header names every required column
     def required_columns = ['sample_id', 'family_id', 'family_position', 'sex', 'file', 'data_type', 'regions_of_interest', 'clair3_model', 'clairs_to_platform']
