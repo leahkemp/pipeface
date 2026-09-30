@@ -256,15 +256,10 @@ process clair3 {
 
 process clair3_haploid_aware {
 
-    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$ref_name.$snp_indel_caller.$filename" }, pattern: 'snp_indel.g.vcf.gz*'
-
     input:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path(diploid_bed), path(haploid_bed), val(data_type), path(clair3_model)
         path ref
         path ref_index
-        val outdir
-        val outdir2
-        val ref_name
 
     output:
         tuple val(sample_id), val(family_id), path(bam), path(bam_index), path("haploid_snp_indel.vcf.gz"), path("haploid_snp_indel.vcf.gz.tbi"), path("diploid_snp_indel.vcf.gz"), path("diploid_snp_indel.vcf.gz.tbi"), path("haploid_snp_indel.g.vcf.gz"), path("haploid_snp_indel.g.vcf.gz.tbi"), path("diploid_snp_indel.g.vcf.gz"), path("diploid_snp_indel.g.vcf.gz.tbi")
@@ -1312,7 +1307,6 @@ process cutesv {
         tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
         path ref
         path ref_index
-        path tandem_repeat
         val outdir
         val outdir2
         val ref_name
@@ -1393,8 +1387,6 @@ process vep_sv {
         path ref
         path ref_index
         path vep_db
-        path gnomad_db
-        path gnomad_db_index
         path cadd_sv_db
         path cadd_sv_db_index
         path vep_gff
@@ -2161,7 +2153,7 @@ workflow {
             if (haploidaware == 'yes') {
                 haploid_bam = bam_sex.filter { it[4] == 'XY' }.map { it[0..3] }
                 bam_diploid_haploid_bed = clair3_pre_processing(haploid_bam.join(regions_of_interest_ch, by: [0,1]), ref_file, ref_index_file, parbed_file)
-                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name)
+                haploid_diploid_vcf_gvcf = clair3_haploid_aware(bam_diploid_haploid_bed.join(data_type_ch, by: [0,1]).join(clair3_model_ch, by: [0,1]), ref_file, ref_index_file)
                 (haploid_snp_indel_vcf_bam, haploid_gvcf) = clair3_post_processing(haploid_diploid_vcf_gvcf, outdir, outdir2, ref_name, snp_indel_caller)
                 snp_indel_vcf_bam = snp_indel_vcf_bam.mix(haploid_snp_indel_vcf_bam)
                 gvcf = gvcf.mix(haploid_gvcf)
@@ -2250,7 +2242,7 @@ workflow {
             (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
         }
         if (sv_caller in ['cutesv', 'both']) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
+            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, sv_mapq)
         }
         if (tr_calling == 'yes') {
             split_beds = longtr_pre_processing(tr_call_regions_file)
@@ -2326,7 +2318,7 @@ workflow {
                 sv_vcf_for_vep = sv_vcf_for_vep.mix(joint_sv_vcf_cutesv)
             }
         }
-        vep_annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, gnomad_db_file, gnomad_db_index_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
+        vep_annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
         // sv repeat annotation
         (annotated_sv_vcf, sv_diagrams) = sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, dfam_db_file, outdir, outdir2, ref_name, mode)
     }

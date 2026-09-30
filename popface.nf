@@ -595,10 +595,7 @@ process vep_snp_indel {
         path spliceai_indel_chm13_db_index
         path alphamissense_chm13_db
         path alphamissense_chm13_db_index
-        val outdir
-        val outdir2
         val ref_name
-        val snp_indel_caller
 
     output:
         tuple val(pop_id), path("*.snp_indel.phased.annotated.vcf.gz"), path("*.snp_indel.phased.annotated.vcf.gz.tbi")
@@ -673,8 +670,6 @@ process vep_sv {
         path ref
         path ref_index
         path vep_db
-        path gnomad_db
-        path gnomad_db_index
         path cadd_sv_db
         path cadd_sv_db_index
         path vep_gff
@@ -1175,10 +1170,10 @@ workflow {
         if (snp_indel_caller != 'NONE') {
             chromosomes = list_chromosomes(joint_snp_indel_phased_vcf)
                 .flatMap { pop_id, chrom_file -> chrom_file.readLines().collect { chrom -> tuple(pop_id, chrom) } }
-            annotated_snp_indel_vcfs = vep_snp_indel(joint_snp_indel_phased_vcf.combine(chromosomes, by: 0), ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller)
+            annotated_snp_indel_vcfs = vep_snp_indel(joint_snp_indel_phased_vcf.combine(chromosomes, by: 0), ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, ref_name)
             concat_snp_indel_vcf(annotated_snp_indel_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name, snp_indel_caller)
         }
-        vep_annotated_sv_vcf = vep_sv(joint_sv_vcf, ref_file, ref_index_file, vep_db_file, gnomad_db_file, gnomad_db_index_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
+        vep_annotated_sv_vcf = vep_sv(joint_sv_vcf, ref_file, ref_index_file, vep_db_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
         // sv repeat annotation
         sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, dfam_db_file, outdir, outdir2, ref_name)
     }
