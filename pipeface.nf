@@ -48,8 +48,8 @@ process scrape_settings {
 
     script:
         // conditionally define reported sv caller and in data format
-        reported_sv_caller = [both: 'cutesv,sniffles', sniffles: 'sniffles', cutesv: 'cutesv', NONE: 'NONE'][sv_caller]
-        reported_in_data_format = [ubam_fastq: 'unaligned BAM or FASTQ', aligned_bam: 'aligned BAM', snp_indel_vcf: 'SNP/indel VCF', sv_vcf: 'SV VCF'][in_data_format]
+        def reported_sv_caller = [both: 'cutesv,sniffles', sniffles: 'sniffles', cutesv: 'cutesv', NONE: 'NONE'][sv_caller]
+        def reported_in_data_format = [ubam_fastq: 'unaligned BAM or FASTQ', aligned_bam: 'aligned BAM', snp_indel_vcf: 'SNP/indel VCF', sv_vcf: 'SV VCF'][in_data_format]
         if (in_data_format in ['ubam_fastq', 'aligned_bam'])
         """
         {
@@ -384,14 +384,8 @@ process deepvariant_dry_run {
         // conditionally define model type
         def model = data_type == 'ont' ? 'ONT_R104' : 'PACBIO'
         // conditionally define haploid contigs and par regions
-        if (haploidaware == 'yes') {
-            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
-        }
-        else {
-            haploidparameter = ""
-            parbedparameter = ""
-        }
+        def haploidparameter = haploidaware == 'yes' && sex != 'XX' ? "--haploid_contigs $chr_x_seq,$chr_y_seq" : ''
+        def parbedparameter = haploidaware == 'yes' && sex != 'XX' ? "--par_regions_bed ${parbed}" : ''
         """
         run_deepvariant --reads=$bam --ref=$ref --sample_name=$sample_id --output_vcf=snp_indel.vcf.gz --output_gvcf=snp_indel.g.vcf.gz --model_type=$model --nophase_vcf --dry_run=true \
         ${haploidparameter} ${parbedparameter} > commands.txt
@@ -462,7 +456,7 @@ process deepvariant_post_processing {
 
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         // when deeptrio is selected, files are still published under the 'deepvariant' caller name
-        def caller = params.snp_indel_caller != 'deeptrio' ? snp_indel_caller : 'deepvariant'
+        def caller = snp_indel_caller == 'deeptrio' ? 'deepvariant' : snp_indel_caller
         return "$sample_id.$ref_name.$caller.$filename"
     }, pattern: 'snp_indel.g.vcf.gz*'
 
@@ -488,14 +482,8 @@ process deepvariant_post_processing {
         def matcher = gvcf[0].baseName =~ /^(.+)-\d{5}-of-(\d{5})$/
         def num_shards = matcher[0][2] as int
         // conditionally define haploid contigs and par regions
-        if (haploidaware == 'yes') {
-            haploidparameter = (sex == "XX") ? "" : "--haploid_contigs $chr_x_seq,$chr_y_seq"
-            parbedparameter = (sex == "XX") ? "" : "--par_regions_bed ${parbed}"
-        }
-        else {
-            haploidparameter = ""
-            parbedparameter = ""
-        }
+        def haploidparameter = haploidaware == 'yes' && sex != 'XX' ? "--haploid_contigs $chr_x_seq,$chr_y_seq" : ''
+        def parbedparameter = haploidaware == 'yes' && sex != 'XX' ? "--par_regions_bed ${parbed}" : ''
         """
         postprocess_variants --ref "${ref}" --infile "call_variants_output.tfrecord.gz" --outfile "snp_indel.vcf.gz" --nonvariant_site_tfrecord_path "gvcf.tfrecord@${num_shards}.gz" --gvcf_outfile "snp_indel.g.vcf.gz" --cpus "${task.cpus}" --small_model_cvo_records "make_examples_call_variant_outputs.tfrecord@${num_shards}.gz" --sample_name "${sample_id}" ${haploidparameter} ${parbedparameter}
         ln -s snp_indel.g.vcf.gz ${family_position}_snp_indel.g.vcf.gz
@@ -565,7 +553,7 @@ process whatshap_phase {
 
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         // when deeptrio is selected, files are still published under the 'deepvariant' caller name
-        def caller = params.snp_indel_caller != 'deeptrio' ? snp_indel_caller : 'deepvariant'
+        def caller = snp_indel_caller == 'deeptrio' ? 'deepvariant' : snp_indel_caller
         return "$sample_id.$ref_name.$caller.$filename"
     }, pattern: 'snp_indel.phased.*'
 
@@ -2128,7 +2116,7 @@ workflow {
     // workflow
     // pre process
     scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, ref_name, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
-    // merge runs and alignment
+    // alignment
     if (in_data_format == 'ubam_fastq') {
         bam = minimap2(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
     }
@@ -2295,7 +2283,7 @@ workflow {
                 .map(reorder_joint_sv_vcf)
         }
     }
-    if (in_data_format == 'sv_vcf' && !(mode in ['duo', 'trio'])) {
+    if (in_data_format == 'sv_vcf') {
         sv_vcf_sniffles = id_ch.join(files_ch, by: [0,1])
         sv_vcf_cutesv = id_ch.join(files_ch, by: [0,1])
     }
