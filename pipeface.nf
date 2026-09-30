@@ -809,7 +809,7 @@ process somalier_relate {
         tuple val(proband_sample_id), path("somalier.samples.tsv"), path("somalier.pairs.tsv"), path("somalier.html")
 
     script:
-        // pedigree from the family positions and the sex column: parents linked to the proband, phenotype unknown
+        // create pedigree
         def father = family_positions.contains('father') ? sample_ids[family_positions.indexOf('father')] : '0'
         def mother = family_positions.contains('mother') ? sample_ids[family_positions.indexOf('mother')] : '0'
         def ped_lines = [sample_ids, family_positions, sexes].transpose().collect { sid, position, sex_val ->
@@ -952,17 +952,11 @@ process whatshap_phase_family {
         tuple val(family_id), path("snp_indel.phased.vcf.gz"), path("snp_indel.phased.vcf.gz.tbi"), path("snp_indel.phased.read_list.txt"), path("snp_indel.phased.stats.gtf")
 
     script:
+        // create pedigree
+        def father = family_positions.contains('father') ? sample_ids[family_positions.indexOf('father')] : '0'
+        def mother = family_positions.contains('mother') ? sample_ids[family_positions.indexOf('mother')] : '0'
         """
-        # build pedigree, find father and mother by family_position (use '0' if absent for duo)
-        FATHER_ID="0"
-        MOTHER_ID="0"
-        SAMPLE_IDS=(${sample_ids.join(' ')})
-        FAMILY_POSITIONS=(${family_positions.join(' ')})
-        for i in \${!SAMPLE_IDS[@]}; do
-            [[ \${FAMILY_POSITIONS[\$i]} == "father" ]] && FATHER_ID=\${SAMPLE_IDS[\$i]}
-            [[ \${FAMILY_POSITIONS[\$i]} == "mother" ]] && MOTHER_ID=\${SAMPLE_IDS[\$i]}
-        done
-        printf "$family_id\t$proband_sample_id\t\${FATHER_ID}\t\${MOTHER_ID}\t0\t1\n" > pedigree.ped
+        printf '%s\\t%s\\t%s\\t%s\\t0\\t1\\n' $family_id $proband_sample_id $father $mother > pedigree.ped
         whatshap phase --reference $ref --output snp_indel.phased.vcf.gz --output-read-list snp_indel.phased.read_list.txt --ped pedigree.ped $snp_indel_split_vcf ${bams.join(' ')}
         tabix snp_indel.phased.vcf.gz
         whatshap stats snp_indel.phased.vcf.gz --gtf snp_indel.phased.stats.gtf
