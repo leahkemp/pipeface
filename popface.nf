@@ -405,8 +405,7 @@ process concat_sv_vcf {
         val ref_name
 
     output:
-        tuple val(pop_id), val(sv_caller), path("sv.*vcf.gz")
-        tuple val(pop_id), path("sv.*vcf.gz"), path("sv.*vcf.gz.tbi")
+        tuple val(pop_id), val(sv_caller), path("sv.*vcf.gz"), path("sv.*vcf.gz.tbi")
 
     script:
         // conditionally define output sv caller specific filename
@@ -1154,7 +1153,8 @@ workflow {
         .map { pop_id, partition, sv_caller, vcfs, sample_ids -> tuple(pop_id, partition, sv_caller, vcfs, sample_ids[0]) }
         .combine(related_ch, by: 0)
     merged_sv_vcfs = jasmine(jasmine_input, ref_file, ref_index_file)
-    (joint_sv_vcf, joint_sv_vcf_indexed) = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
+    joint_sv_vcf = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
+        .map { pop_id, sv_caller, vcf, tbi -> tuple(pop_id, sv_caller, vcf) }
     // somalier
     somalier(somalier_files_ch, outdir, outdir2, ref_name)
     // tr calling

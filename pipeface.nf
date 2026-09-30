@@ -1260,9 +1260,7 @@ process sniffles {
         val sv_mapq
 
     output:
-        tuple val(sample_id), val(family_id), path("sv.phased.vcf.gz")
-        tuple val(sample_id), val(family_id), path("sv.phased.vcf.gz"), path("sv.phased.vcf.gz.tbi")
-        tuple val(sample_id), val(family_id), val(family_position), path("sv.phased.vcf.gz")
+        tuple val(sample_id), val(family_id), val(family_position), path("sv.phased.vcf.gz"), path("sv.phased.vcf.gz.tbi")
 
     script:
         // optionally pass tandem repeat bed file and set mapq filter threshold
@@ -1295,9 +1293,7 @@ process cutesv {
         val sv_mapq
 
     output:
-        tuple val(sample_id), val(family_id), path("sv.vcf.gz")
-        tuple val(sample_id), val(family_id), path("sv.vcf.gz"), path("sv.vcf.gz.tbi")
-        tuple val(sample_id), val(family_id), val(family_position), path("sv.vcf.gz")
+        tuple val(sample_id), val(family_id), val(family_position), path("sv.vcf.gz"), path("sv.vcf.gz.tbi")
 
     script:
         // conditionally define platform specific settings
@@ -2078,7 +2074,7 @@ workflow {
     def group_family_sv = { ch, sv_caller_val ->
         ch
             .groupTuple(by: 1)
-            .map { sample_ids, family_id, family_positions, sv_vcfs ->
+            .map { sample_ids, family_id, family_positions, sv_vcfs, sv_vcf_indices ->
                 def position_order = ['proband', 'father', 'mother']
                 def indices = family_positions.collect { position_order.indexOf(it) }
                     .withIndex()
@@ -2221,10 +2217,12 @@ workflow {
         }
         // sv calling
         if (sv_caller in ['sniffles', 'both']) {
-            (sv_vcf_sniffles, sv_vcf_sniffles_indexed, sv_vcf_fam_sniffles) = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
+            sv_vcf_fam_sniffles = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
+            sv_vcf_sniffles = sv_vcf_fam_sniffles.map { s, f, p, v, t -> tuple(s, f, v) }
         }
         if (sv_caller in ['cutesv', 'both']) {
-            (sv_vcf_cutesv, sv_vcf_cutesv_indexed, sv_vcf_fam_cutesv) = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, sv_mapq)
+            sv_vcf_fam_cutesv = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, sv_mapq)
+            sv_vcf_cutesv = sv_vcf_fam_cutesv.map { s, f, p, v, t -> tuple(s, f, v) }
         }
         if (tr_calling == 'yes') {
             split_beds = longtr_pre_processing(tr_call_regions_file)
