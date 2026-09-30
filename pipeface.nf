@@ -1131,43 +1131,13 @@ process longtr_pre_processing {
 process longtr {
 
     input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type)
+        tuple val(id), val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type)
         path split_beds
         path ref
         path ref_index
 
     output:
-        tuple val(sample_id), val(family_id), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
-
-    script:
-        // define alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
-        def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
-        """
-        # run longtr and index vcfs in parallel for each split bed
-        parallel -j ${task.cpus} '
-            LongTR --bams $haplotagged_bam --bam-samps $sample_id --bam-libs $sample_id --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.{/.}.log
-            tabix tr.{/.}.vcf.gz
-        ' ::: split.*.bed
-        """
-
-    stub:
-        """
-        touch tr.aa.vcf.gz
-        touch tr.aa.vcf.gz.tbi
-        """
-
-}
-
-process longtr_family {
-
-    input:
-        tuple val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type)
-        path split_beds
-        path ref
-        path ref_index
-
-    output:
-        tuple val(family_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
+        tuple val(id), val(family_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
 
     script:
         def bams_csv = bams.join(',')
@@ -1192,43 +1162,17 @@ process longtr_family {
 
 process concat_tr_vcf {
 
-    publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${sample_id}.${ref_name}.longtr.$filename" }, pattern: 'tr.vcf.gz*'
+    // a sample run (one sample id) publishes under the sample, a family run under the family
+    publishDir "$outdir/${family_id != 'NONE' ? family_id : id}/$outdir2${sample_ids.size() > 1 ? '' : '/' + id}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${id}.${ref_name}.longtr.$filename" }, pattern: 'tr.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(tr_vcfs), path(tr_vcf_indices)
+        tuple val(id), val(family_id), val(sample_ids), path(tr_vcfs), path(tr_vcf_indices)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path("tr.vcf.gz"), path("tr.vcf.gz.tbi")
-
-    script:
-        """
-        bcftools concat -a tr.*.vcf.gz --threads ${task.cpus} | bcftools sort -T ./ -Oz -o tr.vcf.gz
-        tabix tr.vcf.gz
-        """
-
-    stub:
-        """
-        touch tr.vcf.gz
-        touch tr.vcf.gz.tbi
-        """
-
-}
-
-process concat_tr_vcf_family {
-
-    publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${family_id}.${ref_name}.longtr.$filename" }, pattern: 'tr.vcf.gz*'
-
-    input:
-        tuple val(family_id), val(sample_ids), path(tr_vcfs), path(tr_vcf_indices)
-        val outdir
-        val outdir2
-        val ref_name
-
-    output:
-        tuple val(family_id), path("tr.vcf.gz"), path("tr.vcf.gz.tbi")
+        tuple val(id), path("tr.vcf.gz"), path("tr.vcf.gz.tbi")
 
     script:
         """
@@ -2091,7 +2035,7 @@ workflow {
     def sort_longtr_family = { family_id, sample_ids, bams, bam_indices, data_types, family_positions ->
         def position_order = ['proband', 'father', 'mother']
         def ordered_indices = position_order.findAll { family_positions.contains(it) }.collect { family_positions.indexOf(it) }
-        tuple(family_id,
+        tuple(family_id, family_id,
             ordered_indices.collect { sample_ids[it] },
             ordered_indices.collect { bams[it] },
             ordered_indices.collect { bam_indices[it] },
@@ -2225,10 +2169,10 @@ workflow {
         }
         if (tr_calling == 'yes') {
             split_beds = longtr_pre_processing(tr_call_regions_file)
-            // tr calling
-            tr_vcfs = longtr(haplotagged_bam.join(data_type_ch, by: [0,1]), split_beds, ref_file, ref_index_file)
-            concat_tr_vcf(tr_vcfs, outdir, outdir2, ref_name)
-            // joint tr calling
+            // tr calling per sample (one-element lists), plus joint calling per family in duo/trio mode
+            longtr_input = haplotagged_bam
+                .join(data_type_ch, by: [0,1])
+                .map { sample_id, family_id, bam, bam_index, data_type -> tuple(sample_id, family_id, [sample_id], [bam], [bam_index], data_type) }
             if (mode in ['duo', 'trio']) {
                 family_input = haplotagged_bam
                     .join(data_type_ch, by: [0,1])
@@ -2238,9 +2182,10 @@ workflow {
                     }
                     .groupTuple(by: 0)
                     .map(sort_longtr_family)
-                tr_vcfs_family = longtr_family(family_input, split_beds, ref_file, ref_index_file)
-                concat_tr_vcf_family(tr_vcfs_family, outdir, outdir2, ref_name)
+                longtr_input = longtr_input.mix(family_input)
             }
+            tr_vcfs = longtr(longtr_input, split_beds, ref_file, ref_index_file)
+            concat_tr_vcf(tr_vcfs, outdir, outdir2, ref_name)
         }
     }
     if (in_data_format == 'snp_indel_vcf') {
