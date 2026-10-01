@@ -777,6 +777,9 @@ workflow {
             exit 1, "No value provided for '${param}'."
         }
     }
+    if (!(ref_name ==~ /[A-Za-z0-9._-]+/)) {
+        exit 1, "ref_name is used in output file names and should contain only letters, digits, '.', '_' or '-', ref_name = '${ref_name}' provided."
+    }
     [snp_indel_caller: snp_indel_caller, clair3_config: clair3_config].each { param, val ->
         if (!val) {
             exit 1, "No value provided for '${param}'. Set to 'NONE' if not required."
