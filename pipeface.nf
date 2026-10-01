@@ -1293,6 +1293,8 @@ process jasmine {
         for i in \${!FAMILY_POSITIONS[@]}; do
             [[ \${FAMILY_POSITIONS[\$i]} != "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; }
         done
+        # cap the java heap at the allocation so the jvm collects rather than growing to the node's memory
+        export JAVA_TOOL_OPTIONS="-Xmx${task.memory.toGiga() - 2}g"
         jasmine threads=${task.cpus} out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
         sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' ${out_vcf}.tmp.vcf | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -

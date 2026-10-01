@@ -378,6 +378,8 @@ process jasmine {
         for SAMPLE in ${sample_ids.join(' ')}; do
             realpath \${SAMPLE}.${sv_caller}.${partition}.vcf >> vcfs.txt
         done
+        # cap the java heap at the allocation so the jvm collects rather than growing to the node's memory
+        export JAVA_TOOL_OPTIONS="-Xmx${task.memory.toGiga() - 2}g"
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
         jasmine threads=1 out_dir=./ genome_file=$ref file_list=vcfs.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type $require_first_sample_optional --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
