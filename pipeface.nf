@@ -1359,7 +1359,7 @@ process sv_scanner {
         } else {
             return "$family_id.$ref_name.${sv_caller}.jasmine.$filename"
         }
-    }, pattern: '*.annotated.*'
+    }, pattern: '*.{annotated.vcf.gz*,svscanner.diagram.txt}'
 
     input:
         tuple val(sample_id), val(family_id), path(vep_annotated_sv_vcf), val(sv_caller)
@@ -1373,24 +1373,26 @@ process sv_scanner {
 
     output:
         tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi"), val(sv_caller)
-        tuple val(sample_id), val(family_id), path("*.annotated.diagram.txt")
+        tuple val(sample_id), val(family_id), path("*.svscanner.diagram.txt")
 
     script:
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
         svscanner --out out --vcf $vep_annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
         ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
         ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
-        ln -s out/diagram.txt ${out_vcf}.diagram.txt
+        ln -s out/diagram.txt ${out_diagram}
         """
 
     stub:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
         touch ${out_vcf}.vcf.gz
         touch ${out_vcf}.vcf.gz.tbi
-        touch ${out_vcf}.diagram.txt
+        touch ${out_diagram}
         """
 
 }
@@ -1404,10 +1406,11 @@ process puzzleapp_preprocess_snp_indel {
             return "$outdir/$family_id/$outdir2"
         }
     }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
+        def tool = filename == 'coverage_vaf.html' ? 'puzzleapp' : snp_indel_caller
         if (mode in ['singleton', 'NONE']) {
-            return "$sample_id.$ref_name.$snp_indel_caller.$filename"
+            return "$sample_id.$ref_name.$tool.$filename"
         } else {
-            return "$family_id.$ref_name.$snp_indel_caller.$filename"
+            return "$family_id.$ref_name.$tool.$filename"
         }
     }, pattern: '*.{tsv,html}'
 

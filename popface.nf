@@ -708,7 +708,7 @@ process vep_sv {
 
 process sv_scanner {
 
-    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.${sv_caller}.jasmine.$filename" }, pattern: '*.annotated.*'
+    publishDir "$outdir/$pop_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$pop_id.$ref_name.${sv_caller}.jasmine.$filename" }, pattern: '*.{annotated.vcf.gz*,svscanner.diagram.txt}'
 
     input:
         tuple val(pop_id), val(sv_caller), path(vep_annotated_sv_vcf)
@@ -721,24 +721,26 @@ process sv_scanner {
 
     output:
         tuple val(pop_id), val(sv_caller), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
-        tuple val(pop_id), val(sv_caller), path("*.annotated.diagram.txt")
+        tuple val(pop_id), val(sv_caller), path("*.svscanner.diagram.txt")
 
     script:
         // conditionally define output sv caller specific filename
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
         svscanner --out out --vcf $vep_annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
         ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
         ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
-        ln -s out/diagram.txt ${out_vcf}.diagram.txt
+        ln -s out/diagram.txt ${out_diagram}
         """
 
     stub:
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
+        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
         touch ${out_vcf}.vcf.gz
         touch ${out_vcf}.vcf.gz.tbi
-        touch ${out_vcf}.diagram.txt
+        touch ${out_diagram}
         """
 
 }
