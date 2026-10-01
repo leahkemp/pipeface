@@ -128,9 +128,6 @@ Prepare file for LongTR (keep the motif and the catalog's locus ID, drop homopol
 awk 'BEGIN { OFS = "\t" } { split($4, f, ";"); id = substr(f[1], 4); motif = substr(f[2], 8); if (length(motif) > 1 && $3 - $2 <= 1000) print $1, $2, $3, motif, id }' variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.bed > variation_clusters_and_isolated_TRs_v1.0.2.hg38.TRGT.longtr.bed
 ```
 
-> [!NOTE]
-> The fifth column is the locus ID, which LongTR writes to the ID column of the tandem repeat VCF file.
-
 #### hs1
 
 Get a copy of the Broad Institute tandem repeat catalog
@@ -162,9 +159,6 @@ Prepare file for LongTR (keep the motif, add a locus ID built from the coordinat
 ```bash
 awk 'BEGIN { OFS = "\t" } { if (length($4) > 1 && $3 - $2 <= 1000) print $1, $2, $3, $4, $1 "-" $2 "-" $3 }' chm13.v2.bed > chm13.v2.longtr.bed
 ```
-
-> [!NOTE]
-> The fifth column is the locus ID, which LongTR writes to the ID column of the tandem repeat VCF file.
 
 ### Somalier sites file (if running relatedness check)
 
@@ -201,16 +195,16 @@ wget -r -np -nH --cut-dirs=2 -R "index.html*" -P ./clair3_models/ https://www.bi
 
 ### Singleton mode
 
-Specify the sample ID, family ID, family position, sex, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
+Specify the sample ID, family ID, family position, sex, affected status, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
 
 ```csv
-sample_id,family_id,family_position,sex,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
-sample_01,NONE,NONE,XY,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_01,NONE,NONE,XY,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_02,NONE,NONE,XX,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_03,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_04,NONE,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
-sample_04,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
+sample_id,family_id,family_position,sex,affected_status,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_01,NONE,NONE,XY,affected,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_01,NONE,NONE,XY,affected,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_02,NONE,NONE,XX,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_03,NONE,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
+sample_04,NONE,NONE,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
+sample_04,NONE,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
 ```
 
 > [!NOTE]
@@ -221,28 +215,29 @@ Requirements:
 
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate)
 - entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
-- all rows for a given `sample_id` must have the same `family_id`, `family_position`, `sex`, `data_type`, `regions_of_interest`, `clair3_model` and `clairs_to_platform`; only `file` may differ between rows
+- all rows for a given `sample_id` must have the same `family_id`, `family_position`, `sex`, `affected_status`, `data_type`, `regions_of_interest`, `clair3_model` and `clairs_to_platform`; only `file` may differ between rows
 - for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - set `family_id` to 'NONE' if not required
 - `family_position` can be any value (set to 'NONE' if not required)
 - `sex` must be 'XX', 'XY' or 'NONE'; in haploid-aware mode it must be 'XX' or 'XY' for every sample, and all entries for a given `sample_id` must agree
+- `affected_status` must be 'affected', 'unaffected' or 'NONE' (set to 'NONE' if not required)
 - set `regions_of_interest` to 'NONE' if not required
 - set `clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
 - set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
 
 ### Duo/Trio mode
 
-Specify the sample ID, family ID, family position, sex, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
+Specify the sample ID, family ID, family position, sex, affected status, file path to the data, data type, file path to regions of interest BED file, file path to Clair3 model and ClairS-TO platform for each file to be processed. Eg:
 
 ```csv
-sample_id,family_id,family_position,sex,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
-sample_01,family01,proband,XY,/path/to/sample_01_1.bam,ont,NONE,NONE,NONE
-sample_01,family01,proband,XY,/path/to/sample_01_2.bam,ont,NONE,NONE,NONE
-sample_02,family01,father,XY,/path/to/sample_02.bam,ont,NONE,NONE,NONE
-sample_03,family01,mother,XX,/path/to/sample_03.bam,ont,NONE,NONE,NONE
-sample_04,family02,proband,NONE,/path/to/sample_04.bam,ont,NONE,NONE,NONE
-sample_05,family02,father,XY,/path/to/sample_05.bam,ont,NONE,NONE,NONE
-sample_06,family02,mother,XX,/path/to/sample_06.bam,ont,NONE,NONE,NONE
+sample_id,family_id,family_position,sex,affected_status,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
+sample_01,family01,proband,XY,affected,/path/to/sample_01_1.bam,ont,NONE,NONE,NONE
+sample_01,family01,proband,XY,affected,/path/to/sample_01_2.bam,ont,NONE,NONE,NONE
+sample_02,family01,father,XY,unaffected,/path/to/sample_02.bam,ont,NONE,NONE,NONE
+sample_03,family01,mother,XX,unaffected,/path/to/sample_03.bam,ont,NONE,NONE,NONE
+sample_04,family02,proband,NONE,affected,/path/to/sample_04.bam,ont,NONE,NONE,NONE
+sample_05,family02,father,XY,unaffected,/path/to/sample_05.bam,ont,NONE,NONE,NONE
+sample_06,family02,mother,XX,unaffected,/path/to/sample_06.bam,ont,NONE,NONE,NONE
 ```
 
 > [!NOTE]
@@ -254,10 +249,11 @@ Requirements:
 - `family_id` must not be 'NONE'
 - entries in the `data_type` column must be either 'ont' or 'pacbio' (as appropriate) and must be the same for a given `family_id`
 - entries in the `file` column must have a file extension of '.bam', '.fastq.gz' or '.fastq', and multiple entries for a given `sample_id` must share the same extension
-- all rows for a given `sample_id` must have the same `family_id`, `family_position`, `sex`, `data_type`, `regions_of_interest`, `clair3_model` and `clairs_to_platform`; only `file` may differ between rows
+- all rows for a given `sample_id` must have the same `family_id`, `family_position`, `sex`, `affected_status`, `data_type`, `regions_of_interest`, `clair3_model` and `clairs_to_platform`; only `file` may differ between rows
 - for entries in the `file` column, files containing methylation data should be provided in uBAM format (and not FASTQ format)
 - provide all entries for a given `sample_id` the same `family_id`
 - `sex` must be 'XX', 'XY' or 'NONE', and all entries for a given `sample_id` must agree
+- `affected_status` must be 'affected', 'unaffected' or 'NONE' (set to 'NONE' if not required)
 - in duo mode, exactly 2 unique `sample_id` values are required per `family_id`, with a `proband` and either a `father` or `mother` in the `family_position` column
 - in trio mode, exactly 3 unique `sample_id` values are required per `family_id`, with a `proband`, `father` and `mother` in the `family_position` column
 - set `regions_of_interest` to 'NONE' if not required

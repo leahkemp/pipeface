@@ -17,7 +17,7 @@ process scrape_settings {
     publishDir "$outdir/${family_id != 'NONE' ? family_id : sample_id}/$outdir2/$sample_id", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$sample_id.$filename" }, pattern: '*pipeface_settings.txt'
 
     input:
-        tuple val(sample_id), val(family_id), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(sex), val(family_position)
+        tuple val(sample_id), val(family_id), val(files), val(data_type), val(regions_of_interest), val(clair3_model), val(sex), val(family_position), val(affected_status)
         val pipeface_version
         val in_data
         val in_data_format
@@ -68,6 +68,7 @@ process scrape_settings {
             echo "Reference name: $ref_name"
             echo "Haploid-aware: $haploidaware"
             echo "Sex: $sex"
+            echo "Affected status: $affected_status"
             echo "PAR regions: $parbed"
             echo "Tandem repeat file: $tandem_repeat"
             echo "Mode: $mode"
@@ -93,6 +94,7 @@ process scrape_settings {
             echo "Sample ID: $sample_id"
             echo "Family ID: $family_id"
             echo "Family position: $family_position"
+            echo "Affected status: $affected_status"
             echo "In data format: $reported_in_data_format"
             echo "Input data file/files: $files"
             echo "In data csv path: $in_data"
@@ -800,7 +802,7 @@ process somalier_relate {
     publishDir "$outdir/$family_id/$outdir2", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "$family_id.$ref_name.$filename" }, pattern: 'somalier.*'
 
     input:
-        tuple val(proband_sample_id), val(family_id), path(somalier_files), val(sample_ids), val(family_positions), val(sexes)
+        tuple val(proband_sample_id), val(family_id), path(somalier_files), val(sample_ids), val(family_positions), val(sexes), val(affected_statuses)
         val outdir
         val outdir2
         val ref_name
@@ -812,10 +814,11 @@ process somalier_relate {
         // create pedigree
         def father = family_positions.contains('father') ? sample_ids[family_positions.indexOf('father')] : '0'
         def mother = family_positions.contains('mother') ? sample_ids[family_positions.indexOf('mother')] : '0'
-        def ped_lines = [sample_ids, family_positions, sexes].transpose().collect { sid, position, sex_val ->
+        def ped_lines = [sample_ids, family_positions, sexes, affected_statuses].transpose().collect { sid, position, sex_val, status ->
             def sex = sex_val == 'XY' ? '1' : sex_val == 'XX' ? '2' : '0'
+            def phenotype = status == 'affected' ? '2' : status == 'unaffected' ? '1' : '-9'
             def parents = position == 'proband' ? [father, mother] : ['0', '0']
-            "'" + ([family_id, sid] + parents + [sex, '-9']).join('\t') + "'"
+            "'" + ([family_id, sid] + parents + [sex, phenotype]).join('\t') + "'"
         }.join(' ')
         """
         printf '%s\\n' ${ped_lines} > somalier.ped
@@ -1762,7 +1765,7 @@ workflow {
     alphamissense_chm13_db_index_file = db_index(alphamissense_chm13_db, 'chm13')
 
     // check the in data csv header names every required column
-    def required_columns = ['sample_id', 'family_id', 'family_position', 'sex', 'file', 'data_type', 'regions_of_interest', 'clair3_model', 'clairs_to_platform']
+    def required_columns = ['sample_id', 'family_id', 'family_position', 'sex', 'affected_status', 'file', 'data_type', 'regions_of_interest', 'clair3_model', 'clairs_to_platform']
     def header_line = file(in_data).readLines().find { it.trim() }
     def header_columns = header_line ? header_line.split(',').collect { it.trim() } : []
     def missing_columns = required_columns - header_columns
@@ -1795,10 +1798,11 @@ workflow {
             index:                       tuple(row.sample_id, row.family_id, file("${row.file}.bai"))
             data_type:                   tuple(row.sample_id, row.family_id, row.data_type)
             sex:                         tuple(row.sample_id, row.family_id, row.sex)
+            affected_status:             tuple(row.sample_id, row.family_id, row.affected_status)
             regions_of_interest:         tuple(row.sample_id, row.family_id, row.regions_of_interest != 'NONE' ? file(row.regions_of_interest) : [])
             clair3_model:                tuple(row.sample_id, row.family_id, row.clair3_model != 'NONE' ? file(row.clair3_model) : [])
             clairs_to_platform:          tuple(row.sample_id, row.family_id, row.clairs_to_platform)
-            row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model, row.sex)
+            row_validation:              tuple(row.sample_id, row.family_id, row.family_position, row.file, row.data_type, row.regions_of_interest, row.clair3_model, row.sex, row.affected_status)
             family_validation:           tuple(row.sample_id, row.family_id, row.family_position)
             family_data_type_validation: tuple(row.sample_id, row.family_id, row.data_type)
         }
@@ -1837,6 +1841,10 @@ workflow {
         .groupTuple(by: [0,1,2])
         .set { sex_ch }
 
+    csv.affected_status
+        .groupTuple(by: [0,1,2])
+        .set { affected_status_ch }
+
     csv.regions_of_interest
         .groupTuple(by: [0,1,2])
         .set { regions_of_interest_ch }
@@ -1851,10 +1859,10 @@ workflow {
 
     // check user provided in data
     csv.row_validation
-        .map { sample_id, family_id, family_position, in_file, data_type, regions_of_interest, clair3_model, sex ->
+        .map { sample_id, family_id, family_position, in_file, data_type, regions_of_interest, clair3_model, sex, affected_status ->
             // check for empty entries
             def required_cols = [sample_id: sample_id, data_type: data_type]
-            def optional_cols = [family_id: family_id, regions_of_interest: regions_of_interest, clair3_model: clair3_model, sex: sex]
+            def optional_cols = [family_id: family_id, regions_of_interest: regions_of_interest, clair3_model: clair3_model, sex: sex, affected_status: affected_status]
             required_cols.each { col, val ->
                 if (val.isEmpty()) {
                     exit 1, "There is an empty entry in the '${col}' column of '${in_data}'."
@@ -1925,6 +1933,9 @@ workflow {
             if (!(sex in ['XX', 'XY', 'NONE'])) {
                 exit 1, "Entries in the 'sex' column of '${in_data}' should be 'XX', 'XY' or 'NONE', '${sex}' provided."
             }
+            if (!(affected_status in ['affected', 'unaffected', 'NONE'])) {
+                exit 1, "Entries in the 'affected_status' column of '${in_data}' should be 'affected', 'unaffected' or 'NONE', '${affected_status}' provided."
+            }
             if (haploidaware == 'yes' && sex == 'NONE') {
                 exit 1, "In haploid-aware mode, set the 'sex' column of '${in_data}' to 'XX' or 'XY' for every sample, 'NONE' provided for sample '${sample_id}'."
             }
@@ -1938,8 +1949,8 @@ workflow {
 
     csv.row_validation
         .groupTuple(by: 0)
-        .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models, sexes ->
-            [family_id: family_ids, family_position: family_positions, sex: sexes, data_type: data_types, regions_of_interest: regions_of_interests, clair3_model: clair3_models].each { col, vals ->
+        .map { sample_id, family_ids, family_positions, files, data_types, regions_of_interests, clair3_models, sexes, affected_statuses ->
+            [family_id: family_ids, family_position: family_positions, sex: sexes, affected_status: affected_statuses, data_type: data_types, regions_of_interest: regions_of_interests, clair3_model: clair3_models].each { col, vals ->
                 if (vals.unique().size() > 1) {
                     exit 1, "All entries for a given 'sample_id' in '${in_data}' should have the same '${col}', conflicting '${col}' values '${vals}' provided for sample '${sample_id}'."
                 }
@@ -2052,7 +2063,7 @@ workflow {
 
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, ref_name, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]).join(affected_status_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, ref_name, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
     // alignment
     if (in_data_format == 'ubam_fastq') {
         bam = minimap2(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
@@ -2140,10 +2151,11 @@ workflow {
                 somalier_relate_input = somalier_files
                     .join(family_position_ch, by: [0,1])
                     .join(sex_ch, by: [0,1])
+                    .join(affected_status_ch, by: [0,1])
                     .groupTuple(by: 1)
-                    .map { sample_ids, family_id, somalier_files_list, family_positions, sexes ->
+                    .map { sample_ids, family_id, somalier_files_list, family_positions, sexes, affected_statuses ->
                         def proband_sample_id = sample_ids[family_positions.indexOf('proband')]
-                        tuple(proband_sample_id, family_id, somalier_files_list.flatten(), sample_ids, family_positions, sexes)
+                        tuple(proband_sample_id, family_id, somalier_files_list.flatten(), sample_ids, family_positions, sexes, affected_statuses)
                     }
                 somalier_relate(somalier_relate_input, outdir, outdir2, ref_name)
             }
