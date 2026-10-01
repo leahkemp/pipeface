@@ -1380,10 +1380,17 @@ process sv_scanner {
         def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
-        svscanner --out out --vcf $vep_annotated_sv_vcf --ref $ref --dfam_dir $dfam_db --nthread ${task.cpus}
-        ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
-        ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
-        ln -s out/diagram.txt ${out_diagram}
+        # pass the vep output through when there are no svs to annotate
+        if [ "\$(bcftools view -H ${vep_annotated_sv_vcf} | wc -l)" -eq 0 ]; then
+            cp ${vep_annotated_sv_vcf} ${out_vcf}.vcf.gz
+            tabix ${out_vcf}.vcf.gz
+            touch ${out_diagram}
+        else
+            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --dfam_dir ${dfam_db} --nthread ${task.cpus}
+            ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
+            ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
+            ln -s out/diagram.txt ${out_diagram}
+        fi
         """
 
     stub:
