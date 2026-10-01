@@ -526,8 +526,15 @@ process concat_tr_vcf {
 
     script:
         """
-        # reorder samples since longtr sorts samples alphabetically
-        bcftools concat -a tr.*.vcf.gz --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
+        # concat the files with records, or fall back to the header of the first file
+        # and reorder samples since longtr sorts samples alphabetically
+        NON_EMPTY=\$(for f in tr.*.vcf.gz; do [ "\$(bcftools index -n "\${f}")" -gt 0 ] && echo "\${f}"; done || true)
+        if [ -n "\${NON_EMPTY}" ]; then
+            bcftools concat -a \${NON_EMPTY} --threads ${task.cpus} | bcftools view -s ${sample_ids.join(',')} | bcftools sort -T ./ -Oz -o tr.vcf.gz
+        else
+            FIRST_VCF=(tr.*.vcf.gz)
+            bcftools view -s ${sample_ids.join(',')} -Oz -o tr.vcf.gz "\${FIRST_VCF[0]}"
+        fi
         tabix tr.vcf.gz
         """
 
