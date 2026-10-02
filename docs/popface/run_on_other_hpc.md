@@ -3,14 +3,22 @@
 - [Run popface on other HPC](#run-popface-on-other-hpc)
   - [Assumptions](#assumptions)
   - [1. Download variant databases (optional)](#1-download-variant-databases-optional)
-    - [VEP cache](#vep-cache)
-    - [REVEL](#revel)
-    - [gnomAD](#gnomad)
-    - [ClinVar](#clinvar)
-    - [CADD](#cadd)
-    - [spliceAI](#spliceai)
-    - [AlphaMissense](#alphamissense)
-  - [2. Modify nextflow\_popface\_container.config](#2-modify-nextflow_popface_containerconfig)
+    - [hg38](#hg38)
+      - [VEP cache](#vep-cache)
+      - [REVEL](#revel)
+      - [gnomAD](#gnomad)
+      - [ClinVar](#clinvar)
+      - [CADD](#cadd)
+      - [SpliceAI](#spliceai)
+      - [AlphaMissense](#alphamissense)
+    - [chm13](#chm13)
+      - [VEP GFF](#vep-gff)
+      - [gnomAD](#gnomad-1)
+      - [ClinVar](#clinvar-1)
+      - [SpliceAI](#spliceai-1)
+      - [AlphaMissense](#alphamissense-1)
+    - [Dfam](#dfam)
+  - [2. Modify nextflow\_popface.config](#2-modify-nextflow_popfaceconfig)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
   - [4. Run popface](#4-run-popface)
   - [Information](#information)
@@ -18,27 +26,25 @@
 ## Assumptions
 
 - Running on a HPC
-- You have access to appropriate GPUs if running DeepVariant/DeepTrio
 
 ## 1. Download variant databases (optional)
 
 Download the variant databases if you wish to run the variant annotation component of the pipeline.
 
 > [!NOTE]
-> Variant annotation is only available for hg38
+> Variant annotation is only available for hg38 and chm13
 
-### VEP cache
+> [!IMPORTANT]
+> These variant annotation databases are third-party resources, each distributed under its own license. Review and comply with each database's license before downloading, using or redistributing them.
+
+### hg38
+
+#### VEP cache
 
 Get a local copy of the VEP cache
 
 ```bash
 curl -O https://ftp.ensembl.org/pub/release-112/variation/indexed_vep_cache/homo_sapiens_merged_vep_112_GRCh38.tar.gz
-```
-
-Check download was successful by checking md5sum
-
-```bash
-md5sum homo_sapiens_merged_vep_112_GRCh38.tar.gz
 ```
 
 Expected md5sum
@@ -53,18 +59,12 @@ Un-tar
 tar -xzf homo_sapiens_merged_vep_112_GRCh38.tar.gz
 ```
 
-### REVEL
+#### REVEL
 
 Get a local copy of the REVEL database
 
 ```bash
 curl -o revel-v1.3_all_chromosomes.zip https://zenodo.org/records/7072866/files/revel-v1.3_all_chromosomes.zip?download=1
-```
-
-Check download was successful by checking md5sum
-
-```bash
-md5sum revel-v1.3_all_chromosomes.zip
 ```
 
 Expected md5sum
@@ -90,18 +90,12 @@ bgzip new_tabbed_revel_grch38.tsv
 tabix -f -s 1 -b 3 -e 3 new_tabbed_revel_grch38.tsv.gz
 ```
 
-### gnomAD
+#### gnomAD
 
-Get a local copy of the gnomAD database. Eg:
+Get a local copy of the gnomAD database
 
 ```bash
 for i in {1..22} X Y; do curl -O https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/joint/gnomad.joint.v4.1.sites.chr${i}.vcf.bgz; done
-```
-
-Check download was successful by checking md5sums
-
-```bash
-for i in {1..22} X Y; do md5sum gnomad.joint.v4.1.sites.chr${i}.vcf.bgz; done
 ```
 
 Expected md5sums
@@ -142,20 +136,13 @@ done > vcf_list.txt
 bcftools concat --naive --file-list vcf_list.txt --output-type z --threads 24 --output gnomad.joint.v4.1.sites.chrall.vcf.gz
 ```
 
-### ClinVar
+#### ClinVar
 
 Get a local copy of the ClinVar database
 
 ```bash
 curl -O https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/weekly/clinvar_20240825.vcf.gz
 curl -O https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/weekly/clinvar_20240825.vcf.gz.tbi
-```
-
-Check download was successful by checking md5sums
-
-```bash
-md5sum clinvar_20240825.vcf.gz
-md5sum clinvar_20240825.vcf.gz.tbi
 ```
 
 Expected md5sums
@@ -165,7 +152,7 @@ e05111f8e6418ce2898d78f68d39a019  clinvar_20240825.vcf.gz
 74fd2cbee0c03af7809a4e9d2960c157  clinvar_20240825.vcf.gz.tbi
 ```
 
-### CADD
+#### CADD
 
 Get a local copy of the CADD databases
 
@@ -176,17 +163,6 @@ curl -O https://krishna.gs.washington.edu/download/CADD/v1.7/GRCh38/gnomad.genom
 curl -O https://krishna.gs.washington.edu/download/CADD/v1.7/GRCh38/gnomad.genomes.r4.0.indel.tsv.gz.tbi
 curl -O https://kircherlab.bihealth.org/download/CADD-SV/v1.1/1000G_phase3_SVs.tsv.gz
 curl -O https://kircherlab.bihealth.org/download/CADD-SV/v1.1/1000G_phase3_SVs.tsv.gz.tbi
-```
-
-Check download was successful by checking md5sums
-
-```bash
-md5sum whole_genome_SNVs.tsv.gz
-md5sum whole_genome_SNVs.tsv.gz.tbi
-md5sum gnomad.genomes.r4.0.indel.tsv.gz
-md5sum gnomad.genomes.r4.0.indel.tsv.gz.tbi
-md5sum 1000G_phase3_SVs.tsv.gz
-md5sum 1000G_phase3_SVs.tsv.gz.tbi
 ```
 
 Expected md5sums
@@ -200,13 +176,13 @@ Expected md5sums
 6ab7ffaead8e9f4246953bbd3b35dbd6  1000G_phase3_SVs.tsv.gz.tbi
 ```
 
-### spliceAI
+#### SpliceAI
 
-Get a local copy of the spliceAI database
+Get a local copy of the SpliceAI database
 
-Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP spliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail.
+Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP SpliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail.
 
-### AlphaMissense
+#### AlphaMissense
 
 Get a local copy of the AlphaMissense database
 
@@ -232,11 +208,118 @@ Index
 tabix -s 1 -b 2 -e 2 -f -S 1 AlphaMissense_hg38.tsv.gz
 ```
 
-## 2. Modify nextflow_popface_container.config
+### chm13
+
+#### VEP GFF
+
+Get a local copy of the VEP GFF
+
+```bash
+wget https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_GENCODEv35_CAT_Liftoff.vep.gff3.gz
+wget https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_GENCODEv35_CAT_Liftoff.vep.gff3.gz.tbi
+```
+
+Expected md5sums
+
+```bash
+00fb576ec456d2d97fbb75fc197a4d88  chm13v2.0_GENCODEv35_CAT_Liftoff.vep.gff3.gz
+5422632fe30edb57c64988b3ed60d406  chm13v2.0_GENCODEv35_CAT_Liftoff.vep.gff3.gz.tbi
+```
+
+#### gnomAD
+
+> [!IMPORTANT]
+> The gnomAD data that was lifted over to chm13 is made available by the Genome Aggregation Database consortium under the Open Data Commons Open Database License (ODbL) v1.0. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+
+Get a local copy of the gnomAD joint (genomes and exomes) database (gnomAD v4.1 joint sites lifted over from hg38 to chm13)
+
+```bash
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz.tbi
+```
+
+Expected md5sums
+
+```bash
+5fa2ee21536b85ff400539b275471855  gnomad.joint.v4.1.sites.chm13t2t.vcf.gz
+3c796ba0a5e17bff57cd89b94d589500  gnomad.joint.v4.1.sites.chm13t2t.vcf.gz.tbi
+```
+
+#### ClinVar
+
+Get a local copy of the ClinVar database
+
+```bash
+wget https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/liftover/chm13v2.0_ClinVar20220313.vcf.gz
+wget https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/liftover/chm13v2.0_ClinVar20220313.vcf.gz.tbi
+```
+
+Expected md5sums
+
+```bash
+4cea2750c5990f0e8e0fa11eab995fcd  chm13v2.0_ClinVar20220313.vcf.gz
+83333b91de82407e503f7cb1c3dd01a4  chm13v2.0_ClinVar20220313.vcf.gz.tbi
+```
+
+#### SpliceAI
+
+> [!IMPORTANT]
+> The SpliceAI scores that were lifted over to chm13 are made available by Illumina for academic and not-for-profit research use only. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+
+Get local copies of the SpliceAI SNV and indel databases (Illumina SpliceAI v1.3 scores lifted over from hg38 to chm13)
+
+```bash
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.snv.chm13.vcf.gz.tbi
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.indel.chm13.vcf.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/spliceai_scores.raw.indel.chm13.vcf.gz.tbi
+```
+
+Expected md5sums
+
+```bash
+8e33f4286e6335a96bfd6d027bda7057  spliceai_scores.raw.snv.chm13.vcf.gz
+50ba4be4aa4f073e5d1f80cf75e97422  spliceai_scores.raw.snv.chm13.vcf.gz.tbi
+b9105deba6662ae980676b612f119207  spliceai_scores.raw.indel.chm13.vcf.gz
+8c285451029811cfde55108778d8d500  spliceai_scores.raw.indel.chm13.vcf.gz.tbi
+```
+
+#### AlphaMissense
+
+> [!IMPORTANT]
+> The AlphaMissense predictions that were lifted over to chm13 are made available by Google DeepMind under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. See the bucket [NOTICE.txt](https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/NOTICE.txt) for the full terms, attribution and the modifications made.
+
+Get a local copy of the AlphaMissense database (lifted over from hg38 to chm13)
+
+```bash
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz
+wget https://s3.ap-southeast-2.wasabisys.com/pipeface-anno/AlphaMissense_chm13.tsv.gz.tbi
+```
+
+Expected md5sums
+
+```bash
+669474b95b93f247ebf35ba4373c7a21  AlphaMissense_chm13.tsv.gz
+3c57d7ce3f7a699cb9471d8c9ce5601c  AlphaMissense_chm13.tsv.gz.tbi
+```
+
+### Dfam
+
+Get a local copy of the Dfam 3.9 Mammalia partition (used for both hg38 and chm13) and put it in a directory of its own. Eg.
+
+```bash
+mkdir -p /path/to/dfam
+cd /path/to/dfam
+curl -O https://www.dfam.org/releases/Dfam_3.9/families/FamDB/dfam39_full.7.h5.gz
+gunzip dfam39_full.7.h5.gz
+```
+
+## 2. Modify nextflow_popface.config
 
 Specify the paths to your local copies of the variant databases. Eg:
 
 ```txt
+// hg38 annotation databases
 params.vep_db = '/path/to/vep/grch38/'
 params.revel_db = '/path/to/new_tabbed_revel_grch38.tsv.gz'
 params.gnomad_db = '/path/to/gnomad.joint.v4.1.sites.chrall.vcf.gz'
@@ -247,12 +330,20 @@ params.cadd_sv_db = '/path/to/1000G_phase3_SVs.tsv.gz'
 params.spliceai_snv_db = '/path/to/spliceai_scores.raw.snv.hg38.vcf.gz'
 params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.vcf.gz'
 params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
+
+// chm13 annotation databases
+params.vep_gff = '/path/to/chm13v2.0_GENCODEv35_CAT_Liftoff.vep.gff3.gz'
+params.spliceai_snv_chm13_db = '/path/to/spliceai_scores.raw.snv.chm13.vcf.gz'
+params.spliceai_indel_chm13_db = '/path/to/spliceai_scores.raw.indel.chm13.vcf.gz'
+params.alphamissense_chm13_db = '/path/to/AlphaMissense_chm13.tsv.gz'
+params.gnomad_chm13_db = '/path/to/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz'
+params.clinvar_chm13_db = '/path/to/chm13v2.0_ClinVar20220313.vcf.gz'
+
+// sv repeat annotation database
+params.dfam_db = '/path/to/dfam/'
 ```
 
-Modify the rest of the `nextflow_popface_container.config` for your specific HPC/job scheduler.
-
-> [!NOTE]
-> The 'deepvariant_call_variants' and 'deeptrio_call_variants' processes require access to appropriate GPUs
+Modify the rest of the `nextflow_popface.config` for your specific HPC/job scheduler: the `executor`, `queue`, `project` and `storage` settings in the `process` block, the `cacheDir` the software containers are pulled to, and per-process resources where needed. Alternatively keep `nextflow_popface.config` untouched and put your settings in a small config that starts with `includeConfig 'nextflow_popface.config'`, as `nextflow_popface_nci.config` does for NCI.
 
 ## 3. Get pipeline dependencies
 
@@ -266,19 +357,19 @@ You'll need access to nextflow and singularity. Tested on:
 Run the pipeline. Eg:
 
 ```bash
-nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 Or run a dry run to validate parameters without executing processes. Eg:
 
 ```bash
-nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -stub -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 If you need to resume a pipeline run, use the `-resume` flag. Eg:
 
 ```bash
-nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface_container.config
+nextflow run popface.nf -resume -params-file ./config/parameters_popface.json -config ./config/nextflow_popface.config
 ```
 
 ## Information
