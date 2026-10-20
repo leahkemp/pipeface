@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag popface version
-def popface_version = "0.12.0"
+def popface_version = "0.13.0"
 
 // set defaults for undocumented params
 params.outdir2 = ""
