@@ -1222,7 +1222,7 @@ process sniffles {
         // optionally set mapq filter threshold
         def mapq_optional = sv_mapq != 'NONE' ? "--mapq ${sv_mapq}" : ''
         """
-        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional $mapq_optional
+        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase --all-contigs $tandem_repeat_optional $mapq_optional
         """
 
     stub:
