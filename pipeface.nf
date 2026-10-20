@@ -1083,14 +1083,14 @@ process minimod {
 
     script:
         """
-        minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary --insertions -o modfreqs.bed
+        minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary -o modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # separate haplotypes
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.bed > \${FILE}.bed; done
-            awk '\$10==1' modfreqs.bed >> modfreqs_hap1.bed
-            awk '\$10==2' modfreqs.bed >> modfreqs_hap2.bed
-            awk '\$10=="*"' modfreqs.bed >> modfreqs_combined.bed
-            awk '\$10==0' modfreqs.bed >> modfreqs_unphased.bed
+            awk '\$9==1' modfreqs.bed >> modfreqs_hap1.bed
+            awk '\$9==2' modfreqs.bed >> modfreqs_hap2.bed
+            awk '\$9=="*"' modfreqs.bed >> modfreqs_combined.bed
+            awk '\$9==0' modfreqs.bed >> modfreqs_unphased.bed
             # generate bigwig
             cut -f1,2 $ref_index > chrom.sizes
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do awk 'NR > 1 { print }' \${FILE}.bed | cut -f1-3,7 > \${FILE}.formatted.bed; done
