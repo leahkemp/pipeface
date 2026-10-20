@@ -130,7 +130,7 @@ awk 'BEGIN { OFS = "\t" } { split($4, f, ";"); id = substr(f[1], 4); motif = sub
 
 #### hs1
 
-Get a copy of the Broad Institute tandem repeat catalog
+Get a copy of the hs1 repeat catalog
 
 ```bash
 curl https://zenodo.org/records/14597629/files/chm13.v2.bed.gz?download=1 -o chm13.v2.bed.gz
