@@ -997,9 +997,9 @@ process spliceai_snp_indel {
         def indel_db = ref_name == "hg38" ? spliceai_indel_db : spliceai_indel_chm13_db
         """
         bcftools index --threads ${task.cpus} -t $snp_indel_split_phased_vcf
-        bcftools annotate --threads ${task.cpus} -a $snv_db -c INFO/SpliceAI $snp_indel_split_phased_vcf -Oz -o snp_indel.phased.spliceai.snv.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $snv_db -c INFO/SpliceAI $snp_indel_split_phased_vcf -Oz -o snp_indel.phased.spliceai.snv.vcf.gz
         bcftools index --threads ${task.cpus} -t snp_indel.phased.spliceai.snv.vcf.gz
-        bcftools annotate --threads ${task.cpus} -a $indel_db -c INFO/SpliceAI snp_indel.phased.spliceai.snv.vcf.gz -Oz -o snp_indel.phased.spliceai.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $indel_db -c INFO/SpliceAI snp_indel.phased.spliceai.snv.vcf.gz -Oz -o snp_indel.phased.spliceai.vcf.gz
         """
 
     stub:

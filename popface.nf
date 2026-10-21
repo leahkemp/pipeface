@@ -592,9 +592,9 @@ process spliceai_snp_indel {
         # snv scores first, indel scores layered on top (the two databases cover disjoint variants)
         tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
         tabix ${chr}.snp_indel.phased.vcf.gz
-        bcftools annotate --threads ${task.cpus} -a $snv_db -c INFO/SpliceAI ${chr}.snp_indel.phased.vcf.gz -Oz -o ${chr}.snp_indel.phased.spliceai.snv.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $snv_db -c INFO/SpliceAI ${chr}.snp_indel.phased.vcf.gz -Oz -o ${chr}.snp_indel.phased.spliceai.snv.vcf.gz
         bcftools index --threads ${task.cpus} -t ${chr}.snp_indel.phased.spliceai.snv.vcf.gz
-        bcftools annotate --threads ${task.cpus} -a $indel_db -c INFO/SpliceAI ${chr}.snp_indel.phased.spliceai.snv.vcf.gz -Oz -o ${chr}.snp_indel.phased.spliceai.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $indel_db -c INFO/SpliceAI ${chr}.snp_indel.phased.spliceai.snv.vcf.gz -Oz -o ${chr}.snp_indel.phased.spliceai.vcf.gz
         """
 
     stub:
