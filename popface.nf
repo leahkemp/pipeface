@@ -6,7 +6,7 @@ def popface_version = "0.13.0"
 // set defaults for undocumented params
 params.outdir2 = ""
 params.min_gap = 100000
-params.chunks = 15
+params.chunks = 5
 
 process scrape_settings {
 
