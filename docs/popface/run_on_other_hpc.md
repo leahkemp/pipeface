@@ -17,7 +17,6 @@
       - [ClinVar](#clinvar-1)
       - [SpliceAI](#spliceai-1)
       - [AlphaMissense](#alphamissense-1)
-    - [Dfam](#dfam)
   - [2. Modify nextflow\_popface.config](#2-modify-nextflow_popfaceconfig)
   - [3. Get pipeline dependencies](#3-get-pipeline-dependencies)
   - [4. Run popface](#4-run-popface)
@@ -321,17 +320,6 @@ Expected md5sums
 3c57d7ce3f7a699cb9471d8c9ce5601c  AlphaMissense_chm13.tsv.gz.tbi
 ```
 
-### Dfam
-
-Get a local copy of the Dfam 3.9 Mammalia partition (used for both hg38 and chm13) and put it in a directory of its own. Eg.
-
-```bash
-mkdir -p /path/to/dfam
-cd /path/to/dfam
-curl -O https://www.dfam.org/releases/Dfam_3.9/families/FamDB/dfam39_full.7.h5.gz
-gunzip dfam39_full.7.h5.gz
-```
-
 ## 2. Modify nextflow_popface.config
 
 Specify the paths to your local copies of the variant databases. Eg:
@@ -356,9 +344,6 @@ params.spliceai_indel_chm13_db = '/path/to/spliceai_scores.raw.indel.chm13.vcf.g
 params.alphamissense_chm13_db = '/path/to/AlphaMissense_chm13.tsv.gz'
 params.gnomad_chm13_db = '/path/to/gnomad.joint.v4.1.sites.chm13t2t.vcf.gz'
 params.clinvar_chm13_db = '/path/to/chm13v2.0_ClinVar20220313.vcf.gz'
-
-// sv repeat annotation database
-params.dfam_db = '/path/to/dfam/'
 ```
 
 Modify the rest of the `nextflow_popface.config` for your specific HPC/job scheduler: the `executor`, `queue`, `project` and `storage` settings in the `process` block, the `cacheDir` the software containers are pulled to, and per-process resources where needed. Alternatively keep `nextflow_popface.config` untouched and put your settings in a small config that starts with `includeConfig 'nextflow_popface.config'`, as `nextflow_popface_nci.config` does for NCI.

@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag popface version
-def popface_version = "0.12.0"
+def popface_version = "0.13.0"
 
 // set defaults for undocumented params
 params.outdir2 = ""
@@ -740,7 +740,6 @@ process sv_scanner {
         tuple val(pop_id), val(sv_caller), path(vep_annotated_sv_vcf)
         path ref
         path ref_index
-        path dfam_db
         val outdir
         val outdir2
         val ref_name
@@ -760,7 +759,7 @@ process sv_scanner {
             tabix ${out_vcf}.vcf.gz
             touch ${out_diagram}
         else
-            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --dfam_dir ${dfam_db} --nthread ${task.cpus}
+            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --nthread ${task.cpus}
             ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
             ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
             ln -s out/diagram.txt ${out_diagram}
@@ -803,7 +802,6 @@ workflow {
     spliceai_snv_db = "${params.spliceai_snv_db}".trim()
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
-    dfam_db = "${params.dfam_db}".trim()
     vep_gff = "${params.vep_gff}".trim()
     gnomad_chm13_db = "${params.gnomad_chm13_db}".trim()
     clinvar_chm13_db = "${params.clinvar_chm13_db}".trim()
@@ -852,11 +850,11 @@ workflow {
         def annotation_dirs
         if (ref_name == 'chm13') {
             annotation_dbs = [vep_gff: vep_gff, gnomad_chm13_db: gnomad_chm13_db, clinvar_chm13_db: clinvar_chm13_db, spliceai_snv_chm13_db: spliceai_snv_chm13_db, spliceai_indel_chm13_db: spliceai_indel_chm13_db, alphamissense_chm13_db: alphamissense_chm13_db]
-            annotation_dirs = [dfam_db: dfam_db]
+            annotation_dirs = [:]
         }
         else {
             annotation_dbs = [revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, cadd_sv_db: cadd_sv_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db]
-            annotation_dirs = [vep_db: vep_db, dfam_db: dfam_db]
+            annotation_dirs = [vep_db: vep_db]
         }
         (annotation_dirs + annotation_dbs).each { param, val ->
             if (!val) {
@@ -932,7 +930,6 @@ workflow {
     spliceai_indel_db_index_file = db_index(spliceai_indel_db, 'hg38')
     alphamissense_db_file = db_file(alphamissense_db, 'hg38')
     alphamissense_db_index_file = db_index(alphamissense_db, 'hg38')
-    dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
     vep_gff_file = db_file(vep_gff, 'chm13')
     vep_gff_index_file = db_index(vep_gff, 'chm13')
     gnomad_chm13_db_file = db_file(gnomad_chm13_db, 'chm13')
@@ -1223,6 +1220,6 @@ workflow {
         }
         vep_annotated_sv_vcf = vep_sv(joint_sv_vcf, ref_file, ref_index_file, vep_db_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
         // sv repeat annotation
-        sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, dfam_db_file, outdir, outdir2, ref_name)
+        sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, outdir, outdir2, ref_name)
     }
 }

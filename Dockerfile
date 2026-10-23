@@ -55,7 +55,7 @@ RUN wget "http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bedGraphToBigWig
     mv bedGraphToBigWig /usr/local/bin/
 
 # cutesv
-RUN pip install cuteSV==2.1.1 --break-system-packages
+RUN pip install cuteSV==2.1.4 --break-system-packages
 
 # sniffles
 RUN pip install sniffles==2.8.0 --break-system-packages
@@ -109,7 +109,7 @@ RUN wget -O- "https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz" | tar 
 FROM ubuntu:24.04 AS deploy
 LABEL name="pipeface"
 LABEL description="docker image containing most software required for pipeface/popface"
-LABEL version="0.0.5"
+LABEL version="0.0.6"
 LABEL maintainer.name="Leah Kemp"
 LABEL maintainer.email="leahmhkemp@gmail.com"
 
