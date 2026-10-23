@@ -1,12 +1,12 @@
 nextflow.enable.dsl=2
 
 // tag popface version
-def popface_version = "0.12.0"
+def popface_version = "0.13.0"
 
 // set defaults for undocumented params
 params.outdir2 = ""
 params.min_gap = 100000
-params.chunks = 15
+params.chunks = 5
 
 process scrape_settings {
 
@@ -568,10 +568,46 @@ process list_chromosomes {
 
 }
 
-process vep_snp_indel {
+process spliceai_snp_indel {
 
     input:
         tuple val(pop_id), path(joint_snp_indel_phased_vcf), path(joint_snp_indel_phased_vcf_index), val(chr)
+        path spliceai_snv_db
+        path spliceai_snv_db_index
+        path spliceai_indel_db
+        path spliceai_indel_db_index
+        path spliceai_snv_chm13_db
+        path spliceai_snv_chm13_db_index
+        path spliceai_indel_chm13_db
+        path spliceai_indel_chm13_db_index
+        val ref_name
+
+    output:
+        tuple val(pop_id), path("*.snp_indel.phased.spliceai.vcf.gz"), val(chr)
+
+    script:
+        def snv_db = ref_name == "hg38" ? spliceai_snv_db : spliceai_snv_chm13_db
+        def indel_db = ref_name == "hg38" ? spliceai_indel_db : spliceai_indel_chm13_db
+        """
+        # snv scores first, indel scores layered on top (the two databases cover disjoint variants)
+        tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
+        tabix ${chr}.snp_indel.phased.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $snv_db -c INFO/SpliceAI ${chr}.snp_indel.phased.vcf.gz -Oz -o ${chr}.snp_indel.phased.spliceai.snv.vcf.gz
+        bcftools index --threads ${task.cpus} -t ${chr}.snp_indel.phased.spliceai.snv.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $indel_db -c INFO/SpliceAI ${chr}.snp_indel.phased.spliceai.snv.vcf.gz -Oz -o ${chr}.snp_indel.phased.spliceai.vcf.gz
+        """
+
+    stub:
+        """
+        touch ${chr}.snp_indel.phased.spliceai.vcf.gz
+        """
+
+}
+
+process vep_snp_indel {
+
+    input:
+        tuple val(pop_id), path(snp_indel_spliceai_vcf), val(chr)
         path ref
         path ref_index
         path vep_db
@@ -585,10 +621,6 @@ process vep_snp_indel {
         path cadd_snv_db_index
         path cadd_indel_db
         path cadd_indel_db_index
-        path spliceai_snv_db
-        path spliceai_snv_db_index
-        path spliceai_indel_db
-        path spliceai_indel_db_index
         path alphamissense_db
         path alphamissense_db_index
         path vep_gff
@@ -597,10 +629,6 @@ process vep_snp_indel {
         path gnomad_chm13_db_index
         path clinvar_chm13_db
         path clinvar_chm13_db_index
-        path spliceai_snv_chm13_db
-        path spliceai_snv_chm13_db_index
-        path spliceai_indel_chm13_db
-        path spliceai_indel_chm13_db_index
         path alphamissense_chm13_db
         path alphamissense_chm13_db_index
         val ref_name
@@ -611,24 +639,20 @@ process vep_snp_indel {
     script:
         if (ref_name == "hg38")
         """
-        tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
-        vep -i ${chr}.snp_indel.phased.vcf.gz -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
+        vep -i $snp_indel_spliceai_vcf -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
         --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
         --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
-        --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
         --plugin AlphaMissense,file=$alphamissense_db
         tabix ${chr}.snp_indel.phased.annotated.vcf.gz
         """
         else if (ref_name == "chm13")
         """
-        tabix -h $joint_snp_indel_phased_vcf $chr | bgzip -@ ${task.cpus} > ${chr}.snp_indel.phased.vcf.gz
-        vep -i ${chr}.snp_indel.phased.vcf.gz -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
+        vep -i $snp_indel_spliceai_vcf -o ${chr}.snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
         --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
-        --plugin SpliceAI,snv=$spliceai_snv_chm13_db,indel=$spliceai_indel_chm13_db \
         --plugin AlphaMissense,file=$alphamissense_chm13_db \
         --custom file=$gnomad_chm13_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_chm13_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG
@@ -716,7 +740,6 @@ process sv_scanner {
         tuple val(pop_id), val(sv_caller), path(vep_annotated_sv_vcf)
         path ref
         path ref_index
-        path dfam_db
         val outdir
         val outdir2
         val ref_name
@@ -736,7 +759,7 @@ process sv_scanner {
             tabix ${out_vcf}.vcf.gz
             touch ${out_diagram}
         else
-            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --dfam_dir ${dfam_db} --nthread ${task.cpus}
+            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --nthread ${task.cpus}
             ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
             ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
             ln -s out/diagram.txt ${out_diagram}
@@ -779,7 +802,6 @@ workflow {
     spliceai_snv_db = "${params.spliceai_snv_db}".trim()
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
-    dfam_db = "${params.dfam_db}".trim()
     vep_gff = "${params.vep_gff}".trim()
     gnomad_chm13_db = "${params.gnomad_chm13_db}".trim()
     clinvar_chm13_db = "${params.clinvar_chm13_db}".trim()
@@ -828,11 +850,11 @@ workflow {
         def annotation_dirs
         if (ref_name == 'chm13') {
             annotation_dbs = [vep_gff: vep_gff, gnomad_chm13_db: gnomad_chm13_db, clinvar_chm13_db: clinvar_chm13_db, spliceai_snv_chm13_db: spliceai_snv_chm13_db, spliceai_indel_chm13_db: spliceai_indel_chm13_db, alphamissense_chm13_db: alphamissense_chm13_db]
-            annotation_dirs = [dfam_db: dfam_db]
+            annotation_dirs = [:]
         }
         else {
             annotation_dbs = [revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, cadd_sv_db: cadd_sv_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db]
-            annotation_dirs = [vep_db: vep_db, dfam_db: dfam_db]
+            annotation_dirs = [vep_db: vep_db]
         }
         (annotation_dirs + annotation_dbs).each { param, val ->
             if (!val) {
@@ -908,7 +930,6 @@ workflow {
     spliceai_indel_db_index_file = db_index(spliceai_indel_db, 'hg38')
     alphamissense_db_file = db_file(alphamissense_db, 'hg38')
     alphamissense_db_index_file = db_index(alphamissense_db, 'hg38')
-    dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
     vep_gff_file = db_file(vep_gff, 'chm13')
     vep_gff_index_file = db_index(vep_gff, 'chm13')
     gnomad_chm13_db_file = db_file(gnomad_chm13_db, 'chm13')
@@ -1193,11 +1214,12 @@ workflow {
         if (snp_indel_caller != 'NONE') {
             chromosomes = list_chromosomes(joint_snp_indel_phased_vcf)
                 .flatMap { pop_id, chrom_file -> chrom_file.readLines().collect { chrom -> tuple(pop_id, chrom) } }
-            annotated_snp_indel_vcfs = vep_snp_indel(joint_snp_indel_phased_vcf.combine(chromosomes, by: 0), ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, ref_name)
+            snp_indel_spliceai_vcfs = spliceai_snp_indel(joint_snp_indel_phased_vcf.combine(chromosomes, by: 0), spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, ref_name)
+            annotated_snp_indel_vcfs = vep_snp_indel(snp_indel_spliceai_vcfs, ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, ref_name)
             concat_snp_indel_vcf(annotated_snp_indel_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name, snp_indel_caller)
         }
         vep_annotated_sv_vcf = vep_sv(joint_sv_vcf, ref_file, ref_index_file, vep_db_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
         // sv repeat annotation
-        sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, dfam_db_file, outdir, outdir2, ref_name)
+        sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, outdir, outdir2, ref_name)
     }
 }

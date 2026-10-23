@@ -1,7 +1,7 @@
 nextflow.enable.dsl=2
 
 // tag pipeface version
-def pipeface_version = "0.12.0"
+def pipeface_version = "0.13.0"
 
 // set defaults for undocumented params
 params.outdir2 = ""
@@ -975,6 +975,40 @@ process whatshap_phase_family {
 
 }
 
+process spliceai_snp_indel {
+
+    input:
+        tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
+        path spliceai_snv_db
+        path spliceai_snv_db_index
+        path spliceai_indel_db
+        path spliceai_indel_db_index
+        path spliceai_snv_chm13_db
+        path spliceai_snv_chm13_db_index
+        path spliceai_indel_chm13_db
+        path spliceai_indel_chm13_db_index
+        val ref_name
+
+    output:
+        tuple val(sample_id), val(family_id), path("snp_indel.phased.spliceai.vcf.gz")
+
+    script:
+        def snv_db = ref_name == "hg38" ? spliceai_snv_db : spliceai_snv_chm13_db
+        def indel_db = ref_name == "hg38" ? spliceai_indel_db : spliceai_indel_chm13_db
+        """
+        bcftools index --threads ${task.cpus} -t $snp_indel_split_phased_vcf
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $snv_db -c INFO/SpliceAI $snp_indel_split_phased_vcf -Oz -o snp_indel.phased.spliceai.snv.vcf.gz
+        bcftools index --threads ${task.cpus} -t snp_indel.phased.spliceai.snv.vcf.gz
+        bcftools annotate --threads ${task.cpus} --pair-logic exact -a $indel_db -c INFO/SpliceAI snp_indel.phased.spliceai.snv.vcf.gz -Oz -o snp_indel.phased.spliceai.vcf.gz
+        """
+
+    stub:
+        """
+        touch snp_indel.phased.spliceai.vcf.gz
+        """
+
+}
+
 process vep_snp_indel {
 
     publishDir { task ->
@@ -992,7 +1026,7 @@ process vep_snp_indel {
     }, pattern: 'snp_indel.phased.annotated.vcf.gz*'
 
     input:
-        tuple val(sample_id), val(family_id), path(snp_indel_split_phased_vcf)
+        tuple val(sample_id), val(family_id), path(snp_indel_spliceai_vcf)
         path ref
         path ref_index
         path vep_db
@@ -1006,10 +1040,6 @@ process vep_snp_indel {
         path cadd_snv_db_index
         path cadd_indel_db
         path cadd_indel_db_index
-        path spliceai_snv_db
-        path spliceai_snv_db_index
-        path spliceai_indel_db
-        path spliceai_indel_db_index
         path alphamissense_db
         path alphamissense_db_index
         path vep_gff
@@ -1018,10 +1048,6 @@ process vep_snp_indel {
         path gnomad_chm13_db_index
         path clinvar_chm13_db
         path clinvar_chm13_db_index
-        path spliceai_snv_chm13_db
-        path spliceai_snv_chm13_db_index
-        path spliceai_indel_chm13_db
-        path spliceai_indel_chm13_db_index
         path alphamissense_chm13_db
         path alphamissense_chm13_db_index
         val outdir
@@ -1036,22 +1062,20 @@ process vep_snp_indel {
     script:
         if (ref_name == "hg38")
         """
-        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
+        vep -i $snp_indel_spliceai_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --dir $vep_db --assembly GRCh38 --species homo_sapiens --cache --offline --merged \
         --sift b --polyphen b --symbol --hgvs --hgvsg --uploaded_allele --check_existing --filter_common --distance 0 --nearest gene --canonical --mane --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
         --plugin REVEL,file=$revel_db --custom file=$gnomad_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG \
         --plugin CADD,snv=$cadd_snv_db,indels=$cadd_indel_db \
-        --plugin SpliceAI,snv=$spliceai_snv_db,indel=$spliceai_indel_db \
         --plugin AlphaMissense,file=$alphamissense_db
         tabix snp_indel.phased.annotated.vcf.gz
         """
         else if (ref_name == "chm13")
         """
-        vep -i $snp_indel_split_phased_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
+        vep -i $snp_indel_spliceai_vcf -o snp_indel.phased.annotated.vcf.gz --format vcf --vcf --fasta $ref --gff $vep_gff --assembly T2T-CHM13v2 --species homo_sapiens \
         --symbol --hgvs --hgvsg --uploaded_allele --distance 0 --nearest gene --canonical --pick \
         --fork ${task.cpus} --no_stats --compress_output bgzip --dont_skip \
-        --plugin SpliceAI,snv=$spliceai_snv_chm13_db,indel=$spliceai_indel_chm13_db \
         --plugin AlphaMissense,file=$alphamissense_chm13_db \
         --custom file=$gnomad_chm13_db,short_name=gnomAD,format=vcf,type=exact,fields=AF_joint%AF_exomes%AF_genomes%nhomalt_joint%nhomalt_exomes%nhomalt_genomes \
         --custom file=$clinvar_chm13_db,short_name=ClinVar,format=vcf,type=exact,coords=0,fields=CLNSIG
@@ -1083,14 +1107,14 @@ process minimod {
 
     script:
         """
-        minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary --insertions -o modfreqs.bed
+        minimod freq $ref $haplotagged_bam -t ${task.cpus} --haplotypes --allow-secondary -o modfreqs.bed
         if [ -s modfreqs.bed ]; then
             # separate haplotypes
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined modfreqs_unphased; do head -n1 modfreqs.bed > \${FILE}.bed; done
-            awk '\$10==1' modfreqs.bed >> modfreqs_hap1.bed
-            awk '\$10==2' modfreqs.bed >> modfreqs_hap2.bed
-            awk '\$10=="*"' modfreqs.bed >> modfreqs_combined.bed
-            awk '\$10==0' modfreqs.bed >> modfreqs_unphased.bed
+            awk '\$9==1' modfreqs.bed >> modfreqs_hap1.bed
+            awk '\$9==2' modfreqs.bed >> modfreqs_hap2.bed
+            awk '\$9=="*"' modfreqs.bed >> modfreqs_combined.bed
+            awk '\$9==0' modfreqs.bed >> modfreqs_unphased.bed
             # generate bigwig
             cut -f1,2 $ref_index > chrom.sizes
             for FILE in modfreqs_hap1 modfreqs_hap2 modfreqs_combined; do awk 'NR > 1 { print }' \${FILE}.bed | cut -f1-3,7 > \${FILE}.formatted.bed; done
@@ -1222,7 +1246,7 @@ process sniffles {
         // optionally set mapq filter threshold
         def mapq_optional = sv_mapq != 'NONE' ? "--mapq ${sv_mapq}" : ''
         """
-        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase $tandem_repeat_optional $mapq_optional
+        sniffles --reference $ref --input $haplotagged_bam --threads ${task.cpus} --sample-id $sample_id --vcf sv.phased.vcf.gz --output-rnames --minsvlen 50 --phase --all-contigs $tandem_repeat_optional $mapq_optional
         """
 
     stub:
@@ -1370,7 +1394,6 @@ process sv_scanner {
         tuple val(sample_id), val(family_id), path(vep_annotated_sv_vcf), val(sv_caller)
         path ref
         path ref_index
-        path dfam_db
         val outdir
         val outdir2
         val ref_name
@@ -1391,7 +1414,7 @@ process sv_scanner {
             tabix ${out_vcf}.vcf.gz
             touch ${out_diagram}
         else
-            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --dfam_dir ${dfam_db} --nthread ${task.cpus}
+            svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --nthread ${task.cpus}
             ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
             ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
             ln -s out/diagram.txt ${out_diagram}
@@ -1546,7 +1569,6 @@ workflow {
     spliceai_snv_db = "${params.spliceai_snv_db}".trim()
     spliceai_indel_db = "${params.spliceai_indel_db}".trim()
     alphamissense_db = "${params.alphamissense_db}".trim()
-    dfam_db = "${params.dfam_db}".trim()
     vep_gff = "${params.vep_gff}".trim()
     gnomad_chm13_db = "${params.gnomad_chm13_db}".trim()
     clinvar_chm13_db = "${params.clinvar_chm13_db}".trim()
@@ -1597,11 +1619,11 @@ workflow {
         def annotation_dirs
         if (ref_name == 'chm13') {
             annotation_dbs = [vep_gff: vep_gff, gnomad_chm13_db: gnomad_chm13_db, clinvar_chm13_db: clinvar_chm13_db, spliceai_snv_chm13_db: spliceai_snv_chm13_db, spliceai_indel_chm13_db: spliceai_indel_chm13_db, alphamissense_chm13_db: alphamissense_chm13_db]
-            annotation_dirs = [dfam_db: dfam_db]
+            annotation_dirs = [:]
         }
         else {
             annotation_dbs = [revel_db: revel_db, gnomad_db: gnomad_db, clinvar_db: clinvar_db, cadd_snv_db: cadd_snv_db, cadd_indel_db: cadd_indel_db, cadd_sv_db: cadd_sv_db, spliceai_snv_db: spliceai_snv_db, spliceai_indel_db: spliceai_indel_db, alphamissense_db: alphamissense_db]
-            annotation_dirs = [vep_db: vep_db, dfam_db: dfam_db]
+            annotation_dirs = [vep_db: vep_db]
         }
         (annotation_dirs + annotation_dbs).each { param, val ->
             if (!val) {
@@ -1750,7 +1772,6 @@ workflow {
     spliceai_indel_db_index_file = db_index(spliceai_indel_db, 'hg38')
     alphamissense_db_file = db_file(alphamissense_db, 'hg38')
     alphamissense_db_index_file = db_index(alphamissense_db, 'hg38')
-    dfam_db_file = annotate == 'yes' ? file(dfam_db) : []
     vep_gff_file = db_file(vep_gff, 'chm13')
     vep_gff_index_file = db_index(vep_gff, 'chm13')
     gnomad_chm13_db_file = db_file(gnomad_chm13_db, 'chm13')
@@ -2204,7 +2225,8 @@ workflow {
         // annotation of the joint (duo/trio) or per-sample phased snp/indel vcf
         if (annotate == 'yes') {
             snp_indel_for_vep = mode in ['duo', 'trio'] ? joint_snp_indel_phased_vcf : snp_indel_split_phased_vcf
-            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_for_vep,ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
+            snp_indel_spliceai_vcf = spliceai_snp_indel(snp_indel_for_vep, spliceai_snv_db_file, spliceai_snv_db_index_file, spliceai_indel_db_file, spliceai_indel_db_index_file, spliceai_snv_chm13_db_file, spliceai_snv_chm13_db_index_file, spliceai_indel_chm13_db_file, spliceai_indel_chm13_db_index_file, ref_name)
+            annotated_snp_indel_vcf = vep_snp_indel(snp_indel_spliceai_vcf, ref_file, ref_index_file, vep_db_file, revel_db_file, revel_db_index_file, gnomad_db_file, gnomad_db_index_file, clinvar_db_file, clinvar_db_index_file, cadd_snv_db_file, cadd_snv_db_index_file, cadd_indel_db_file, cadd_indel_db_index_file, alphamissense_db_file, alphamissense_db_index_file, vep_gff_file, vep_gff_index_file, gnomad_chm13_db_file, gnomad_chm13_db_index_file, clinvar_chm13_db_file, clinvar_chm13_db_index_file, alphamissense_chm13_db_file, alphamissense_chm13_db_index_file, outdir, outdir2, ref_name, snp_indel_caller, mode)
         }
     }
     if (mode in ['duo', 'trio']) {
@@ -2255,7 +2277,7 @@ workflow {
         }
         vep_annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
         // sv repeat annotation
-        (annotated_sv_vcf, sv_diagrams) = sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, dfam_db_file, outdir, outdir2, ref_name, mode)
+        (annotated_sv_vcf, sv_diagrams) = sv_scanner(vep_annotated_sv_vcf, ref_file, ref_index_file, outdir, outdir2, ref_name, mode)
     }
     // puzzleapp preprocessing
     if (prepare_for_puzzleapp == 'yes') {
