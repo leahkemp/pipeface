@@ -15,7 +15,7 @@ jasmine: 1.1.5-r1
 SVscanner: 0.7.0
 somalier: 0.3.2
 ensembl-vep: 112
-puzzleapp: 0.2.3
+puzzleapp: 0.2.4
 kentUtils: 0.0
 HTSlib: 1.20
 bcftools: 1.21
