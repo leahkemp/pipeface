@@ -177,9 +177,27 @@ Expected md5sums
 
 #### SpliceAI
 
-Get a local copy of the SpliceAI database
+Get a local copy of the SpliceAI SNV database (Ensembl pre-computed SpliceAI 1.3.1 raw scores for MANE v1.4 transcripts)
+
+```bash
+wget https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_plugins/spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.vcf.gz
+wget https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_plugins/spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.vcf.gz.tbi
+```
+
+Get a local copy of the SpliceAI indel database (`spliceai_scores.raw.indel.hg38.vcf.gz`)
 
 Manually download from Illumina basespace (https://basespace.illumina.com/s/otSPW8hnhaZR). See [the VEP SpliceAI plugin documentation](https://asia.ensembl.org/info/docs/tools/vep/script/vep_plugins.html#spliceai) for more detail.
+
+Both databases name contigs without the `chr` prefix, so rename the contigs to match the reference genome
+
+```bash
+bcftools index -s spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.vcf.gz | awk '{print $1"\t"($1=="MT"?"chrM":"chr"$1)}' > chr_add_snv.txt
+bcftools annotate --rename-chrs chr_add_snv.txt --threads 4 spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.vcf.gz -Oz -o spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.chr.vcf.gz
+bcftools index --threads 4 -t spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.chr.vcf.gz
+bcftools index -s spliceai_scores.raw.indel.hg38.vcf.gz | awk '{print $1"\t"($1=="MT"?"chrM":"chr"$1)}' > chr_add_indel.txt
+bcftools annotate --rename-chrs chr_add_indel.txt --threads 4 spliceai_scores.raw.indel.hg38.vcf.gz -Oz -o spliceai_scores.raw.indel.hg38.chr.vcf.gz
+bcftools index --threads 4 -t spliceai_scores.raw.indel.hg38.chr.vcf.gz
+```
 
 #### AlphaMissense
 
@@ -315,8 +333,8 @@ params.clinvar_db = '/path/to/clinvar_20240825.vcf.gz'
 params.cadd_snv_db = '/path/to/whole_genome_SNVs.tsv.gz'
 params.cadd_indel_db = '/path/to/gnomad.genomes.r4.0.indel.tsv.gz'
 params.cadd_sv_db = '/path/to/1000G_phase3_SVs.tsv.gz'
-params.spliceai_snv_db = '/path/to/spliceai_scores.raw.snv.hg38.vcf.gz'
-params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.vcf.gz'
+params.spliceai_snv_db = '/path/to/spliceai_scores.raw.snv.ensembl_mane_v1.4.grch38.chr.vcf.gz'
+params.spliceai_indel_db = '/path/to/spliceai_scores.raw.indel.hg38.chr.vcf.gz'
 params.alphamissense_db = '/path/to/AlphaMissense_hg38.tsv.gz'
 
 // chm13 annotation databases
