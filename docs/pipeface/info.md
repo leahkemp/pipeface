@@ -249,4 +249,5 @@ chm13:
 ## Haploid Aware Mode
 
 - Enables correct handling of the haploid nature of chrX and chrY for XY samples, along with PAR regions
+- Applies to SNP/indel and tandem repeat calling
 - Only supported for singletons at the moment
