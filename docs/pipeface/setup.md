@@ -199,12 +199,12 @@ Specify the sample ID, family ID, family position, sex, affected status, file pa
 
 ```csv
 sample_id,family_id,family_position,sex,affected_status,file,data_type,regions_of_interest,clair3_model,clairs_to_platform
-sample_01,NONE,NONE,XY,affected,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_01,NONE,NONE,XY,affected,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_02,NONE,NONE,XX,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_03,NONE,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_4khz
-sample_04,NONE,NONE,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
-sample_04,NONE,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio
+sample_01,NONE,NONE,XY,affected,/path/to/sample_01_1.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_5khz_ssrs
+sample_01,NONE,NONE,XY,affected,/path/to/sample_01_2.fastq.gz,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_5khz_ssrs
+sample_02,NONE,NONE,XX,NONE,/path/to/sample_02.fastq,ont,/path/to/regions.bed,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_5khz_ssrs
+sample_03,NONE,NONE,NONE,NONE,/path/to/sample_03.bam,ont,NONE,/path/to/clair3_models/ont/r1041_e82_400bps_hac_v500/,ont_r10_dorado_sup_5khz_ssrs
+sample_04,NONE,NONE,NONE,NONE,/path/to/sample_04_1.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio_ssrs
+sample_04,NONE,NONE,NONE,NONE,/path/to/sample_04_2.bam,pacbio,NONE,/path/to/clair3_models/hifi_revio/,hifi_revio_ssrs
 ```
 
 > [!NOTE]
@@ -223,7 +223,7 @@ Requirements:
 - `affected_status` must be 'affected', 'unaffected' or 'NONE' (set to 'NONE' if not required)
 - set `regions_of_interest` to 'NONE' if not required
 - set `clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
-- set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
+- set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_5khz_ssrs` or `hifi_revio_ssrs`) when somatic calling, otherwise set to 'NONE'
 
 ### Duo/Trio mode
 
@@ -258,7 +258,7 @@ Requirements:
 - in trio mode, exactly 3 unique `sample_id` values are required per `family_id`, with a `proband`, `father` and `mother` in the `family_position` column
 - set `regions_of_interest` to 'NONE' if not required
 - set `clair3_model` to the path of an appropriate Clair3 model when Clair3 is selected as the SNP/indel caller, otherwise set to 'NONE'
-- set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_4khz` or `hifi_revio`) when somatic calling, otherwise set to 'NONE'
+- set `clairs_to_platform` to an appropriate [ClairS-TO platform](https://github.com/HKU-BAL/ClairS-TO#pre-trained-models) (e.g. `ont_r10_dorado_sup_5khz_ssrs` or `hifi_revio_ssrs`) when somatic calling, otherwise set to 'NONE'
 
 ## 4. Modify parameters_pipeface.json
 
