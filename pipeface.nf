@@ -1139,18 +1139,33 @@ process longtr_pre_processing {
 
     input:
         path tr_call_regions
+        path parbed
+        val haploidaware
+        val chr_x_seq
+        val chr_y_seq
 
     output:
         path("split.*.bed")
 
     script:
+        if (haploidaware == 'yes')
         """
-        split -l 10000 $tr_call_regions split. --additional-suffix=.bed
+        # chrx/chry loci haploid (except for par regions) in xy samples, everything else diploid
+        awk -v x=${chr_x_seq} -v y=${chr_y_seq} '\$1 == x || \$1 == y' $tr_call_regions > xy.bed
+        bedtools subtract -A -a xy.bed -b $parbed > haploid.bed
+        bedtools intersect -v -f 1.0 -r -a $tr_call_regions -b haploid.bed > diploid.bed
+        split -l 10000 diploid.bed split.dip. --additional-suffix=.bed
+        split -l 10000 haploid.bed split.hap. --additional-suffix=.bed
+        """
+        else
+        """
+        split -l 10000 $tr_call_regions split.dip. --additional-suffix=.bed
         """
 
     stub:
         """
-        touch split.aa.bed
+        touch split.dip.aa.bed
+        touch split.hap.aa.bed
         """
 
 }
@@ -1158,10 +1173,12 @@ process longtr_pre_processing {
 process longtr {
 
     input:
-        tuple val(id), val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type)
+        tuple val(id), val(family_id), val(sample_ids), path(bams, stageAs: 'bam?.bam'), path(bam_indices, stageAs: 'bam?.bam.bai'), val(data_type), val(sex)
         path split_beds
         path ref
         path ref_index
+        val chr_x_seq
+        val chr_y_seq
 
     output:
         tuple val(id), val(family_id), val(sample_ids), path("tr.*.vcf.gz"), path("tr.*.vcf.gz.tbi")
@@ -1171,18 +1188,27 @@ process longtr {
         def samples_csv = sample_ids.join(',')
         // define alignment parameters for ONT to account for higher incidence of indels in homopolymers (defaults are tailored to pacbio hifi)
         def alignment_params_optional = data_type == 'ont' ? "--alignment-params -1.0,-0.458675,-1.0,-0.458675,-0.00005800168,-1,-1" : ''
+        // conditionally define haploid contigs and par regions
+        def haploid_chrs_optional = sex == 'XY' ? "--haploid-chrs ${chr_x_seq},${chr_y_seq}" : ''
         """
         # run longtr and index vcfs in parallel for each split bed
         parallel -j ${task.cpus} '
             LongTR --bams $bams_csv --bam-samps $samples_csv --bam-libs $samples_csv --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional --log longtr.{/.}.log
             tabix tr.{/.}.vcf.gz
-        ' ::: split.*.bed
+        ' ::: split.dip.*.bed
+        # haploid beds if present
+        if compgen -G "split.hap.*.bed" > /dev/null; then
+            parallel -j ${task.cpus} '
+                LongTR --bams $bams_csv --bam-samps $samples_csv --bam-libs $samples_csv --fasta $ref --regions {} --tr-vcf tr.{/.}.vcf.gz --phased-bam --output-gls --output-pls --output-phased-gls --output-filter $alignment_params_optional $haploid_chrs_optional --log longtr.{/.}.log
+                tabix tr.{/.}.vcf.gz
+            ' ::: split.hap.*.bed
+        fi
         """
 
     stub:
         """
-        touch tr.aa.vcf.gz
-        touch tr.aa.vcf.gz.tbi
+        touch tr.dip.aa.vcf.gz
+        touch tr.dip.aa.vcf.gz.tbi
         """
 
 }
@@ -2075,7 +2101,8 @@ workflow {
             ordered_indices.collect { sample_ids[it] },
             ordered_indices.collect { bams[it] },
             ordered_indices.collect { bam_indices[it] },
-            data_types[0])
+            data_types[0],
+            'NONE')
     }
     // reorder joint sv vcf tuple
     def reorder_joint_sv_vcf = { proband_sample_id, family_id, sv_caller_val, vcf ->
@@ -2198,11 +2225,12 @@ workflow {
             sv_vcf_cutesv = sv_vcf_fam_cutesv.map { s, f, p, v, t -> tuple(s, f, v) }
         }
         if (tr_calling == 'yes') {
-            split_beds = longtr_pre_processing(tr_call_regions_file)
+            split_beds = longtr_pre_processing(tr_call_regions_file, parbed_file, haploidaware, chr_x_seq, chr_y_seq)
             // tr calling per sample (one-element lists), plus joint calling per family in duo/trio mode
             longtr_input = haplotagged_bam
                 .join(data_type_ch, by: [0,1])
-                .map { sample_id, family_id, bam, bam_index, data_type -> tuple(sample_id, family_id, [sample_id], [bam], [bam_index], data_type) }
+                .join(sex_ch, by: [0,1])
+                .map { sample_id, family_id, bam, bam_index, data_type, sex -> tuple(sample_id, family_id, [sample_id], [bam], [bam_index], data_type, haploidaware == 'yes' ? sex : 'NONE') }
             if (mode in ['duo', 'trio']) {
                 family_input = haplotagged_bam
                     .join(data_type_ch, by: [0,1])
@@ -2214,7 +2242,7 @@ workflow {
                     .map(sort_longtr_family)
                 longtr_input = longtr_input.mix(family_input)
             }
-            tr_vcfs = longtr(longtr_input, split_beds, ref_file, ref_index_file)
+            tr_vcfs = longtr(longtr_input, split_beds, ref_file, ref_index_file, chr_x_seq, chr_y_seq)
             concat_tr_vcf(tr_vcfs, outdir, outdir2, ref_name)
         }
     }
