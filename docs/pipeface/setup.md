@@ -324,12 +324,6 @@ Optionally turn on somatic calling ('yes' or 'no'). Eg:
     "somatic_calling": "yes",
 ```
 
-Specify the SV caller to use ('sniffles', 'cutesv' or 'both'). Eg:
-
-```json
-    "sv_caller": "sniffles",
-```
-
 Optionally specify a threshold for the mapping quality (MAPQ) filter for structural variant calls. Set to 'NONE' to use default thresholds. Maximum value is 60. Eg:
 
 ```json

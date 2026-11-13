@@ -27,7 +27,6 @@ process scrape_settings {
         val tandem_repeat
         val mode
         val snp_indel_caller
-        val sv_caller
         val annotate
         val calculate_depth
         val analyse_base_mods
@@ -47,8 +46,7 @@ process scrape_settings {
         tuple val(sample_id), val(family_id), path("pipeface_settings.txt")
 
     script:
-        // conditionally define reported sv caller and in data format
-        def reported_sv_caller = [both: 'cutesv,sniffles', sniffles: 'sniffles', cutesv: 'cutesv', NONE: 'NONE'][sv_caller]
+        // conditionally define reported in data format
         def reported_in_data_format = [ubam_fastq: 'unaligned BAM or FASTQ', aligned_bam: 'aligned BAM', snp_indel_vcf: 'SNP/indel VCF', sv_vcf: 'SV VCF'][in_data_format]
         if (in_data_format in ['ubam_fastq', 'aligned_bam'])
         """
@@ -73,7 +71,6 @@ process scrape_settings {
             echo "Tandem repeat file: ${tandem_repeat}"
             echo "Mode: ${mode}"
             echo "SNP/indel caller: ${snp_indel_caller}"
-            echo "SV caller: ${reported_sv_caller}"
             echo "SV MAPQ filter threshold: ${sv_mapq}"
             echo "Annotate: ${annotate}"
             echo "Calculate depth: ${calculate_depth}"
@@ -1283,49 +1280,12 @@ process sniffles {
 
 }
 
-process cutesv {
-
-    publishDir "${outdir}/${family_id != 'NONE' ? family_id : sample_id}/${outdir2}/${sample_id}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${sample_id}.${ref_name}.cutesv.${filename}" }, pattern: 'sv.vcf.gz*'
-
-    input:
-        tuple val(sample_id), val(family_id), path(haplotagged_bam), path(haplotagged_bam_index), val(data_type), val(family_position)
-        path ref
-        path ref_index
-        val outdir
-        val outdir2
-        val ref_name
-        val sv_mapq
-
-    output:
-        tuple val(sample_id), val(family_id), val(family_position), path("sv.vcf.gz"), path("sv.vcf.gz.tbi")
-
-    script:
-        // conditionally define platform specific settings
-        def settings = data_type == 'ont'
-            ? '--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3'
-            : '--max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5'
-        // optionally set mapq filter threshold
-        def mapq_optional = sv_mapq != 'NONE' ? "--min_mapq ${sv_mapq}" : ''
-        """
-        cuteSV ${haplotagged_bam} ${ref} sv.vcf ./ --sample ${sample_id} -t ${task.cpus} --genotype --report_readid --min_size 50 ${settings} ${mapq_optional}
-        bgzip -@ ${task.cpus} sv.vcf
-        tabix sv.vcf.gz
-        """
-
-    stub:
-        """
-        touch sv.vcf.gz
-        touch sv.vcf.gz.tbi
-        """
-
-}
-
 process jasmine {
 
-    publishDir "${outdir}/${family_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${family_id}.${ref_name}.${sv_caller}.jasmine.${filename}" }, pattern: '*.vcf.gz*'
+    publishDir "${outdir}/${family_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${family_id}.${ref_name}.sniffles.jasmine.${filename}" }, pattern: '*.vcf.gz*'
 
     input:
-        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(sv_vcfs, stageAs: 'sv?.vcf.gz'), val(sv_caller)
+        tuple val(proband_sample_id), val(family_id), val(sample_ids), val(family_positions), path(sv_vcfs, stageAs: 'sv?.vcf.gz')
         path ref
         path ref_index
         val outdir
@@ -1333,32 +1293,30 @@ process jasmine {
         val ref_name
 
     output:
-        tuple val(proband_sample_id), val(family_id), val(sv_caller), path("*.vcf.gz"), path("*.vcf.gz.tbi")
+        tuple val(proband_sample_id), val(family_id), path("*.vcf.gz"), path("*.vcf.gz.tbi")
 
     script:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
         # gunzip vcfs and create file list (proband first for --require_first_sample)
         FAMILY_POSITIONS=(${family_positions.join(' ')})
         for i in \${!FAMILY_POSITIONS[@]}; do
-            [[ \${FAMILY_POSITIONS[\$i]} == "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; }
+            [[ \${FAMILY_POSITIONS[\$i]} == "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.sv.phased.vcf; realpath \${FAMILY_POSITIONS[\$i]}.sv.phased.vcf >> vcfs.txt; }
         done
         for i in \${!FAMILY_POSITIONS[@]}; do
-            [[ \${FAMILY_POSITIONS[\$i]} != "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf; realpath \${FAMILY_POSITIONS[\$i]}.${out_vcf}.vcf >> vcfs.txt; }
+            [[ \${FAMILY_POSITIONS[\$i]} != "proband" ]] && { gunzip -c sv\$((i+1)).vcf.gz > \${FAMILY_POSITIONS[\$i]}.sv.phased.vcf; realpath \${FAMILY_POSITIONS[\$i]}.sv.phased.vcf >> vcfs.txt; }
         done
         # cap the java heap at the allocation so the jvm collects rather than growing to the node's memory
         export JAVA_TOOL_OPTIONS="-Xmx${task.memory.toGiga() - 2}g"
-        jasmine threads=${task.cpus} out_dir=./ genome_file=${ref} file_list=vcfs.txt out_file=${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype
+        jasmine threads=${task.cpus} out_dir=./ genome_file=${ref} file_list=vcfs.txt out_file=sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --clique_merging --dup_to_ins --normalize_type --require_first_sample --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
-        sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' ${out_vcf}.tmp.vcf | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
-        tabix ${out_vcf}.vcf.gz
+        sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' sv.phased.tmp.vcf | bcftools sort -T ./ -Oz -o sv.phased.vcf.gz -
+        tabix sv.phased.vcf.gz
         """
 
     stub:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        touch ${out_vcf}.vcf.gz
-        touch ${out_vcf}.vcf.gz.tbi
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
         """
 
 }
@@ -1366,7 +1324,7 @@ process jasmine {
 process vep_sv {
 
     input:
-        tuple val(sample_id), val(family_id), path(sv_vcf), val(sv_caller)
+        tuple val(sample_id), val(family_id), path(sv_vcf)
         path ref
         path ref_index
         path vep_db
@@ -1377,7 +1335,7 @@ process vep_sv {
         val ref_name
 
     output:
-        tuple val(sample_id), val(family_id), path("sv.vep_annotated.vcf.gz"), val(sv_caller)
+        tuple val(sample_id), val(family_id), path("sv.vep_annotated.vcf.gz")
 
     script:
         if (ref_name == "hg38")
@@ -1410,14 +1368,14 @@ process sv_scanner {
         }
     }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (mode in ['singleton', 'NONE']) {
-            return "${sample_id}.${ref_name}.${sv_caller}.${filename}"
+            return "${sample_id}.${ref_name}.sniffles.${filename}"
         } else {
-            return "${family_id}.${ref_name}.${sv_caller}.jasmine.${filename}"
+            return "${family_id}.${ref_name}.sniffles.jasmine.${filename}"
         }
     }, pattern: '*.{annotated.vcf.gz*,svscanner.diagram.txt}'
 
     input:
-        tuple val(sample_id), val(family_id), path(vep_annotated_sv_vcf), val(sv_caller)
+        tuple val(sample_id), val(family_id), path(vep_annotated_sv_vcf)
         path ref
         path ref_index
         val outdir
@@ -1426,34 +1384,29 @@ process sv_scanner {
         val mode
 
     output:
-        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi"), val(sv_caller)
+        tuple val(sample_id), val(family_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
         tuple val(sample_id), val(family_id), path("*.svscanner.diagram.txt")
 
     script:
-        // conditionally define output sv caller specific filename
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
-        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
         # pass the vep output through when there are no svs to annotate
         if [ "\$(bcftools view -H ${vep_annotated_sv_vcf} | wc -l)" -eq 0 ]; then
-            cp ${vep_annotated_sv_vcf} ${out_vcf}.vcf.gz
-            tabix ${out_vcf}.vcf.gz
-            touch ${out_diagram}
+            cp ${vep_annotated_sv_vcf} sv.phased.annotated.vcf.gz
+            tabix sv.phased.annotated.vcf.gz
+            touch sv.phased.svscanner.diagram.txt
         else
             svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --nthread ${task.cpus}
-            ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
-            ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
-            ln -s out/diagram.txt ${out_diagram}
+            ln -s out/annotated.vcf.gz sv.phased.annotated.vcf.gz
+            ln -s out/annotated.vcf.gz.tbi sv.phased.annotated.vcf.gz.tbi
+            ln -s out/diagram.txt sv.phased.svscanner.diagram.txt
         fi
         """
 
     stub:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
-        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
-        touch ${out_vcf}.vcf.gz
-        touch ${out_vcf}.vcf.gz.tbi
-        touch ${out_diagram}
+        touch sv.phased.annotated.vcf.gz
+        touch sv.phased.annotated.vcf.gz.tbi
+        touch sv.phased.svscanner.diagram.txt
         """
 
 }
@@ -1519,25 +1472,23 @@ process puzzleapp_preprocess_sv {
         }
     }, mode: params.publish_mode, overwrite: true, saveAs: { filename ->
         if (mode in ['singleton', 'NONE']) {
-            return "${sample_id}.${ref_name}.${sv_caller}.${filename}"
+            return "${sample_id}.${ref_name}.sniffles.${filename}"
         } else {
-            return "${family_id}.${ref_name}.${sv_caller}.jasmine.${filename}"
+            return "${family_id}.${ref_name}.sniffles.jasmine.${filename}"
         }
     }, pattern: '*.annotated.tsv'
 
     input:
-        tuple val(sample_id), val(family_id), path(sv_annotated_vcf), path(sv_annotated_vcf_index), val(sv_caller), val(sample_ids), val(kinships)
+        tuple val(sample_id), val(family_id), path(sv_annotated_vcf), path(sv_annotated_vcf_index), val(sample_ids), val(kinships)
         val outdir
         val outdir2
         val ref_name
         val mode
 
     output:
-        tuple val(sample_id), val(family_id), path("*.annotated.tsv"), val(sv_caller)
+        tuple val(sample_id), val(family_id), path("*.annotated.tsv")
 
     script:
-        // conditionally define output sv caller specific filename
-        def out_tsv = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         // build the yaml 'samples' entries
         def samples_yaml = [sample_ids, kinships].transpose().collect { entry ->
             "{sample_id: \"${entry[0]}\", kinship: \"${entry[1]}\"}"
@@ -1545,15 +1496,14 @@ process puzzleapp_preprocess_sv {
         """
         cat > config.yaml << 'EOF'
         samples: [${samples_yaml}]
-        paths: {svs_vcf: "${sv_annotated_vcf}", svs_tsv: "${out_tsv}.tsv"}
+        paths: {svs_vcf: "${sv_annotated_vcf}", svs_tsv: "sv.phased.annotated.tsv"}
         EOF
         Rscript -e 'data.table::setDTthreads(${task.cpus}); puzzleapp::run_preprocess(config_yaml = "config.yaml")'
         """
 
     stub:
-        def out_tsv = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
         """
-        touch ${out_tsv}.tsv
+        touch sv.phased.annotated.tsv
         """
 
 }
@@ -1571,7 +1521,6 @@ workflow {
     mode = "${params.mode}".trim()
     snp_indel_caller = "${params.snp_indel_caller}".trim()
     clair3_config = "${params.clair3_config}".trim()
-    sv_caller = "${params.sv_caller}".trim()
     sv_mapq = "${params.sv_mapq}".trim()
     annotate = "${params.annotate}".trim()
     haploidaware = "${params.haploidaware}".trim()
@@ -1705,9 +1654,6 @@ workflow {
         if (snp_indel_caller == 'clair3' && clair3_config == 'NONE' && mode in ['duo', 'trio']) {
             exit 1, "When clair3 is selected as the SNP/indel calling software, provide a path to an appropriate clair3 config file for GLnexus (clair3_config), snp_indel_caller = '${snp_indel_caller}' provided."
         }
-        if (!(sv_caller in ['cutesv', 'sniffles', 'both'])) {
-            exit 1, "SV calling software should be 'sniffles', 'cutesv', or 'both', sv_caller = '${sv_caller}' provided."
-        }
         if (sv_mapq != 'NONE' && !(sv_mapq.isInteger() && sv_mapq.toInteger() >= 0 && sv_mapq.toInteger() <= 60)) {
             exit 1, "sv_mapq should be a positive integer (maximum 60) or 'NONE', sv_mapq = '${sv_mapq}' provided."
         }
@@ -1744,9 +1690,6 @@ workflow {
         }
     }
     if (in_data_format == 'snp_indel_vcf') {
-        if (sv_caller != 'NONE') {
-            exit 1, "When the in data format is SNP/indel VCF, set the SV calling software to 'NONE', sv_caller = '${sv_caller}' provided."
-        }
         if (snp_indel_caller == 'NONE') {
             exit 1, "When the in data format is SNP/indel VCF, pass the SNP/indel calling software which was used to generate the input data (not 'NONE'), snp_indel_caller = '${snp_indel_caller}' provided."
         }
@@ -1754,12 +1697,6 @@ workflow {
     else if (in_data_format == 'sv_vcf') {
         if (snp_indel_caller != 'NONE') {
             exit 1, "When the in data format is SV VCF, set the SNP/indel calling software to 'NONE', snp_indel_caller = '${snp_indel_caller}' provided."
-        }
-        if (sv_caller == 'NONE') {
-            exit 1, "When the in data format is SV VCF, pass the SV calling software which was used to generate the input data (not 'NONE'), sv_caller = '${sv_caller}' provided."
-        }
-        if (!(sv_caller in ['sniffles', 'cutesv'])) {
-            exit 1, "When the in data format is SV VCF, set the SV calling software to the caller which generated the input data ('sniffles' or 'cutesv'), sv_caller = '${sv_caller}' provided."
         }
     }
     if (!(params.publish_mode in ['copy', 'copyNoFollow', 'link', 'move', 'rellink', 'symlink'])) {
@@ -2080,8 +2017,8 @@ workflow {
             indices.collect { bam_indices[it] },
             indices.collect { gvcfs[it] })
     }
-    // group sv vcfs by family, sort proband first, key by proband sample_id and attach sv_caller
-    def group_family_sv = { ch, sv_caller_val ->
+    // group sv vcfs by family, sort proband first, key by proband sample_id
+    def group_family_sv = { ch ->
         ch
             .groupTuple(by: 1)
             .map { sample_ids, family_id, family_positions, sv_vcfs, sv_vcf_indices ->
@@ -2090,8 +2027,7 @@ workflow {
                 tuple(proband_sample_id, family_id,
                     indices.collect { sample_ids[it] },
                     indices.collect { family_positions[it] },
-                    indices.collect { sv_vcfs[it] },
-                    sv_caller_val)
+                    indices.collect { sv_vcfs[it] })
             }
     }
     // sort bams proband first (then father, then mother) for joint longtr
@@ -2104,14 +2040,9 @@ workflow {
             data_types[0],
             'NONE')
     }
-    // reorder joint sv vcf tuple
-    def reorder_joint_sv_vcf = { proband_sample_id, family_id, sv_caller_val, vcf ->
-        tuple(proband_sample_id, family_id, vcf, sv_caller_val)
-    }
-
     // workflow
     // pre process
-    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]).join(affected_status_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, ref_name, tandem_repeat, mode, snp_indel_caller, sv_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
+    scrape_settings(in_data_ch.join(family_position_ch, by: [0,1]).join(affected_status_ch, by: [0,1]), pipeface_version, in_data, in_data_format, ref, ref_index, ref_name, tandem_repeat, mode, snp_indel_caller, annotate, calculate_depth, analyse_base_mods, tr_calling, tr_call_regions, check_relatedness, sites, somatic_calling, prepare_for_puzzleapp, outdir, outdir2, haploidaware, parbed, sv_mapq)
     // alignment
     if (in_data_format == 'ubam_fastq') {
         bam = minimap2(id_ch.join(extension_ch, by: [0,1]).join(files_ch, by: [0,1]).join(data_type_ch, by: [0,1]), ref_file, ref_index_file)
@@ -2216,14 +2147,8 @@ workflow {
             (joint_snp_indel_phased_vcf, joint_phased_read_list) = whatshap_phase_family(joint_snp_indel_split_vcf_bam, ref_file, ref_index_file, outdir, outdir2, ref_name, snp_indel_caller)
         }
         // sv calling
-        if (sv_caller in ['sniffles', 'both']) {
-            sv_vcf_fam_sniffles = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
-            sv_vcf_sniffles = sv_vcf_fam_sniffles.map { s, f, p, v, t -> tuple(s, f, v) }
-        }
-        if (sv_caller in ['cutesv', 'both']) {
-            sv_vcf_fam_cutesv = cutesv(haplotagged_bam.join(data_type_ch, by: [0,1]).join(family_position_ch, by: [0,1]), ref_file, ref_index_file, outdir, outdir2, ref_name, sv_mapq)
-            sv_vcf_cutesv = sv_vcf_fam_cutesv.map { s, f, p, v, t -> tuple(s, f, v) }
-        }
+        sv_vcf_fam = sniffles(haplotagged_bam.join(family_position_ch, by: [0,1]), ref_file, ref_index_file, tandem_repeat_file, outdir, outdir2, ref_name, sv_mapq)
+        sv_vcf = sv_vcf_fam.map { s, f, p, v, t -> tuple(s, f, v) }
         if (tr_calling == 'yes') {
             split_beds = longtr_pre_processing(tr_call_regions_file, parbed_file, haploidaware, chr_x_seq, chr_y_seq)
             // tr calling per sample (one-element lists), plus joint calling per family in duo/trio mode
@@ -2259,49 +2184,23 @@ workflow {
     }
     if (mode in ['duo', 'trio']) {
         // sv vcf merging
-        if (sv_caller in ['sniffles', 'both']) {
-            family_sv_sniffles = group_family_sv(sv_vcf_fam_sniffles, 'sniffles')
-        }
-        if (sv_caller in ['cutesv', 'both']) {
-            family_sv_cutesv = group_family_sv(sv_vcf_fam_cutesv, 'cutesv')
-        }
-        family_sv_all = sv_caller == 'both' ? family_sv_sniffles.mix(family_sv_cutesv) :
-                        sv_caller == 'sniffles' ? family_sv_sniffles : family_sv_cutesv
-        joint_sv_vcfs = jasmine(family_sv_all, ref_file, ref_index_file, outdir, outdir2, ref_name)
-            .map { proband_sample_id, family_id, sv_caller_val, vcf, tbi -> tuple(proband_sample_id, family_id, sv_caller_val, vcf) }
-        if (sv_caller in ['sniffles', 'both']) {
-            joint_sv_vcf_sniffles = joint_sv_vcfs
-                .filter { it[2] == 'sniffles' }
-                .map(reorder_joint_sv_vcf)
-        }
-        if (sv_caller in ['cutesv', 'both']) {
-            joint_sv_vcf_cutesv = joint_sv_vcfs
-                .filter { it[2] == 'cutesv' }
-                .map(reorder_joint_sv_vcf)
-        }
+        family_sv = group_family_sv(sv_vcf_fam)
+        joint_sv_vcf = jasmine(family_sv, ref_file, ref_index_file, outdir, outdir2, ref_name)
+            .map { proband_sample_id, family_id, vcf, tbi -> tuple(proband_sample_id, family_id, vcf) }
     }
     if (in_data_format == 'sv_vcf') {
-        sv_vcf_sniffles = id_ch.join(files_ch, by: [0,1])
-        sv_vcf_cutesv = id_ch.join(files_ch, by: [0,1])
+        sv_vcf = id_ch.join(files_ch, by: [0,1])
     }
     // sv annotation
-    sv_vcf_for_vep = Channel.empty()
     if (annotate == 'yes') {
-        if (in_data_format in ['ubam_fastq', 'aligned_bam', 'sv_vcf'] && !(mode in ['duo', 'trio'])) {
-            if (sv_caller in ['sniffles', 'both']) {
-                sv_vcf_for_vep = sv_vcf_for_vep.mix(sv_vcf_sniffles.map { s, f, v -> tuple(s, f, v, 'sniffles') })
-            }
-            if (sv_caller in ['cutesv', 'both']) {
-                sv_vcf_for_vep = sv_vcf_for_vep.mix(sv_vcf_cutesv.map { s, f, v -> tuple(s, f, v, 'cutesv') })
-            }
-        }
         if (mode in ['duo', 'trio']) {
-            if (sv_caller in ['sniffles', 'both']) {
-                sv_vcf_for_vep = sv_vcf_for_vep.mix(joint_sv_vcf_sniffles)
-            }
-            if (sv_caller in ['cutesv', 'both']) {
-                sv_vcf_for_vep = sv_vcf_for_vep.mix(joint_sv_vcf_cutesv)
-            }
+            sv_vcf_for_vep = joint_sv_vcf
+        }
+        else if (in_data_format in ['ubam_fastq', 'aligned_bam', 'sv_vcf']) {
+            sv_vcf_for_vep = sv_vcf
+        }
+        else {
+            sv_vcf_for_vep = Channel.empty()
         }
         vep_annotated_sv_vcf = vep_sv(sv_vcf_for_vep, ref_file, ref_index_file, vep_db_file, cadd_sv_db_file, cadd_sv_db_index_file, vep_gff_file, vep_gff_index_file, ref_name)
         // sv repeat annotation

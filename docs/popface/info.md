@@ -57,15 +57,15 @@ input_somalier-.->joint_somalier
 
 - Clair3 or DeepVariant gVCF files
 - Aligned BAM files
-- Sniffles and/or cuteSV SV VCF files
+- Sniffles SV VCF files
 - Somalier extracted files
 
 ## Main output files
 
 - Joint phased Clair3 or DeepVariant SNP/indel VCF file
 - Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 and chm13)
-- Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- Joint phased SV VCF file
+- Joint phased and annotated SV VCF file (hg38 and chm13)
 - SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 and chm13)
 - Joint phased tandem repeat VCF file
 - Joint relatedness and quality control somalier TSV and HTML files

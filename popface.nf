@@ -13,7 +13,7 @@ process scrape_settings {
     publishDir "${outdir}/${pop_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${pop_id}.${filename}" }, pattern: '*popface*'
 
     input:
-        tuple val(pop_id), val(sample_ids), val(related), val(family_positions), val(gvcfs), val(bams), val(sniffles), val(cutesv), val(somaliers), val(data_type)
+        tuple val(pop_id), val(sample_ids), val(related), val(family_positions), val(gvcfs), val(bams), val(sniffles), val(somaliers), val(data_type)
         val popface_version
         val in_data
         val ref
@@ -46,13 +46,13 @@ process scrape_settings {
             echo "Annotate: ${annotate}"
             echo "Outdir: ${outdir}"
         } > popface_settings.txt
-        printf "sample_id,family_position,gvcf,bam,sniffles,cutesv,somalier\\n" > popface_input_files.csv
-        NAMES=(sample_ids family_positions gvcfs bams sniffles cutesv somaliers)
-        VALUES=("${sample_ids}" "${family_positions}" "${gvcfs}" "${bams}" "${sniffles}" "${cutesv}" "${somaliers}")
+        printf "sample_id,family_position,gvcf,bam,sniffles,somalier\\n" > popface_input_files.csv
+        NAMES=(sample_ids family_positions gvcfs bams sniffles somaliers)
+        VALUES=("${sample_ids}" "${family_positions}" "${gvcfs}" "${bams}" "${sniffles}" "${somaliers}")
         for i in \${!NAMES[@]}; do
             printf "%s\n" "\${VALUES[\$i]}" | sed "s/\\[//g; s/\\]//g; s/, /\\n/g" > "\${NAMES[\$i]}.txt"
         done
-        paste -d',' sample_ids.txt family_positions.txt gvcfs.txt bams.txt sniffles.txt cutesv.txt somaliers.txt >> popface_input_files.csv
+        paste -d',' sample_ids.txt family_positions.txt gvcfs.txt bams.txt sniffles.txt somaliers.txt >> popface_input_files.csv
         """
 
     stub:
@@ -260,13 +260,13 @@ process merge_vcf {
 process split_sv_vcfs {
 
     input:
-        tuple val(pop_id), val(sv_caller), val(sample_ids), path(sv_vcfs), path(sv_vcf_indices)
+        tuple val(pop_id), val(sample_ids), path(sv_vcfs), path(sv_vcf_indices)
         path ref_index
         val min_gap
         val chunks
 
     output:
-        tuple val(pop_id), val(sv_caller), val(sample_ids), path("*.vcf")
+        tuple val(pop_id), val(sample_ids), path("*.vcf")
 
     script:
         """
@@ -319,7 +319,7 @@ process split_sv_vcfs {
 
         # extract BND and INV variants (they can span multiple chromosomes)
         while IFS=\$'\t' read -r sample vcf; do
-            bcftools view -i 'INFO/SVTYPE="BND" || INFO/SVTYPE="INV"' \$vcf -o \$sample.${sv_caller}.BND_INV.vcf
+            bcftools view -i 'INFO/SVTYPE="BND" || INFO/SVTYPE="INV"' \$vcf -o \$sample.sniffles.BND_INV.vcf
         done < sample_vcfs.tsv
 
         # group chunk_boundaries rows by chunk name into per-chunk regions beds
@@ -332,7 +332,7 @@ process split_sv_vcfs {
         while IFS=\$'\t' read -r sample vcf; do
             for chunk_bed in chunk_regions_del/*.bed; do
                 chunk_name=\$(basename "\$chunk_bed" .bed)
-                bcftools view -R "\$chunk_bed" -i 'INFO/SVTYPE="DEL"' \$vcf -o \$sample.${sv_caller}.DEL_\${chunk_name}.vcf
+                bcftools view -R "\$chunk_bed" -i 'INFO/SVTYPE="DEL"' \$vcf -o \$sample.sniffles.DEL_\${chunk_name}.vcf
             done
         done < sample_vcfs.tsv
 
@@ -340,7 +340,7 @@ process split_sv_vcfs {
         while IFS=\$'\t' read -r sample vcf; do
             for chunk_bed in chunk_regions_ins_dup/*.bed; do
                 chunk_name=\$(basename "\$chunk_bed" .bed)
-                bcftools view -R "\$chunk_bed" -i 'INFO/SVTYPE="INS" || INFO/SVTYPE="DUP"' \$vcf -o \$sample.${sv_caller}.INS_DUP_\${chunk_name}.vcf
+                bcftools view -R "\$chunk_bed" -i 'INFO/SVTYPE="INS" || INFO/SVTYPE="DUP"' \$vcf -o \$sample.sniffles.INS_DUP_\${chunk_name}.vcf
             done
         done < sample_vcfs.tsv
 
@@ -351,9 +351,9 @@ process split_sv_vcfs {
         touch chunk_boundaries_del.bed
         touch chunk_boundaries_ins_dup.bed
         for sample in ${sample_ids.join(' ')}; do
-            touch \$sample.${sv_caller}.BND_INV.vcf
-            touch \$sample.${sv_caller}.DEL_chunk_chr1_1.vcf
-            touch \$sample.${sv_caller}.INS_DUP_chunk_chr1_1.vcf
+            touch \$sample.sniffles.BND_INV.vcf
+            touch \$sample.sniffles.DEL_chunk_chr1_1.vcf
+            touch \$sample.sniffles.INS_DUP_chunk_chr1_1.vcf
         done
         """
 
@@ -362,66 +362,61 @@ process split_sv_vcfs {
 process jasmine {
 
     input:
-        tuple val(pop_id), val(partition), val(sv_caller), path(split_sv_vcfs), val(sample_ids), val(related)
+        tuple val(pop_id), val(partition), path(split_sv_vcfs), val(sample_ids), val(related)
         path ref
         path ref_index
 
     output:
-        tuple val(pop_id), val(sv_caller), path("${partition}.*.vcf.gz"), path("${partition}.*.vcf.gz.tbi")
+        tuple val(pop_id), path("${partition}.*.vcf.gz"), path("${partition}.*.vcf.gz.tbi")
 
     script:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         // conditionally define require first flag
         def require_first_sample_optional = related == 'yes' ? '--require_first_sample' : ''
         """
         # create file list in in_data_popface.csv row order (sample_ids are pre-sorted by csv index)
         for SAMPLE in ${sample_ids.join(' ')}; do
-            realpath \${SAMPLE}.${sv_caller}.${partition}.vcf >> vcfs.txt
+            realpath \${SAMPLE}.sniffles.${partition}.vcf >> vcfs.txt
         done
         # cap the java heap at the allocation so the jvm collects rather than growing to the node's memory
         export JAVA_TOOL_OPTIONS="-Xmx${task.memory.toGiga() - 2}g"
         # note. jasmine threads is specfically set to 1 due this issue: https://github.com/mkirsche/Jasmine/issues/49
-        jasmine threads=1 out_dir=./ genome_file=${ref} file_list=vcfs.txt out_file=${partition}.${out_vcf}.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type ${require_first_sample_optional} --default_zero_genotype
+        jasmine threads=1 out_dir=./ genome_file=${ref} file_list=vcfs.txt out_file=${partition}.sv.phased.tmp.vcf min_support=1 --mark_specific spec_reads=7 spec_len=20 --pre_normalize --output_genotypes --centroid_merging --dup_to_ins --normalize_type ${require_first_sample_optional} --default_zero_genotype
         # fix vcf header (remove prefix to sample names that jasmine adds), sort, compress and index
-        sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' ${partition}.${out_vcf}.tmp.vcf | bcftools sort -T ./ -Oz -o ${partition}.${out_vcf}.vcf.gz -
-        tabix ${partition}.${out_vcf}.vcf.gz
+        sed -E '/^#CHROM/ s/\t[0-9]+_/\t/g' ${partition}.sv.phased.tmp.vcf | bcftools sort -T ./ -Oz -o ${partition}.sv.phased.vcf.gz -
+        tabix ${partition}.sv.phased.vcf.gz
         """
 
     stub:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        touch ${partition}.${out_vcf}.vcf.gz
-        touch ${partition}.${out_vcf}.vcf.gz.tbi
+        touch ${partition}.sv.phased.vcf.gz
+        touch ${partition}.sv.phased.vcf.gz.tbi
         """
 
 }
 
 process concat_sv_vcf {
 
-    publishDir "${outdir}/${pop_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${pop_id}.${ref_name}.${sv_caller}.jasmine.${filename}"}, pattern: 'sv.*vcf.gz*'
+    publishDir "${outdir}/${pop_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${pop_id}.${ref_name}.sniffles.jasmine.${filename}"}, pattern: 'sv.*vcf.gz*'
 
     input:
-        tuple val(pop_id), val(sv_caller), path(sv_vcfs), path(sv_vcf_indices)
+        tuple val(pop_id), path(sv_vcfs), path(sv_vcf_indices)
         val outdir
         val outdir2
         val ref_name
 
     output:
-        tuple val(pop_id), val(sv_caller), path("sv.*vcf.gz"), path("sv.*vcf.gz.tbi")
+        tuple val(pop_id), path("sv.*vcf.gz"), path("sv.*vcf.gz.tbi")
 
     script:
-        // conditionally define output sv caller specific filename
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        bcftools concat -a *sv*.vcf.gz --threads ${task.cpus} | bcftools sort -T ./ -Oz -o ${out_vcf}.vcf.gz -
-        tabix ${out_vcf}.vcf.gz
+        bcftools concat -a *sv*.vcf.gz --threads ${task.cpus} | bcftools sort -T ./ -Oz -o sv.phased.vcf.gz -
+        tabix sv.phased.vcf.gz
         """
 
     stub:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased' : 'sv'
         """
-        touch ${out_vcf}.vcf.gz
-        touch ${out_vcf}.vcf.gz.tbi
+        touch sv.phased.vcf.gz
+        touch sv.phased.vcf.gz.tbi
         """
 
 }
@@ -698,7 +693,7 @@ process concat_snp_indel_vcf {
 process vep_sv {
 
     input:
-        tuple val(pop_id), val(sv_caller), path(sv_vcf)
+        tuple val(pop_id), path(sv_vcf)
         path ref
         path ref_index
         path vep_db
@@ -709,7 +704,7 @@ process vep_sv {
         val ref_name
 
     output:
-        tuple val(pop_id), val(sv_caller), path("sv.vep_annotated.vcf.gz")
+        tuple val(pop_id), path("sv.vep_annotated.vcf.gz")
 
     script:
         if (ref_name == "hg38")
@@ -734,10 +729,10 @@ process vep_sv {
 
 process sv_scanner {
 
-    publishDir "${outdir}/${pop_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${pop_id}.${ref_name}.${sv_caller}.jasmine.${filename}" }, pattern: '*.{annotated.vcf.gz*,svscanner.diagram.txt}'
+    publishDir "${outdir}/${pop_id}/${outdir2}", mode: params.publish_mode, overwrite: true, saveAs: { filename -> "${pop_id}.${ref_name}.sniffles.jasmine.${filename}" }, pattern: '*.{annotated.vcf.gz*,svscanner.diagram.txt}'
 
     input:
-        tuple val(pop_id), val(sv_caller), path(vep_annotated_sv_vcf)
+        tuple val(pop_id), path(vep_annotated_sv_vcf)
         path ref
         path ref_index
         val outdir
@@ -745,34 +740,29 @@ process sv_scanner {
         val ref_name
 
     output:
-        tuple val(pop_id), val(sv_caller), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
-        tuple val(pop_id), val(sv_caller), path("*.svscanner.diagram.txt")
+        tuple val(pop_id), path("*.annotated.vcf.gz"), path("*.annotated.vcf.gz.tbi")
+        tuple val(pop_id), path("*.svscanner.diagram.txt")
 
     script:
-        // conditionally define output sv caller specific filename
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
-        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
         # pass the vep output through when there are no svs to annotate
         if [ "\$(bcftools view -H ${vep_annotated_sv_vcf} | wc -l)" -eq 0 ]; then
-            cp ${vep_annotated_sv_vcf} ${out_vcf}.vcf.gz
-            tabix ${out_vcf}.vcf.gz
-            touch ${out_diagram}
+            cp ${vep_annotated_sv_vcf} sv.phased.annotated.vcf.gz
+            tabix sv.phased.annotated.vcf.gz
+            touch sv.phased.svscanner.diagram.txt
         else
             svscanner --out out --vcf ${vep_annotated_sv_vcf} --ref ${ref} --nthread ${task.cpus}
-            ln -s out/annotated.vcf.gz ${out_vcf}.vcf.gz
-            ln -s out/annotated.vcf.gz.tbi ${out_vcf}.vcf.gz.tbi
-            ln -s out/diagram.txt ${out_diagram}
+            ln -s out/annotated.vcf.gz sv.phased.annotated.vcf.gz
+            ln -s out/annotated.vcf.gz.tbi sv.phased.annotated.vcf.gz.tbi
+            ln -s out/diagram.txt sv.phased.svscanner.diagram.txt
         fi
         """
 
     stub:
-        def out_vcf = sv_caller == 'sniffles' ? 'sv.phased.annotated' : 'sv.annotated'
-        def out_diagram = sv_caller == 'sniffles' ? 'sv.phased.svscanner.diagram.txt' : 'sv.svscanner.diagram.txt'
         """
-        touch ${out_vcf}.vcf.gz
-        touch ${out_vcf}.vcf.gz.tbi
-        touch ${out_diagram}
+        touch sv.phased.annotated.vcf.gz
+        touch sv.phased.annotated.vcf.gz.tbi
+        touch sv.phased.svscanner.diagram.txt
         """
 
 }
@@ -944,7 +934,7 @@ workflow {
     alphamissense_chm13_db_index_file = db_index(alphamissense_chm13_db, 'chm13')
 
     // check the in data csv header names every required column
-    def required_columns = ['pop_id', 'sample_id', 'related', 'family_position', 'gvcf', 'bam', 'sniffles', 'cutesv', 'somalier', 'data_type']
+    def required_columns = ['pop_id', 'sample_id', 'related', 'family_position', 'gvcf', 'bam', 'sniffles', 'somalier', 'data_type']
     def header_line = file(in_data).readLines().find { it.trim() }
     def header_columns = header_line ? header_line.split(',').collect { it.trim() } : []
     def missing_columns = required_columns - header_columns
@@ -959,16 +949,16 @@ workflow {
         .toList()
         .flatMap { rows -> rows.withIndex().collect { row, idx -> [row, idx] } }
         .multiMap { row, index ->
-            in_data:            tuple(row.pop_id, row.sample_id, row.related, row.family_position, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type)
+            in_data:            tuple(row.pop_id, row.sample_id, row.related, row.family_position, row.gvcf, row.bam, row.sniffles, row.somalier, row.data_type)
             ids:                tuple(row.pop_id, row.sample_id)
             gvcfs:              tuple(row.pop_id, row.sample_id, row.gvcf, index)
             gvcfs_bams:         tuple(row.pop_id, row.sample_id, row.gvcf, row.bam)
-            svs:                tuple(row.pop_id, row.sample_id, row.sniffles, row.cutesv, index)
+            svs:                tuple(row.pop_id, row.sample_id, row.sniffles, index)
             somaliers:          tuple(row.pop_id, row.sample_id, row.family_position, row.related, row.somalier)
             bams_data_type:     tuple(row.pop_id, row.sample_id, row.bam, row.data_type, index)
             related:            tuple(row.pop_id, row.related)
-            row_validation:     tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type, row.related, row.family_position)
-            cohort_validation:  tuple(row.pop_id, row.sample_id, row.related, row.family_position, row.gvcf, row.bam, row.sniffles, row.cutesv, row.somalier, row.data_type)
+            row_validation:     tuple(row.pop_id, row.sample_id, row.gvcf, row.bam, row.sniffles, row.somalier, row.data_type, row.related, row.family_position)
+            cohort_validation:  tuple(row.pop_id, row.sample_id, row.related, row.family_position, row.gvcf, row.bam, row.sniffles, row.somalier, row.data_type)
             dup_validation:     row.sample_id
             tr_validation:      row.bam
         }
@@ -981,7 +971,7 @@ workflow {
         lists.collect { list -> order.collect { list[it] } }
     }
     csv.in_data
-        .groupTuple(by: [0,2,9])
+        .groupTuple(by: [0,2,8])
         .set { in_data_ch }
 
     csv.ids
@@ -998,12 +988,8 @@ workflow {
         .set { gvcfs_bams_ch }
 
     csv.svs
-        .flatMap { pop_id, sample_id, sniffles, cutesv, index ->
-            def tuples = []
-            if (sniffles != 'NONE') tuples << tuple(pop_id, sample_id, 'sniffles', file(sniffles), file("${sniffles}.tbi"), index)
-            if (cutesv != 'NONE') tuples << tuple(pop_id, sample_id, 'cutesv', file(cutesv), file("${cutesv}.tbi"), index)
-            return tuples
-        }
+        .filter { pop_id, sample_id, sniffles, index -> sniffles != 'NONE' }
+        .map { pop_id, sample_id, sniffles, index -> tuple(pop_id, sample_id, file(sniffles), file("${sniffles}.tbi"), index) }
         .set { svs_ch }
 
     csv.somaliers
@@ -1029,10 +1015,10 @@ workflow {
 
     // check user provided in data
     csv.row_validation
-        .map { pop_id, sample_id, gvcf, bam, sniffles, cutesv, somalier, data_type, related, family_position ->
+        .map { pop_id, sample_id, gvcf, bam, sniffles, somalier, data_type, related, family_position ->
             // check for empty entries
             def required_cols = [pop_id: pop_id, sample_id: sample_id, data_type: data_type, related: related]
-            def optional_cols = [gvcf: gvcf, bam: bam, sniffles: sniffles, cutesv: cutesv, somalier: somalier, family_position: family_position]
+            def optional_cols = [gvcf: gvcf, bam: bam, sniffles: sniffles, somalier: somalier, family_position: family_position]
             required_cols.each { col, val ->
                 if (val.isEmpty()) {
                     exit 1, "There is an empty entry in the '${col}' column of '${in_data}'."
@@ -1044,12 +1030,12 @@ workflow {
                 }
             }
             // check file existence
-            [gvcf: gvcf, bam: bam, sniffles: sniffles, cutesv: cutesv, somalier: somalier].each { col, val ->
+            [gvcf: gvcf, bam: bam, sniffles: sniffles, somalier: somalier].each { col, val ->
                 if (val != 'NONE' && !file(val).exists()) {
                     exit 1, "There is an entry in the '${col}' column of '${in_data}' which doesn't exist. Check file '${val}'. Set to 'NONE' if not required."
                 }
             }
-            [bam: [bam, "${bam}.bai"], sniffles: [sniffles, "${sniffles}.tbi"], cutesv: [cutesv, "${cutesv}.tbi"]].each { col, paths ->
+            [bam: [bam, "${bam}.bai"], sniffles: [sniffles, "${sniffles}.tbi"]].each { col, paths ->
                 def (val, idx) = paths
                 if (val != 'NONE' && !file(idx).exists()) {
                     exit 1, "There is an entry in the '${col}' column of '${in_data}' which doesn't look to have an associated index. Expecting '${idx}'."
@@ -1081,11 +1067,11 @@ workflow {
 
     csv.cohort_validation
         .groupTuple(by: 0)
-        .map { pop_id, sample_ids, relateds, family_positions, gvcfs, bams, sniffless, cutesvs, somaliers, data_types ->
+        .map { pop_id, sample_ids, relateds, family_positions, gvcfs, bams, sniffless, somaliers, data_types ->
             if (sample_ids.unique().size() < 2) {
                 exit 1, "Entries in the 'sample_id' column of '${in_data}' should contain 2 or more unique values for every 'pop_id', '${sample_ids}' provided for population '${pop_id}'."
             }
-            [gvcf: gvcfs, bam: bams, sniffles: sniffless, cutesv: cutesvs, somalier: somaliers].each { col, vals ->
+            [gvcf: gvcfs, bam: bams, sniffles: sniffless, somalier: somaliers].each { col, vals ->
                 if (vals.any { it == 'NONE' } && !vals.every { it == 'NONE' }) {
                     exit 1, "Entries in the '${col}' column of '${in_data}' should be either all 'NONE' or all real files for a given 'pop_id', '${vals}' provided for population '${pop_id}'."
                 }
@@ -1179,26 +1165,25 @@ workflow {
     }
     // sv vcf merging
     sv_vcfs_grouped = svs_ch
-        .map { pop_id, sample_id, sv_caller, vcf, tbi, index -> tuple(pop_id, sv_caller, sample_id, vcf, tbi, index) }
-        .groupTuple(by: [0,1])
-        .map { pop_id, sv_caller, sample_ids, vcfs, tbis, indices ->
+        .groupTuple(by: 0)
+        .map { pop_id, sample_ids, vcfs, tbis, indices ->
             def (s, v, t) = sort_by_index(indices, [sample_ids, vcfs, tbis])
-            tuple(pop_id, sv_caller, s, v, t)
+            tuple(pop_id, s, v, t)
         }
     split_sv_vcfs_ch = split_sv_vcfs(sv_vcfs_grouped, ref_index_file, min_gap, chunks)
     jasmine_input = split_sv_vcfs_ch
-        .flatMap { pop_id, sv_caller, sample_ids, vcfs ->
+        .flatMap { pop_id, sample_ids, vcfs ->
             vcfs.collectMany { vcf ->
                 def partition = vcf.baseName.tokenize('.')[-1]
-                [ tuple(pop_id, partition, sv_caller, vcf, sample_ids) ]
+                [ tuple(pop_id, partition, vcf, sample_ids) ]
             }
         }
-        .groupTuple(by: [0,1,2])
-        .map { pop_id, partition, sv_caller, vcfs, sample_ids -> tuple(pop_id, partition, sv_caller, vcfs, sample_ids[0]) }
+        .groupTuple(by: [0,1])
+        .map { pop_id, partition, vcfs, sample_ids -> tuple(pop_id, partition, vcfs, sample_ids[0]) }
         .combine(related_ch, by: 0)
     merged_sv_vcfs = jasmine(jasmine_input, ref_file, ref_index_file)
-    joint_sv_vcf = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: [0,1]), outdir, outdir2, ref_name)
-        .map { pop_id, sv_caller, vcf, tbi -> tuple(pop_id, sv_caller, vcf) }
+    joint_sv_vcf = concat_sv_vcf(merged_sv_vcfs.groupTuple(by: 0), outdir, outdir2, ref_name)
+        .map { pop_id, vcf, tbi -> tuple(pop_id, vcf) }
     // somalier
     somalier(somalier_files_ch, outdir, outdir2, ref_name)
     // tr calling

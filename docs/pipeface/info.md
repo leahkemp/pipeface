@@ -136,7 +136,7 @@ depth-.->puzzleapp_preprocessing
 - [Clair3](https://github.com/HKU-BAL/Clair3) or [DeepVariant](https://github.com/google/deepvariant)/[DeepTrio](https://github.com/google/deepvariant/blob/r1.10/docs/deeptrio-details.md)
 - [WhatsHap](https://github.com/whatshap/whatshap)
 - [GLnexus](https://github.com/dnanexus-rnd/GLnexus)
-- [Sniffles2](https://github.com/fritzsedlazeck/Sniffles) and/or [cuteSV](https://github.com/tjiangHIT/cuteSV)
+- [Sniffles2](https://github.com/fritzsedlazeck/Sniffles)
 - [Jasmine (customised)](https://github.com/bioinfomethods/Jasmine)
 - [somalier](https://github.com/brentp/somalier)
 - [mosdepth](https://github.com/brentp/mosdepth)
@@ -174,12 +174,12 @@ depth-.->puzzleapp_preprocessing
 - Clair3 or DeepVariant SNP/indel gVCF file
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
-- Phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- Phased SV VCF file
+- Phased and annotated SV VCF file (hg38 and chm13)
 - SVscanner text diagrams of the repeat elements annotated in each SV (hg38 and chm13)
 - Puzzleapp SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Somalier extracted files
-- ClairS-TO somatic SNV/indel VCF files
+- Somatic SNV/indel VCF files
 
 ### Duo
 
@@ -190,14 +190,14 @@ depth-.->puzzleapp_preprocessing
 - Joint phased and annotated Clair3 or DeepVariant SNP/indel VCF file (hg38 and chm13)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
-- Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- Joint phased SV VCF file
+- Joint phased and annotated SV VCF file (hg38 and chm13)
 - SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 and chm13)
 - Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
-- ClairS-TO somatic SNV/indel VCF files
+- Somatic SNV/indel VCF files
 
 ### Trio
 
@@ -208,14 +208,14 @@ depth-.->puzzleapp_preprocessing
 - Joint phased and annotated Clair3 or DeepTrio SNP/indel VCF file (hg38 and chm13)
 - Bed and bigwig base modification frequencies for complete read set and separate haplotypes (uBAMs containing base modifications only)
 - Phased tandem repeat VCF file
-- Joint phased Sniffles2 and/or un-phased cuteSV SV VCF file
-- Joint phased and annotated (VEP + SVscanner) Sniffles2 and/or un-phased and annotated cuteSV SV VCF file (hg38 and chm13)
+- Joint phased SV VCF file
+- Joint phased and annotated SV VCF file (hg38 and chm13)
 - SVscanner text diagrams of the repeat elements annotated in each joint SV (hg38 and chm13)
 - Puzzleapp joint SNP/indel and SV TSV files and coverage/VAF quality control HTML file (hg38 only)
 - Joint phased tandem repeat VCF file
 - Somalier extracted files
 - Joint relatedness and quality control somalier TSV and HTML files
-- ClairS-TO somatic SNV/indel VCF files
+- Somatic SNV/indel VCF files
 
 > [!NOTE]
 > - Running DeepVariant/DeepTrio on ONT data assumes r10 data
